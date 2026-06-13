@@ -1,0 +1,210 @@
+"""Windows desktop launcher for the Forza Telemetry Tracker."""
+from __future__ import annotations
+
+import ctypes
+import logging
+import os
+import socket
+import sys
+import threading
+import time
+from dataclasses import dataclass, field
+
+import httpx
+import uvicorn
+
+from telemetry_tracker.app import _settings_payload, create_app
+from telemetry_tracker.app_paths import DesktopPaths, default_desktop_paths
+from telemetry_tracker.port_conflicts import (
+    PortBinding,
+    find_port_conflicts,
+    kill_process_tree,
+    wait_for_bindings_to_clear,
+)
+from telemetry_tracker.storage import TelemetryStore
+
+DEFAULT_HTTP_HOST = "127.0.0.1"
+BACKEND_READY_TIMEOUT_SECONDS = 20.0
+
+
+def allocate_local_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((DEFAULT_HTTP_HOST, 0))
+        return int(sock.getsockname()[1])
+
+
+def desktop_url(port: int) -> str:
+    return f"http://{DEFAULT_HTTP_HOST}:{int(port)}"
+
+
+def configure_desktop_logging(paths: DesktopPaths) -> None:
+    paths.logs_dir.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=[logging.FileHandler(paths.logs_dir / "app.log", encoding="utf-8")],
+        force=True,
+    )
+    backend_handler = logging.FileHandler(paths.logs_dir / "backend.log", encoding="utf-8")
+    logging.getLogger("uvicorn").addHandler(backend_handler)
+
+
+def listener_binding_from_paths(paths: DesktopPaths) -> PortBinding:
+    store = TelemetryStore(paths.database)
+    store.migrate()
+    settings = _settings_payload(store)
+    return PortBinding("UDP", str(settings["udp_host"]), int(settings["udp_port"]), "Forza UDP listener")
+
+
+def format_conflict_message(conflicts: list) -> str:
+    lines = [
+        "The Forza UDP listener port is already in use.",
+        "Close the other process, or allow this app to stop it before continuing.",
+    ]
+    for conflict in conflicts:
+        line = f"{conflict.binding.protocol.upper()} {conflict.binding.host}:{conflict.binding.port} is owned by PID {conflict.pid} {conflict.process_name}".strip()
+        lines.append(line)
+        if conflict.command_line:
+            lines.append(conflict.command_line)
+    return "\n".join(lines)
+
+
+def message_box_yes_no(message: str) -> bool:
+    if os.name != "nt":
+        return False
+    MB_ICONWARNING = 0x30
+    MB_YESNO = 0x04
+    IDYES = 6
+    result = ctypes.windll.user32.MessageBoxW(None, message, "Forza Telemetry Tracker", MB_ICONWARNING | MB_YESNO)
+    return result == IDYES
+
+
+def ensure_udp_port_available(
+    binding: PortBinding,
+    *,
+    prompt_user=message_box_yes_no,
+) -> None:
+    conflicts = find_port_conflicts([binding])
+    if not conflicts:
+        return
+    if not prompt_user(format_conflict_message(conflicts)):
+        raise RuntimeError("Tracker startup cancelled because the UDP listener port is in use.")
+    killed: set[int] = set()
+    for conflict in conflicts:
+        if conflict.pid > 0 and conflict.pid not in killed:
+            kill_process_tree(conflict.pid)
+            killed.add(conflict.pid)
+    wait_for_bindings_to_clear([binding])
+
+
+@dataclass
+class DesktopBackend:
+    paths: DesktopPaths
+    http_port: int
+    http_host: str = DEFAULT_HTTP_HOST
+    _server: uvicorn.Server | None = field(default=None, init=False, repr=False)
+    _thread: threading.Thread | None = field(default=None, init=False, repr=False)
+
+    def build_app(self):
+        return create_app(
+            runtime_paths=self.paths,
+            start_udp_listener=True,
+            refresh_car_catalog=True,
+            refresh_track_catalog=True,
+            request_shutdown=self.request_process_shutdown,
+        )
+
+    def request_process_shutdown(self) -> None:
+        """Exit the desktop process shortly after an update install response is sent."""
+
+        def exit_soon() -> None:
+            if self._server is not None:
+                self._server.should_exit = True
+            time.sleep(0.2)
+            os._exit(0)
+
+        threading.Thread(target=exit_soon, name="forza-update-shutdown", daemon=True).start()
+
+    def start(self) -> None:
+        self.paths.ensure_user_directories()
+        configure_desktop_logging(self.paths)
+        ensure_udp_port_available(listener_binding_from_paths(self.paths))
+        config = uvicorn.Config(
+            self.build_app(),
+            host=self.http_host,
+            port=self.http_port,
+            log_level="info",
+            access_log=False,
+            log_config=None,
+        )
+        self._server = uvicorn.Server(config)
+        self._thread = threading.Thread(
+            target=self._server.run,
+            name="forza-tracker-backend",
+            daemon=True,
+        )
+        self._thread.start()
+        self.wait_until_ready()
+
+    def wait_until_ready(self) -> None:
+        deadline = time.monotonic() + BACKEND_READY_TIMEOUT_SECONDS
+        url = f"{desktop_url(self.http_port)}/api/status"
+        while time.monotonic() < deadline:
+            try:
+                if httpx.get(url, timeout=1.0).status_code == 200:
+                    return
+            except httpx.HTTPError:
+                pass
+            time.sleep(0.1)
+        raise RuntimeError("Forza Telemetry Tracker backend did not become ready")
+
+    def stop(self) -> None:
+        if self._server is not None:
+            self._server.should_exit = True
+        if self._thread is not None:
+            self._thread.join(timeout=10.0)
+            self._thread = None
+        self._server = None
+
+
+def run_smoke_http_only(paths: DesktopPaths | None = None) -> int:
+    resolved_paths = paths or default_desktop_paths()
+    resolved_paths.ensure_user_directories()
+    port = int(os.environ.get("FORZA_TRACKER_SMOKE_HTTP_PORT") or allocate_local_port())
+    backend = DesktopBackend(paths=resolved_paths, http_port=port)
+    backend.start()
+    try:
+        while True:
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        return 0
+    finally:
+        backend.stop()
+
+
+def run_desktop_app(paths: DesktopPaths | None = None) -> int:
+    resolved_paths = paths or default_desktop_paths()
+    resolved_paths.ensure_user_directories()
+    port = allocate_local_port()
+    backend = DesktopBackend(paths=resolved_paths, http_port=port)
+    backend.start()
+    try:
+        try:
+            import webview  # type: ignore[import-not-found]
+        except ImportError as exc:
+            raise RuntimeError("pywebview is required for the desktop launcher") from exc
+        webview.create_window("Forza Telemetry Tracker", desktop_url(port), min_size=(1200, 780))
+        webview.start()
+        return 0
+    finally:
+        backend.stop()
+
+
+def main() -> int:
+    if "--smoke-http-only" in sys.argv:
+        return run_smoke_http_only()
+    return run_desktop_app()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

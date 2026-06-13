@@ -1,0 +1,58 @@
+{
+  "cars": [
+    {
+      "display_name": "2014 BAC Mono",
+      "make": "BAC",
+      "model": "Mono",
+      "year": 2014
+    },
+    {
+      "display_name": "2008 Dodge Viper SRT-10 ACR",
+      "make": "Dodge",
+      "model": "Viper SRT-10 ACR",
+      "year": 2008
+    },
+    {
+      "display_name": "2020 Lamborghini Essenza SCV12",
+      "make": "Lamborghini",
+      "model": "Essenza SCV12",
+      "year": 2020
+    },
+    {
+      "display_name": "1991 Mazda #55 787B",
+      "make": "Mazda",
+      "model": "#55 787B",
+      "year": 1991
+    },
+    {
+      "display_name": "2008 Mazda Furai",
+      "make": "Mazda",
+      "model": "Furai",
+      "year": 2008
+    },
+    {
+      "display_name": "2021 McLaren 620R",
+      "make": "McLaren",
+      "model": "620R",
+      "year": 2021
+    },
+    {
+      "display_name": "1970 Porsche #3 917 LH Forza Edition",
+      "make": "Porsche",
+      "model": "#3 917 LH Forza Edition",
+      "year": 1970
+    },
+    {
+      "display_name": "2005 Porsche Cayman GT3 WTAC",
+      "make": "Porsche",
+      "model": "Cayman GT3 WTAC",
+      "year": 2005
+    },
+    {
+      "display_name": "1995 Toyota J&J Motorsport Supra WTAC",
+      "make": "Toyota",
+      "model": "J&J Motorsport Supra WTAC",
+      "year": 1995
+    }
+  ]
+}

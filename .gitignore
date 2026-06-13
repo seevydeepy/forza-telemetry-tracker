@@ -1,0 +1,36 @@
+telemetry/latest.json
+telemetry/capture-session.json
+telemetry/capture-index.json
+telemetry/analysis-state.json
+telemetry/sessions/
+
+# Python local artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Telemetry tracker local artifacts
+telemetry/telemetry_tracker.sqlite3
+telemetry/telemetry_tracker.sqlite3-*
+telemetry/telemetry_tracker-*.sqlite3
+telemetry/telemetry_tracker-*.sqlite3-*
+telemetry_tracker.sqlite3
+telemetry_tracker.sqlite3-*
+telemetry/map-cache/
+telemetry/map-cache-*/
+web/telemetry-tracker/node_modules/
+web/telemetry-tracker/dist/
+web/telemetry-tracker/coverage/
+.playwright-cli/
+.superpowers/
+
+# Desktop packaging artifacts
+/build/
+/dist/
+/ForzaTelemetryTrackerUpdater.spec
+
+# .NET helper build artifacts
+tools/fh6-map-tile-converter/**/bin/
+tools/fh6-map-tile-converter/**/obj/
+/telemetry/logs/

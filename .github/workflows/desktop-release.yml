@@ -1,0 +1,226 @@
+name: Desktop Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and sign Windows desktop package
+    runs-on: windows-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate SemVer tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -notmatch '^v(?<version>\d+\.\d+\.\d+)$') {
+            throw "Release tags must match vX.Y.Z. Got: $tag"
+          }
+          if (-not "${{ vars.FORZA_TRUSTED_SIGNER_THUMBPRINTS }}".Trim()) {
+            throw "FORZA_TRUSTED_SIGNER_THUMBPRINTS repository variable must contain at least one trusted SHA-256 certificate thumbprint."
+          }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$($Matches.version)" >> $env:GITHUB_OUTPUT
+          "release_date=$((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd'))" >> $env:GITHUB_OUTPUT
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements-telemetry-tracker.txt
+            requirements-telemetry-desktop.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/telemetry-tracker/package-lock.json
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Download WebView2 standalone installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build | Out-Null
+          Invoke-WebRequest `
+            -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" `
+            -OutFile "build\MicrosoftEdgeWebView2RuntimeInstallerX64.exe"
+
+      - name: Build unsigned desktop app
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File tools\build-desktop-release.ps1 `
+            -Version "${{ steps.version.outputs.version }}" `
+            -Repository "${{ github.repository }}" `
+            -Channel stable `
+            -ReleaseDate "${{ steps.version.outputs.release_date }}" `
+            -GitSha "${{ github.sha }}" `
+            -TrustedSignerThumbprints "${{ vars.FORZA_TRUSTED_SIGNER_THUMBPRINTS }}" `
+            -WebView2StandaloneInstaller "$((Resolve-Path build\MicrosoftEdgeWebView2RuntimeInstallerX64.exe).Path)" `
+            -SkipSigning `
+            -SkipInstaller `
+            -SkipSmoke
+
+      - name: Sign map converter
+        uses: SSLcom/esigner-codesign@v1.3.2
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/dist/ForzaTelemetryTracker/_internal/bin/map-converter/forza-map-tile-converter.exe
+          override: true
+          environment_name: ${{ secrets.ES_ENVIRONMENT_NAME || 'PROD' }}
+          clean_logs: true
+          malware_block: false
+
+      - name: Sign updater helper
+        uses: SSLcom/esigner-codesign@v1.3.2
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/dist/ForzaTelemetryTracker/ForzaTelemetryTrackerUpdater.exe
+          override: true
+          environment_name: ${{ secrets.ES_ENVIRONMENT_NAME || 'PROD' }}
+          clean_logs: true
+          malware_block: false
+
+      - name: Sign desktop app
+        uses: SSLcom/esigner-codesign@v1.3.2
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/dist/ForzaTelemetryTracker/ForzaTelemetryTracker.exe
+          override: true
+          environment_name: ${{ secrets.ES_ENVIRONMENT_NAME || 'PROD' }}
+          clean_logs: true
+          malware_block: false
+
+      - name: Verify signed project executables
+        shell: pwsh
+        run: |
+          $files = @(
+            "dist\ForzaTelemetryTracker\ForzaTelemetryTracker.exe",
+            "dist\ForzaTelemetryTracker\ForzaTelemetryTrackerUpdater.exe",
+            "dist\ForzaTelemetryTracker\_internal\bin\map-converter\forza-map-tile-converter.exe"
+          )
+          foreach ($file in $files) {
+            $signature = Get-AuthenticodeSignature -LiteralPath $file
+            if ($signature.Status -ne "Valid") {
+              throw "$file signature is $($signature.Status)"
+            }
+          }
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        run: |
+          $env:FORZA_TRACKER_VERSION = "${{ steps.version.outputs.version }}"
+          $env:FORZA_TRACKER_INSTALLER_SOURCE = (Resolve-Path "dist\ForzaTelemetryTracker").Path
+          $env:WEBVIEW2_STANDALONE_INSTALLER = (Resolve-Path "build\MicrosoftEdgeWebView2RuntimeInstallerX64.exe").Path
+          iscc "packaging\installer\forza-telemetry-tracker.iss"
+
+      - name: Sign installer
+        uses: SSLcom/esigner-codesign@v1.3.2
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/dist/installer/ForzaTelemetryTrackerSetup-v${{ steps.version.outputs.version }}-x64.exe
+          override: true
+          environment_name: ${{ secrets.ES_ENVIRONMENT_NAME || 'PROD' }}
+          clean_logs: true
+          malware_block: false
+
+      - name: Verify signed installer and create checksum
+        id: assets
+        shell: pwsh
+        run: |
+          $installer = "dist\installer\ForzaTelemetryTrackerSetup-v${{ steps.version.outputs.version }}-x64.exe"
+          $signature = Get-AuthenticodeSignature -LiteralPath $installer
+          if ($signature.Status -ne "Valid") {
+            throw "Installer signature is $($signature.Status)"
+          }
+          $hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          $checksum = "$installer.sha256"
+          "$hash  $(Split-Path -Leaf $installer)" | Set-Content -Path $checksum -Encoding ascii
+          "installer=$installer" >> $env:GITHUB_OUTPUT
+          "checksum=$checksum" >> $env:GITHUB_OUTPUT
+
+      - name: Smoke test signed package
+        shell: pwsh
+        run: python tools/smoke-desktop-package.py --app-dir dist\ForzaTelemetryTracker
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-release-assets
+          path: |
+            ${{ steps.assets.outputs.installer }}
+            ${{ steps.assets.outputs.checksum }}
+          if-no-files-found: error
+
+  release:
+    name: Publish stable GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-release-assets
+          path: release-assets
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          cat > release-notes.md <<EOF
+          Stable desktop release ${TAG_NAME}
+
+          - Signed Windows installer.
+          - SHA-256 checksum is attached for verification.
+          - Source commit: ${GITHUB_SHA}
+          EOF
+          mapfile -t assets < <(find release-assets -type f -print)
+          gh release create "${TAG_NAME}" "${assets[@]}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${TAG_NAME}" \
+            --notes-file release-notes.md \
+            --verify-tag
