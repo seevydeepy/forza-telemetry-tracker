@@ -84,7 +84,7 @@ jobs:
             -SkipSmoke
 
       - name: Sign map converter
-        uses: SSLcom/esigner-codesign@v1.3.2
+        uses: SSLcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -98,7 +98,7 @@ jobs:
           malware_block: false
 
       - name: Sign updater helper
-        uses: SSLcom/esigner-codesign@v1.3.2
+        uses: SSLcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -112,7 +112,7 @@ jobs:
           malware_block: false
 
       - name: Sign desktop app
-        uses: SSLcom/esigner-codesign@v1.3.2
+        uses: SSLcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -149,7 +149,7 @@ jobs:
           iscc "packaging\installer\forza-telemetry-tracker.iss"
 
       - name: Sign installer
-        uses: SSLcom/esigner-codesign@v1.3.2
+        uses: SSLcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
