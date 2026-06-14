@@ -18,6 +18,8 @@
     close: void;
     toast: { level: ToastLevel; message: string; sticky?: boolean };
   }>();
+  const KOFI_URL = 'https://ko-fi.com/Z4I021C66X';
+  const KOFI_BUTTON_IMAGE_URL = 'https://storage.ko-fi.com/cdn/kofi3.png?v=6';
 
   let about: AppAboutPayload | null = null;
   let aboutLoading = true;
@@ -150,6 +152,9 @@
           <h3>{about.name}</h3>
           <p>Installed version {about.version}</p>
         </div>
+        <a class="kofi-link" href={KOFI_URL} target="_blank" rel="noreferrer" aria-label="Support SeevyDeepy on Ko-fi">
+          <img height="36" src={KOFI_BUTTON_IMAGE_URL} alt="Buy Me a Coffee at ko-fi.com" />
+        </a>
       </header>
 
       <dl class="about-detail-grid">
@@ -322,6 +327,8 @@
   .about-title-block {
     align-items: center;
     display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
     justify-content: space-between;
   }
 
@@ -335,6 +342,20 @@
   .about-title-block h3 {
     color: var(--text-primary);
     font-size: 1.25rem;
+  }
+
+  .kofi-link {
+    display: inline-flex;
+    flex: 0 0 auto;
+    line-height: 0;
+  }
+
+  .kofi-link img {
+    border: 0;
+    display: block;
+    height: 36px;
+    max-width: 100%;
+    width: auto;
   }
 
   .about-title-block p,

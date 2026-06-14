@@ -54,6 +54,14 @@ describe('AboutModal', () => {
     expect(within(dialog).getByText('Installed version 1.0.0')).toBeInTheDocument();
     expect(within(dialog).getByText('stable')).toBeInTheDocument();
     expect(within(dialog).getByText('owner/repo')).toBeInTheDocument();
+    const supportLink = within(dialog).getByRole('link', { name: 'Support SeevyDeepy on Ko-fi' });
+    expect(supportLink).toHaveAttribute('href', 'https://ko-fi.com/Z4I021C66X');
+    expect(supportLink).toHaveAttribute('target', '_blank');
+    expect(supportLink).toHaveAttribute('rel', 'noreferrer');
+    expect(within(supportLink).getByAltText('Buy Me a Coffee at ko-fi.com')).toHaveAttribute(
+      'src',
+      'https://storage.ko-fi.com/cdn/kofi3.png?v=6'
+    );
     expect(within(dialog).getByRole('button', { name: 'Check for updates' })).toBeInTheDocument();
   });
 
