@@ -24,7 +24,7 @@ The following source SVGs were used:
 - `grip` from [`tire_repair_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/tire_repair/materialsymbolsoutlined/tire_repair_fill1_24px.svg)
 - `help` from [`help_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/help/materialsymbolsoutlined/help_fill1_24px.svg)
 - `history` from [`history_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/history/materialsymbolsoutlined/history_fill1_24px.svg)
-- `import` from [`file_download_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/file_download/materialsymbolsoutlined/file_download_fill1_24px.svg)
+- `import` from [`upload_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/upload/materialsymbolsoutlined/upload_fill1_24px.svg)
 - `info` from [`info_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/info/materialsymbolsoutlined/info_fill1_24px.svg)
 - `inputs` from [`gamepad_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/gamepad/materialsymbolsoutlined/gamepad_fill1_24px.svg)
 - `keyboard` from [`keyboard_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/keyboard/materialsymbolsoutlined/keyboard_fill1_24px.svg)
