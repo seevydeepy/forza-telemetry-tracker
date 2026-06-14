@@ -905,8 +905,8 @@ describe('TelemetryCanvas', () => {
     await fireEvent.mouseMove(window, { clientX: 65, clientY: 55 });
     await fireEvent.mouseUp(window);
 
-    await waitFor(() => expect(canvas).toHaveAttribute('data-pan-x', '45'));
-    expect(canvas).toHaveAttribute('data-pan-y', '25');
+    await waitFor(() => expect(canvas).toHaveAttribute('data-target-pan-x', '45'));
+    expect(canvas).toHaveAttribute('data-target-pan-y', '25');
     expect(canvas).toHaveAttribute('data-zoom', '1');
     await waitFor(() => expect(mock.context.stroke).toHaveBeenCalled());
   });
@@ -1165,8 +1165,8 @@ describe('TelemetryCanvas', () => {
     await waitFor(() => {
       const latestLineTo = mock.context.lineTo.mock.calls.at(-1);
       expect(latestLineTo).toBeDefined();
-      const latestViewportX = Number(latestLineTo?.[0]) + Number(canvas?.getAttribute('data-pan-x'));
-      const latestViewportY = Number(latestLineTo?.[1]) + Number(canvas?.getAttribute('data-pan-y'));
+      const latestViewportX = Number(latestLineTo?.[0]) + Number(canvas?.getAttribute('data-target-pan-x'));
+      const latestViewportY = Number(latestLineTo?.[1]) + Number(canvas?.getAttribute('data-target-pan-y'));
 
       expect(latestViewportX).toBeGreaterThanOrEqual(width * 0.4);
       expect(latestViewportX).toBeLessThanOrEqual(width * 0.6);
@@ -1220,9 +1220,9 @@ describe('TelemetryCanvas', () => {
     await waitFor(() => {
       const latestLineTo = mock.context.lineTo.mock.calls.at(-1);
       expect(latestLineTo).toBeDefined();
-      const latestViewportX = Number(latestLineTo?.[0]) + Number(canvas?.getAttribute('data-pan-x'));
+      const latestViewportX = Number(latestLineTo?.[0]) + Number(canvas?.getAttribute('data-target-pan-x'));
 
-      expect(Number(canvas?.getAttribute('data-pan-x'))).toBeCloseTo(-60, 3);
+      expect(Number(canvas?.getAttribute('data-target-pan-x'))).toBeCloseTo(-60, 3);
       expect(latestViewportX).toBeCloseTo(width * 0.6, 3);
     });
   });
