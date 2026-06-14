@@ -2469,7 +2469,9 @@ describe('App', () => {
     const mapSettings = within(dialog).getByLabelText('FH6 world map settings');
     expect(mapSettings).toBeInTheDocument();
     expect(mapSettings).toHaveClass('settings-section');
-    expect(within(mapSettings).getByRole('button', { name: 'How to find the FH6 install folder' })).toBeInTheDocument();
+    const mapSettingsHelpButton = within(mapSettings).getByRole('button', { name: 'How to find the FH6 install folder' });
+    expect(mapSettingsHelpButton).toHaveClass('world-map-install-location-help');
+    expect(mapSettingsHelpButton).not.toHaveClass('app-icon-button');
     expect(within(mapSettings).getAllByRole('button').map((button) => button.textContent?.trim()).filter(Boolean)).toEqual([
       'Build local map cache',
       'Save map settings'
@@ -2583,7 +2585,10 @@ describe('App', () => {
     const mediaRootInput = within(panel).getByLabelText('FH6 Local Install Location');
     expect(mediaRootInput).toHaveAttribute('placeholder', 'e.g. C:\\SteamLibrary\\steamapps\\common\\ForzaHorizon6');
     await waitFor(() => expect(mediaRootInput).toHaveFocus());
-    await fireEvent.click(within(panel).getByRole('button', { name: 'How to find the FH6 install folder' }));
+    const setupHelpButton = within(panel).getByRole('button', { name: 'How to find the FH6 install folder' });
+    expect(setupHelpButton).toHaveClass('world-map-install-location-help');
+    expect(setupHelpButton).not.toHaveClass('app-icon-button');
+    await fireEvent.click(setupHelpButton);
     expect(within(panel).getByText('Open Task Manager.')).toBeInTheDocument();
     expect(within(panel).getByText('Right click the FH6 process.')).toBeInTheDocument();
     await fireEvent.input(mediaRootInput, {
