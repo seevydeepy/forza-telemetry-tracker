@@ -277,7 +277,7 @@ const readyWorldMapTileSet: WorldMapStatus['tile_set'] = {
 const readyWorldMapStatus: WorldMapStatus = {
   status: 'ready',
   settings: {
-    fh6_media_root: 'G:/FH6/media',
+    fh6_media_root: 'G:/FH6',
     world_map_enabled: true,
     world_map_season: 'summer'
   },
@@ -1207,7 +1207,7 @@ function createDefaultFetchHandler(options?: StubOptions) {
         source: {
           available: sourceAvailable,
           path: sourceAvailable
-            ? `${nextSettings.fh6_media_root}/UI/Textures/Data_Bound/Map_Brio_${nextSettings.world_map_season[0].toUpperCase()}${nextSettings.world_map_season.slice(1)}.zip`
+            ? `${nextSettings.fh6_media_root}/media/UI/Textures/Data_Bound/Map_Brio_${nextSettings.world_map_season[0].toUpperCase()}${nextSettings.world_map_season.slice(1)}.zip`
             : null,
           season: nextSettings.world_map_season
         },
@@ -2469,11 +2469,16 @@ describe('App', () => {
     const mapSettings = within(dialog).getByLabelText('FH6 world map settings');
     expect(mapSettings).toBeInTheDocument();
     expect(mapSettings).toHaveClass('settings-section');
-    expect(within(mapSettings).getAllByRole('button').map((button) => button.textContent?.trim())).toEqual([
+    expect(within(mapSettings).getByRole('button', { name: 'How to find the FH6 install folder' })).toBeInTheDocument();
+    expect(within(mapSettings).getAllByRole('button').map((button) => button.textContent?.trim()).filter(Boolean)).toEqual([
       'Build local map cache',
       'Save map settings'
     ]);
-    expect(within(dialog).getByText('FH6 media path is not configured.')).toBeInTheDocument();
+    expect(within(dialog).getByText('FH6 install location is not configured.')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('FH6 Local Install Location')).toHaveAttribute(
+      'placeholder',
+      'e.g. C:\\SteamLibrary\\steamapps\\common\\ForzaHorizon6'
+    );
     expect(dialog).not.toHaveTextContent('For desktop v1');
     expect(dialog).not.toHaveTextContent('New site loads start with this overlay');
     expect(dialog).not.toHaveTextContent('Status summary');
@@ -2485,10 +2490,16 @@ describe('App', () => {
     render(App);
 
     const dialog = await openSettingsModal();
-    expect(within(dialog).getByText(/Map tiles are generated from your local FH6 install/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Link the tracker to your FH6 game install folder/i)).toBeInTheDocument();
 
-    await fireEvent.input(within(dialog).getByLabelText('FH6 media folder'), {
-      target: { value: 'G:/FH6/media' }
+    await fireEvent.click(within(dialog).getByRole('button', { name: 'How to find the FH6 install folder' }));
+    expect(within(dialog).getByText('Start the game.')).toBeInTheDocument();
+    expect(within(dialog).getByText(/The folder that opens is the folder the tracker needs/i)).toBeInTheDocument();
+    await fireEvent.click(within(dialog).getByRole('button', { name: 'How to find the FH6 install folder' }));
+    expect(within(dialog).queryByText('Start the game.')).toBeNull();
+
+    await fireEvent.input(within(dialog).getByLabelText('FH6 Local Install Location'), {
+      target: { value: 'G:/FH6' }
     });
     await fireEvent.click(within(dialog).getByLabelText('Enable world map overlay'));
     await fireEvent.click(within(dialog).getByRole('button', { name: 'Build local map cache' }));
@@ -2500,7 +2511,7 @@ describe('App', () => {
             requestUrl(input as RequestInfo | URL) === '/api/map/settings' &&
             init?.method === 'PATCH' &&
             init.body === JSON.stringify({
-              fh6_media_root: 'G:/FH6/media',
+              fh6_media_root: 'G:/FH6',
               world_map_enabled: true,
               world_map_season: 'summer'
             })
@@ -2543,7 +2554,7 @@ describe('App', () => {
             requestUrl(input as RequestInfo | URL) === '/api/map/settings' &&
             init?.method === 'PATCH' &&
             init.body === JSON.stringify({
-              fh6_media_root: 'G:/FH6/media',
+              fh6_media_root: 'G:/FH6',
               world_map_enabled: false,
               world_map_season: 'summer'
             })
@@ -2567,12 +2578,16 @@ describe('App', () => {
 
     await fireEvent.click(setupToggle);
 
-    const panel = within(stage).getByRole('region', { name: 'FH6 world map setup' });
-    expect(panel).toHaveTextContent('Map cache has not been initialized.');
-    const mediaRootInput = within(panel).getByLabelText('FH6 media folder');
+    const panel = screen.getByRole('dialog', { name: 'World Map Setup' });
+    expect(panel).toHaveTextContent('Link the tracker to your FH6 game install folder.');
+    const mediaRootInput = within(panel).getByLabelText('FH6 Local Install Location');
+    expect(mediaRootInput).toHaveAttribute('placeholder', 'e.g. C:\\SteamLibrary\\steamapps\\common\\ForzaHorizon6');
     await waitFor(() => expect(mediaRootInput).toHaveFocus());
+    await fireEvent.click(within(panel).getByRole('button', { name: 'How to find the FH6 install folder' }));
+    expect(within(panel).getByText('Open Task Manager.')).toBeInTheDocument();
+    expect(within(panel).getByText('Right click the FH6 process.')).toBeInTheDocument();
     await fireEvent.input(mediaRootInput, {
-      target: { value: 'G:/FH6/media' }
+      target: { value: 'G:/FH6' }
     });
     await fireEvent.click(within(panel).getByRole('button', { name: 'Build local map cache' }));
 
@@ -2583,7 +2598,7 @@ describe('App', () => {
             requestUrl(input as RequestInfo | URL) === '/api/map/settings' &&
             init?.method === 'PATCH' &&
             init.body === JSON.stringify({
-              fh6_media_root: 'G:/FH6/media',
+              fh6_media_root: 'G:/FH6',
               world_map_enabled: true,
               world_map_season: 'summer'
             })
@@ -2600,7 +2615,7 @@ describe('App', () => {
         )
       ).toBe(true)
     );
-    await waitFor(() => expect(within(stage).queryByRole('region', { name: 'FH6 world map setup' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'World Map Setup' })).toBeNull());
     await waitFor(() => expect(canvas).toHaveAttribute('data-world-map-tile-set-id', 'fh6-brio-summer'));
     expect(within(stage).getByRole('button', { name: 'Hide map overlay' })).toHaveAttribute('aria-pressed', 'true');
   });
@@ -2610,7 +2625,7 @@ describe('App', () => {
       ...defaultWorldMapStatus,
       status: 'source_missing',
       settings: {
-        fh6_media_root: 'G:/Wrong/media',
+        fh6_media_root: 'G:/Wrong',
         world_map_enabled: true,
         world_map_season: 'summer'
       },
@@ -2633,14 +2648,14 @@ describe('App', () => {
     const stage = getVisualisationStage();
     await fireEvent.click(within(stage).getByRole('button', { name: 'Set up map overlay' }));
 
-    const panel = within(stage).getByRole('region', { name: 'FH6 world map setup' });
-    await fireEvent.input(within(panel).getByLabelText('FH6 media folder'), {
-      target: { value: 'G:/Wrong/media' }
+    const panel = screen.getByRole('dialog', { name: 'World Map Setup' });
+    await fireEvent.input(within(panel).getByLabelText('FH6 Local Install Location'), {
+      target: { value: 'G:/Wrong' }
     });
     await fireEvent.click(within(panel).getByRole('button', { name: 'Build local map cache' }));
 
-    await waitFor(() => expect(within(stage).getByRole('region', { name: 'FH6 world map setup' })).toBeInTheDocument());
-    await waitFor(() => expect(within(stage).getByText('Seasonal map archive was not found.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'World Map Setup' })).toBeInTheDocument());
+    await waitFor(() => expect(within(panel).getByText('Seasonal map archive was not found.')).toBeInTheDocument());
     expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-world-map-tile-set-id', '');
   });
 
@@ -2819,7 +2834,7 @@ describe('App', () => {
       ...defaultWorldMapStatus,
       status: 'converter_missing',
       converter: { available: false, path: null },
-      settings: { ...defaultWorldMapStatus.settings, fh6_media_root: 'G:\\SteamLibrary\\steamapps\\common\\ForzaHorizon6\\media', world_map_enabled: true },
+      settings: { ...defaultWorldMapStatus.settings, fh6_media_root: 'G:\\SteamLibrary\\steamapps\\common\\ForzaHorizon6', world_map_enabled: true },
       source: { ...defaultWorldMapStatus.source, available: true }
     };
     stubApiFetch({ worldMapStatus });

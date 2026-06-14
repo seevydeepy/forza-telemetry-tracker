@@ -629,39 +629,11 @@ button {
 
 
 .world-map-setup-panel {
-  backdrop-filter: var(--canvas-overlay-backdrop-filter);
-  background: var(--canvas-overlay-panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 1rem;
-  bottom: calc(var(--canvas-bottom-overlay-offset) + var(--section-summary-control-clearance));
-  box-shadow: 0 20px 60px rgb(0 0 0 / 38%);
   color: var(--text-primary);
   display: grid;
   gap: 0.75rem;
-  max-height: min(540px, calc(100% - 7rem));
-  overflow: auto;
-  padding: 0.85rem;
-  position: absolute;
-  right: var(--canvas-floating-margin);
-  width: min(440px, calc(100% - var(--canvas-floating-margin) - var(--canvas-floating-margin)));
-  z-index: 7;
-}
-
-.world-map-setup-header {
-  align-items: flex-start;
-  display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
-}
-
-.world-map-setup-header h2,
-.world-map-setup-header p {
-  margin: 0;
-}
-
-.world-map-setup-header p {
-  color: var(--text-secondary);
-  margin-top: 0.2rem;
+  max-width: 34rem;
+  min-width: min(30rem, calc(100vw - 96px));
 }
 
 .world-map-setup-panel label {
@@ -673,7 +645,6 @@ button {
   color: var(--text-secondary);
 }
 
-.world-map-setup-panel input,
 .world-map-setup-panel select {
   background: #18181b;
   border: 1px solid var(--panel-border);
@@ -713,12 +684,6 @@ button {
 .world-map-setup-actions {
   display: flex;
   justify-content: flex-end;
-}
-
-.world-map-setup-panel .app-icon-button {
-  backdrop-filter: none;
-  background: var(--canvas-overlay-control-bg);
-  box-shadow: none;
 }
 
 .floating-section-summary {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { buildWorldMapCache, updateWorldMapSettings } from './api';
+  import WorldMapInstallLocationField from './WorldMapInstallLocationField.svelte';
   import type { WorldMapSeason, WorldMapSettings, WorldMapStatus } from './types';
 
   export let status: WorldMapStatus | null = null;
@@ -82,7 +83,7 @@
   }
 
   function sourceStatusLabel(nextStatus: WorldMapStatus | null, nextMediaRoot: string) {
-    if (!nextMediaRoot.trim()) return 'FH6 media path is not configured.';
+    if (!nextMediaRoot.trim()) return 'FH6 install location is not configured.';
     if (!nextStatus) return 'World map source status has not loaded yet.';
     return nextStatus.source.available
       ? `Source archive found for ${nextStatus.source.season}.`
@@ -104,7 +105,7 @@
       case 'converter_missing':
         return 'Map converter is missing from this installation. Reinstall the tracker or install a repaired build.';
       case 'source_missing':
-        return 'Waiting for a valid FH6 media path and seasonal map archive.';
+        return 'Waiting for a valid FH6 install location and seasonal map archive.';
       case 'error':
         return nextStatus.error_message ?? 'Last map cache build failed.';
       default:
@@ -123,19 +124,11 @@
 <section class="settings-section world-map-panel" aria-label="FH6 world map settings">
   <h3>FH6 world map</h3>
   <p class="settings-hint">
-    Map tiles are generated from your local FH6 install and stored only in your local tracker cache.
+    Link the tracker to your FH6 game install folder. Map tiles are generated from your local FH6 install and stored only in your local tracker cache.
     The app does not bundle or upload map assets.
   </p>
 
-  <label>
-    <span>FH6 media folder</span>
-    <input
-      aria-label="FH6 media folder"
-      bind:value={mediaRoot}
-      placeholder="G:\SteamLibrary\steamapps\common\ForzaHorizon6\media"
-      disabled={busy}
-    />
-  </label>
+  <WorldMapInstallLocationField bind:value={mediaRoot} disabled={busy} />
 
   <div class="world-map-grid">
     <label>

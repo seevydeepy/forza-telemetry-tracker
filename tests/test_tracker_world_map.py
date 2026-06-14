@@ -20,6 +20,7 @@ from telemetry_tracker.world_map import (
     build_world_map_cache,
     load_map_calibration,
     parse_tile_entry_name,
+    resolve_media_root,
     safe_cache_tile_path,
     season_source_zip,
     tile_world_bounds,
@@ -108,22 +109,28 @@ def _make_fake_converter(root: Path) -> Path:
 
 class WorldMapHelperTests(unittest.TestCase):
     def test_season_source_zip_returns_canonical_source_archive(self):
-        media_root = Path("G:/FH6/media")
+        install_root = Path("G:/FH6")
 
         self.assertEqual(
-            season_source_zip(media_root, "summer"),
-            media_root / "UI" / "Textures" / "Data_Bound" / "Map_Brio_Summer.zip",
+            season_source_zip(install_root, "summer"),
+            install_root / "media" / "UI" / "Textures" / "Data_Bound" / "Map_Brio_Summer.zip",
         )
 
     def test_season_source_zip_rejects_unknown_season(self):
         with self.assertRaisesRegex(ValueError, "season"):
-            season_source_zip(Path("G:/FH6/media"), "monsoon")
+            season_source_zip(Path("G:/FH6"), "monsoon")
+
+    def test_resolve_media_root_rejects_direct_media_folder(self):
+        for direct_media_root in (Path("G:/FH6/media"), Path("G:/FH6/Media"), Path("G:/FH6/media/")):
+            with self.subTest(direct_media_root=direct_media_root):
+                with self.assertRaisesRegex(ValueError, "top-level FH6 install folder"):
+                    resolve_media_root(direct_media_root)
 
     def test_load_map_calibration_reads_values_from_ui_zip(self):
         with tempfile.TemporaryDirectory() as tmp:
             media_root = _make_media_root(Path(tmp), include_ui_zip=True)
 
-            calibration = load_map_calibration(media_root)
+            calibration = load_map_calibration(media_root.parent)
 
         self.assertEqual(calibration["world_origin_x"], -12548.0)
         self.assertEqual(calibration["world_origin_z"], -11281.0)
@@ -133,7 +140,7 @@ class WorldMapHelperTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             media_root = _make_media_root(Path(tmp), include_ui_zip=False)
 
-            calibration = load_map_calibration(media_root)
+            calibration = load_map_calibration(media_root.parent)
 
         self.assertEqual(calibration["world_origin_x"], DEFAULT_WORLD_ORIGIN_X)
         self.assertEqual(calibration["world_origin_z"], DEFAULT_WORLD_ORIGIN_Z)
@@ -189,7 +196,7 @@ class WorldMapHelperTests(unittest.TestCase):
 
             status = build_world_map_cache(
                 store=store,
-                media_root=media_root,
+                media_root=media_root.parent,
                 season="summer",
                 converter_path=converter,
             )
@@ -201,6 +208,24 @@ class WorldMapHelperTests(unittest.TestCase):
         self.assertEqual(tile_set["manifest"]["worldOriginX"], DEFAULT_WORLD_ORIGIN_X)
         self.assertEqual(tile_set["manifest"]["tileCoordinateSystem"], TILE_COORDINATE_SYSTEM)
         self.assertEqual(tile_set["manifest"]["tiles"][0]["path"], "0/0/0.png")
+
+    def test_build_world_map_cache_rejects_direct_media_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            media_root = _make_media_root(root)
+            converter = _make_fake_converter(root)
+            store = TelemetryStore(root / "telemetry_tracker.sqlite3")
+            store.migrate()
+
+            status = build_world_map_cache(
+                store=store,
+                media_root=media_root,
+                season="summer",
+                converter_path=converter,
+            )
+
+        self.assertEqual(status["status"], "source_missing")
+        self.assertIn("top-level FH6 install folder", status["error_message"])
 
 
 class WorldMapApiTests(unittest.TestCase):
@@ -220,7 +245,7 @@ class WorldMapApiTests(unittest.TestCase):
                     settings = client.patch(
                         "/api/map/settings",
                         json={
-                            "fh6_media_root": str(media_root),
+                            "fh6_media_root": str(media_root.parent),
                             "world_map_enabled": True,
                             "world_map_season": "summer",
                         },
@@ -257,7 +282,7 @@ class WorldMapApiTests(unittest.TestCase):
             tile_path.parent.mkdir(parents=True)
             tile_path.write_bytes(PNG_BYTES)
             app.state.store.update_world_map_settings(
-                media_root=str(media_root),
+                media_root=str(media_root.parent),
                 enabled=True,
                 season="summer",
             )
@@ -367,7 +392,7 @@ class WorldMapApiTests(unittest.TestCase):
             paths = default_desktop_paths(resource_base=resources, user_data_base=root / "data")
             app = create_app(runtime_paths=paths)
             with TestClient(app) as client:
-                client.patch("/api/map/settings", json={"fh6_media_root": str(media_root), "world_map_enabled": True, "world_map_season": "summer"})
+                client.patch("/api/map/settings", json={"fh6_media_root": str(media_root.parent), "world_map_enabled": True, "world_map_season": "summer"})
                 response = client.post("/api/map/cache/build", json={"season": "summer"})
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["status"], "ready")

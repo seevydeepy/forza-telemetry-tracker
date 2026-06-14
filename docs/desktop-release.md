@@ -85,7 +85,7 @@ There is intentionally no automatic installer launch and no in-app executable ve
 8. Verify `/events` connects during smoke testing.
 9. Send a sample Data Out UDP packet to `127.0.0.1:5400` and confirm receipt.
 10. Record telemetry and confirm `telemetry_tracker.sqlite3` under `%LOCALAPPDATA%\Forza Telemetry Tracker`.
-11. Build the world-map cache from a valid local FH6 media folder.
+11. Build the world-map cache from a valid local FH6 install folder.
 12. Confirm generated tiles under `%LOCALAPPDATA%\Forza Telemetry Tracker\map-cache`.
 13. Close the app and verify HTTP and UDP ports are released.
 14. Install an older build, configure a private release token if the repo is private, detect a newer stable release from About, open the GitHub Release link, and install the newer build manually.

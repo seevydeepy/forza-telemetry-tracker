@@ -3282,13 +3282,13 @@ class TelemetryStoreTests(unittest.TestCase):
             store.migrate()
 
             settings = store.update_world_map_settings(
-                media_root=" G:/SteamLibrary/steamapps/common/ForzaHorizon6/media ",
+                media_root=" G:/SteamLibrary/steamapps/common/ForzaHorizon6 ",
                 enabled=True,
                 season="Winter",
             )
             reread = store.world_map_settings()
 
-        self.assertEqual(settings["fh6_media_root"], "G:/SteamLibrary/steamapps/common/ForzaHorizon6/media")
+        self.assertEqual(settings["fh6_media_root"], "G:/SteamLibrary/steamapps/common/ForzaHorizon6")
         self.assertEqual(settings["world_map_enabled"], True)
         self.assertEqual(settings["world_map_season"], "winter")
         self.assertEqual(reread, settings)

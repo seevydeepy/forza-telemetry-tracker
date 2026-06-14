@@ -36,9 +36,25 @@ _TILE_ENTRY_RE = re.compile(r"^(\d+)-(\d+)-(\d+)\.swatchbin$", re.IGNORECASE)
 _FLOAT_RE = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)"
 
 
-def season_source_zip(media_root: Path, season: str) -> Path:
+def resolve_media_root(install_root: Path) -> Path:
+    """Resolve the FH6 media folder inside a configured install root."""
+
+    root = Path(install_root).expanduser()
+    if root.name.lower() == "media":
+        raise ValueError(
+            f"FH6 install location must be the top-level FH6 install folder, not the media folder: {root}"
+        )
+    return root / "media"
+
+
+def season_source_zip(install_root: Path, season: str) -> Path:
     """Return the canonical seasonal FH6 world-map source archive path."""
 
+    media_root = resolve_media_root(install_root)
+    return _season_source_zip_from_media_root(media_root, season)
+
+
+def _season_source_zip_from_media_root(media_root: Path, season: str) -> Path:
     normalized = _validate_season(season)
     season_title = normalized.title()
     return (
@@ -60,10 +76,11 @@ def parse_tile_entry_name(entry_name: str) -> tuple[int, int, int]:
     return z, column, row
 
 
-def load_map_calibration(media_root: Path) -> dict[str, float]:
+def load_map_calibration(install_root: Path) -> dict[str, float]:
     """Load FH6 map calibration from ``UI.zip`` with a safe canonical fallback."""
 
     calibration = _default_calibration()
+    media_root = resolve_media_root(install_root)
     ui_zip = Path(media_root) / "UI" / "Textures" / "Data_Bound" / "UI.zip"
     if not ui_zip.exists():
         return calibration
@@ -156,14 +173,18 @@ def build_world_map_cache(
     """Build a local PNG tile cache from a user's FH6 install."""
 
     normalized_season = _validate_season(season)
-    media_root = Path(media_root).expanduser()
-    source_zip = season_source_zip(media_root, normalized_season)
+    install_root = Path(media_root).expanduser()
     target_cache_root = Path(cache_root) if cache_root is not None else store.db_path.parent / "map-cache"
     cache_dir = target_cache_root / "fh6" / DEFAULT_MAP_NAME / normalized_season
     tile_set_id = _tile_set_id(normalized_season)
-    calibration = load_map_calibration(media_root)
+    calibration = _default_calibration()
 
-    if not media_root.exists() or not media_root.is_dir():
+    try:
+        resolved_media_root = resolve_media_root(install_root)
+        source_zip = _season_source_zip_from_media_root(resolved_media_root, normalized_season)
+        calibration = load_map_calibration(install_root)
+    except ValueError as exc:
+        source_zip = _season_source_zip_from_media_root(install_root, normalized_season)
         return _store_error_status(
             store=store,
             status="source_missing",
@@ -172,7 +193,30 @@ def build_world_map_cache(
             source_zip=source_zip,
             cache_dir=cache_dir,
             calibration=calibration,
-            error_message=f"FH6 media root does not exist: {media_root}",
+            error_message=str(exc),
+        )
+
+    if not install_root.exists() or not install_root.is_dir():
+        return _store_error_status(
+            store=store,
+            status="source_missing",
+            tile_set_id=tile_set_id,
+            season=normalized_season,
+            source_zip=source_zip,
+            cache_dir=cache_dir,
+            calibration=calibration,
+            error_message=f"FH6 install root does not exist: {install_root}",
+        )
+    if not resolved_media_root.exists() or not resolved_media_root.is_dir():
+        return _store_error_status(
+            store=store,
+            status="source_missing",
+            tile_set_id=tile_set_id,
+            season=normalized_season,
+            source_zip=source_zip,
+            cache_dir=cache_dir,
+            calibration=calibration,
+            error_message=f"FH6 media folder does not exist inside the install root: {resolved_media_root}",
         )
     if not source_zip.exists():
         return _store_error_status(
@@ -315,8 +359,15 @@ def world_map_status_payload(
     source_zip: Path | None = None
     source_available = False
     if media_root_text:
-        source_zip = season_source_zip(Path(str(media_root_text)), season)
-        source_available = source_zip.exists()
+        try:
+            source_zip = season_source_zip(Path(str(media_root_text)), season)
+            source_available = source_zip.exists()
+        except ValueError:
+            source_zip = _season_source_zip_from_media_root(
+                Path(str(media_root_text)),
+                season,
+            )
+            source_available = False
     tile_set = store.latest_world_map_tile_set("fh6", DEFAULT_MAP_NAME, season)
     tile_set_is_current = tile_set_uses_current_tile_coordinates(tile_set)
     enriched_tile_set = _api_tile_set(tile_set) if tile_set_is_current else None
@@ -637,6 +688,7 @@ __all__ = [
     "load_map_calibration",
     "parse_tile_entry_name",
     "resolve_converter_path",
+    "resolve_media_root",
     "safe_cache_tile_path",
     "season_source_zip",
     "tile_world_bounds",
