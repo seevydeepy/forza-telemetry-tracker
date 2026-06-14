@@ -46,14 +46,29 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
 
 [Code]
-function IsWebView2Installed: Boolean;
+const
+  WebView2AlreadyInstalledExitCode = -2147219416; // Inno reports 0x80040828 as a signed Integer.
+  WebView2ClientKey = 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
+
+function HasWebView2Version(const RootKey: Integer; const RootName: String): Boolean;
 var
   Version: String;
 begin
+  Result := RegQueryStringValue(RootKey, WebView2ClientKey, 'pv', Version) and
+    (Version <> '') and (Version <> '0.0.0.0');
+  if Result then begin
+    Log('Detected Microsoft Edge WebView2 Runtime ' + Version + ' in ' + RootName + '\' + WebView2ClientKey + '.');
+  end;
+end;
+
+function IsWebView2Installed: Boolean;
+begin
+  // Microsoft documents the 64-bit Windows per-machine key in the 32-bit registry view.
   Result :=
-    RegQueryStringValue(HKCU, 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version) or
-    RegQueryStringValue(HKLM, 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version) or
-    RegQueryStringValue(HKLM64, 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version);
+    HasWebView2Version(HKCU, 'HKCU') or
+    HasWebView2Version(HKLM32, 'HKLM32') or
+    HasWebView2Version(HKLM, 'HKLM') or
+    HasWebView2Version(HKLM64, 'HKLM64');
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
@@ -69,6 +84,10 @@ begin
       exit;
     end;
     if ResultCode <> 0 then begin
+      if ResultCode = WebView2AlreadyInstalledExitCode then begin
+        Log('Microsoft Edge WebView2 Runtime installer reported that the runtime is already installed; continuing.');
+        exit;
+      end;
       Result := 'Microsoft Edge WebView2 Runtime installation failed with exit code ' + IntToStr(ResultCode) + '.';
       exit;
     end;
