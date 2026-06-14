@@ -38,5 +38,16 @@ a = Analysis(
     optimize=0,
 )
 pyz = PYZ(a.pure)
-exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="ForzaTelemetryTracker", debug=False, strip=False, upx=True, console=False)
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name="ForzaTelemetryTracker",
+    debug=False,
+    strip=False,
+    upx=True,
+    console=False,
+    icon=str(ROOT / "packaging" / "icons" / "forza-telemetry-tracker.ico"),
+)
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=True, upx_exclude=[], name="ForzaTelemetryTracker")
