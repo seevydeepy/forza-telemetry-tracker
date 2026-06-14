@@ -9,6 +9,7 @@ import sys
 import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import httpx
 import uvicorn
@@ -25,6 +26,14 @@ from telemetry_tracker.storage import TelemetryStore
 
 DEFAULT_HTTP_HOST = "127.0.0.1"
 BACKEND_READY_TIMEOUT_SECONDS = 20.0
+
+
+def load_webview():
+    try:
+        import webview  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise RuntimeError("pywebview is required for the desktop launcher") from exc
+    return webview
 
 
 def allocate_local_port() -> int:
@@ -155,6 +164,51 @@ class DesktopBackend:
         self._server = None
 
 
+class DesktopBridge:
+    def __init__(self, webview_module=None) -> None:
+        self._webview = webview_module
+        self._window = None
+
+    def bind_window(self, window) -> None:
+        self._window = window
+
+    def _webview_module(self):
+        if self._webview is None:
+            self._webview = load_webview()
+        return self._webview
+
+    def _dialog_window(self):
+        if self._window is not None:
+            return self._window
+        windows = getattr(self._webview_module(), "windows", None)
+        if isinstance(windows, list) and windows:
+            return windows[0]
+        return None
+
+    def choose_fh6_install_folder(self, current_path: str | None = None) -> str | None:
+        window = self._dialog_window()
+        if window is None:
+            return None
+
+        directory = ""
+        if current_path:
+            try:
+                candidate = Path(str(current_path)).expanduser()
+                if candidate.exists() and candidate.is_dir():
+                    directory = str(candidate)
+            except OSError:
+                directory = ""
+
+        selected = window.create_file_dialog(
+            self._webview_module().FOLDER_DIALOG,
+            directory=directory,
+            allow_multiple=False,
+        )
+        if not selected:
+            return None
+        return str(selected[0])
+
+
 def run_smoke_http_only(paths: DesktopPaths | None = None) -> int:
     resolved_paths = paths or default_desktop_paths()
     resolved_paths.ensure_user_directories()
@@ -177,11 +231,15 @@ def run_desktop_app(paths: DesktopPaths | None = None) -> int:
     backend = DesktopBackend(paths=resolved_paths, http_port=port)
     backend.start()
     try:
-        try:
-            import webview  # type: ignore[import-not-found]
-        except ImportError as exc:
-            raise RuntimeError("pywebview is required for the desktop launcher") from exc
-        webview.create_window("Forza Telemetry Tracker", desktop_url(port), min_size=(1200, 780))
+        webview = load_webview()
+        bridge = DesktopBridge(webview)
+        window = webview.create_window(
+            "Forza Telemetry Tracker",
+            desktop_url(port),
+            min_size=(1200, 780),
+            js_api=bridge,
+        )
+        bridge.bind_window(window)
         webview.start()
         return 0
     finally:

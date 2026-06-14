@@ -1804,6 +1804,16 @@ async function loadSessionFromBrowser(sessionLabel: string) {
   await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Sessions' })).not.toBeInTheDocument());
 }
 
+function stubDesktopFolderPicker(selectedPath: string | null) {
+  const choose_fh6_install_folder = vi.fn(async (_currentPath: string | null = null) => selectedPath);
+  vi.stubGlobal('pywebview', {
+    api: {
+      choose_fh6_install_folder
+    }
+  });
+  return choose_fh6_install_folder;
+}
+
 beforeAll(() => {
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
@@ -2472,6 +2482,7 @@ describe('App', () => {
     const mapSettingsHelpButton = within(mapSettings).getByRole('button', { name: 'How to find the FH6 install folder' });
     expect(mapSettingsHelpButton).toHaveClass('world-map-install-location-help');
     expect(mapSettingsHelpButton).not.toHaveClass('app-icon-button');
+    expect(within(mapSettings).queryByRole('button', { name: 'Browse for FH6 install folder' })).not.toBeInTheDocument();
     expect(within(mapSettings).getAllByRole('button').map((button) => button.textContent?.trim()).filter(Boolean)).toEqual([
       'Build local map cache',
       'Save map settings'
@@ -2485,6 +2496,52 @@ describe('App', () => {
     expect(dialog).not.toHaveTextContent('New site loads start with this overlay');
     expect(dialog).not.toHaveTextContent('Status summary');
     expect(within(dialog).getByRole('button', { name: 'Reset floating panels and layout' })).toBeInTheDocument();
+  });
+
+  it('uses the desktop folder picker for FH6 world map settings when the bridge is available', async () => {
+    const chooseInstallFolder = stubDesktopFolderPicker('D:\\SteamLibrary\\steamapps\\common\\ForzaHorizon6');
+    stubApiFetch({ worldMapStatus: readyWorldMapStatus });
+    render(App);
+
+    const dialog = await openSettingsModal();
+    const mapSettings = within(dialog).getByLabelText('FH6 world map settings');
+    const installLocationInput = within(mapSettings).getByLabelText('FH6 Local Install Location');
+    await waitFor(() => expect(installLocationInput).toHaveValue('G:/FH6'));
+
+    await fireEvent.click(within(mapSettings).getByRole('button', { name: 'Browse for FH6 install folder' }));
+
+    await waitFor(() => expect(chooseInstallFolder).toHaveBeenCalledWith('G:/FH6'));
+    await waitFor(() => expect(installLocationInput).toHaveValue('D:\\SteamLibrary\\steamapps\\common\\ForzaHorizon6'));
+  });
+
+  it('shows the FH6 install folder browse button when the desktop bridge becomes ready after mount', async () => {
+    stubApiFetch({ worldMapStatus: readyWorldMapStatus });
+    render(App);
+
+    const dialog = await openSettingsModal();
+    const mapSettings = within(dialog).getByLabelText('FH6 world map settings');
+    expect(within(mapSettings).queryByRole('button', { name: 'Browse for FH6 install folder' })).not.toBeInTheDocument();
+
+    stubDesktopFolderPicker('D:\\SteamLibrary\\steamapps\\common\\ForzaHorizon6');
+    window.dispatchEvent(new Event('pywebviewready'));
+
+    expect(await within(mapSettings).findByRole('button', { name: 'Browse for FH6 install folder' })).toBeInTheDocument();
+  });
+
+  it('leaves the current FH6 install location unchanged when the desktop folder picker is cancelled', async () => {
+    const chooseInstallFolder = stubDesktopFolderPicker(null);
+    stubApiFetch({ worldMapStatus: readyWorldMapStatus });
+    render(App);
+
+    const dialog = await openSettingsModal();
+    const mapSettings = within(dialog).getByLabelText('FH6 world map settings');
+    const installLocationInput = within(mapSettings).getByLabelText('FH6 Local Install Location');
+    await waitFor(() => expect(installLocationInput).toHaveValue('G:/FH6'));
+
+    await fireEvent.click(within(mapSettings).getByRole('button', { name: 'Browse for FH6 install folder' }));
+
+    await waitFor(() => expect(chooseInstallFolder).toHaveBeenCalledWith('G:/FH6'));
+    expect(installLocationInput).toHaveValue('G:/FH6');
   });
 
   it('saves FH6 world map settings and builds the local map cache from settings', async () => {

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { canChooseFh6InstallFolder, chooseFh6InstallFolder } from './desktopBridge';
   import Icon from './Icon.svelte';
 
   export let value = '';
@@ -15,6 +17,15 @@
   let helpOpen = false;
   let helpLeft = POPOVER_GAP;
   let helpTop = POPOVER_GAP;
+  let folderPickerAvailable = false;
+  let choosingFolder = false;
+  let folderPickerError = '';
+
+  onMount(() => {
+    refreshFolderPickerAvailability();
+    window.addEventListener('pywebviewready', refreshFolderPickerAvailability);
+    return () => window.removeEventListener('pywebviewready', refreshFolderPickerAvailability);
+  });
 
   function toggleHelp(event: MouseEvent) {
     const trigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
@@ -28,6 +39,26 @@
 
   function clamp(value: number, min: number, max: number) {
     return Math.max(min, Math.min(value, Math.max(min, max)));
+  }
+
+  function refreshFolderPickerAvailability() {
+    folderPickerAvailable = canChooseFh6InstallFolder();
+  }
+
+  async function browseForInstallFolder() {
+    if (!folderPickerAvailable || disabled || choosingFolder) return;
+    folderPickerError = '';
+    choosingFolder = true;
+    try {
+      const selected = await chooseFh6InstallFolder(value);
+      if (selected) {
+        value = selected;
+      }
+    } catch {
+      folderPickerError = 'Unable to open the FH6 install folder picker.';
+    } finally {
+      choosingFolder = false;
+    }
   }
 </script>
 
@@ -45,15 +76,31 @@
       <Icon name="help" size={18} />
     </button>
   </div>
-  <input
-    id={inputId}
-    aria-describedby={helpOpen ? helpId : undefined}
-    aria-label="FH6 Local Install Location"
-    bind:this={inputElement}
-    bind:value
-    {placeholder}
-    {disabled}
-  />
+  <div class="world-map-install-location-input-row">
+    <input
+      id={inputId}
+      aria-describedby={helpOpen ? helpId : undefined}
+      aria-label="FH6 Local Install Location"
+      bind:this={inputElement}
+      bind:value
+      {placeholder}
+      {disabled}
+    />
+    {#if folderPickerAvailable}
+      <button
+        type="button"
+        class="world-map-install-location-browse"
+        aria-label="Browse for FH6 install folder"
+        disabled={disabled || choosingFolder}
+        on:click={browseForInstallFolder}
+      >
+        {choosingFolder ? 'Browsing…' : 'Browse'}
+      </button>
+    {/if}
+  </div>
+  {#if folderPickerError}
+    <p class="world-map-install-location-error" role="alert">{folderPickerError}</p>
+  {/if}
   {#if helpOpen}
     <div
       id={helpId}
@@ -116,15 +163,49 @@
     outline-offset: 2px;
   }
 
+  .world-map-install-location-input-row {
+    align-items: stretch;
+    display: flex;
+    gap: 0.5rem;
+    min-width: 0;
+    width: 100%;
+  }
+
   .world-map-install-location input {
     background: #18181b;
     border: 1px solid var(--panel-border);
     border-radius: 0.65rem;
     box-sizing: border-box;
     color: #e2e8f0;
+    flex: 1 1 auto;
     min-width: 0;
     padding: 0.5rem 0.6rem;
     width: 100%;
+  }
+
+  .world-map-install-location-browse {
+    background: var(--canvas-overlay-control-bg);
+    border: 1px solid #52525b;
+    border-radius: 0.65rem;
+    color: var(--text-primary);
+    flex: 0 0 auto;
+    min-width: 5.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .world-map-install-location-browse:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .world-map-install-location-browse:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .world-map-install-location-error {
+    color: #fecaca;
+    margin: 0;
   }
 
   .world-map-install-location-popover {

@@ -7,11 +7,13 @@ from unittest.mock import MagicMock, patch
 
 from telemetry_tracker.app_paths import default_desktop_paths
 from telemetry_tracker.desktop_launcher import (
+    DesktopBridge,
     DesktopBackend,
     allocate_local_port,
     configure_desktop_logging,
     desktop_url,
     ensure_udp_port_available,
+    run_desktop_app,
 )
 
 
@@ -62,6 +64,98 @@ class DesktopLauncherTests(unittest.TestCase):
         self.assertTrue(fake_server.should_exit)
         config_class.assert_called_once()
         self.assertIsNone(config_class.call_args.kwargs["log_config"])
+
+    def test_desktop_bridge_returns_selected_fh6_install_folder(self):
+        fake_window = MagicMock()
+        fake_window.create_file_dialog.return_value = [r"C:\SteamLibrary\steamapps\common\ForzaHorizon6"]
+        fake_webview = MagicMock()
+        fake_webview.FOLDER_DIALOG = 20
+        bridge = DesktopBridge()
+        bridge.bind_window(fake_window)
+
+        with patch("telemetry_tracker.desktop_launcher.load_webview", return_value=fake_webview):
+            selected = bridge.choose_fh6_install_folder()
+
+        self.assertEqual(selected, r"C:\SteamLibrary\steamapps\common\ForzaHorizon6")
+        fake_window.create_file_dialog.assert_called_once_with(
+            20,
+            directory="",
+            allow_multiple=False,
+        )
+
+    def test_desktop_bridge_uses_existing_current_folder_as_dialog_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_window = MagicMock()
+            fake_window.create_file_dialog.return_value = [str(Path(tmp) / "ForzaHorizon6")]
+            fake_webview = MagicMock()
+            fake_webview.FOLDER_DIALOG = 20
+            bridge = DesktopBridge()
+            bridge.bind_window(fake_window)
+
+            with patch("telemetry_tracker.desktop_launcher.load_webview", return_value=fake_webview):
+                bridge.choose_fh6_install_folder(tmp)
+
+        fake_window.create_file_dialog.assert_called_once_with(
+            20,
+            directory=tmp,
+            allow_multiple=False,
+        )
+
+    def test_desktop_bridge_returns_none_when_folder_dialog_is_cancelled(self):
+        fake_window = MagicMock()
+        fake_window.create_file_dialog.return_value = None
+        fake_webview = MagicMock()
+        fake_webview.FOLDER_DIALOG = 20
+        bridge = DesktopBridge()
+        bridge.bind_window(fake_window)
+
+        with patch("telemetry_tracker.desktop_launcher.load_webview", return_value=fake_webview):
+            selected = bridge.choose_fh6_install_folder()
+
+        self.assertIsNone(selected)
+
+    def test_desktop_bridge_uses_pywebview_window_if_called_before_explicit_bind(self):
+        fake_window = MagicMock()
+        fake_window.create_file_dialog.return_value = [r"D:\Games\ForzaHorizon6"]
+        fake_webview = MagicMock()
+        fake_webview.FOLDER_DIALOG = 20
+        fake_webview.windows = [fake_window]
+        bridge = DesktopBridge(fake_webview)
+
+        selected = bridge.choose_fh6_install_folder()
+
+        self.assertEqual(selected, r"D:\Games\ForzaHorizon6")
+        fake_window.create_file_dialog.assert_called_once_with(
+            20,
+            directory="",
+            allow_multiple=False,
+        )
+
+    def test_run_desktop_app_exposes_desktop_bridge_to_pywebview(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = default_desktop_paths(resource_base=Path(tmp) / "resources", user_data_base=Path(tmp) / "data")
+            fake_backend = MagicMock()
+            fake_window = MagicMock()
+            fake_webview = MagicMock()
+            fake_webview.create_window.return_value = fake_window
+
+            with (
+                patch("telemetry_tracker.desktop_launcher.allocate_local_port", return_value=45678),
+                patch("telemetry_tracker.desktop_launcher.DesktopBackend", return_value=fake_backend) as backend_class,
+                patch("telemetry_tracker.desktop_launcher.load_webview", return_value=fake_webview),
+            ):
+                result = run_desktop_app(paths)
+
+        self.assertEqual(result, 0)
+        backend_class.assert_called_once_with(paths=paths, http_port=45678)
+        fake_backend.start.assert_called_once()
+        fake_backend.stop.assert_called_once()
+        fake_webview.create_window.assert_called_once()
+        bridge = fake_webview.create_window.call_args.kwargs["js_api"]
+        self.assertIsInstance(bridge, DesktopBridge)
+        fake_window.create_file_dialog.return_value = [r"E:\FH6"]
+        self.assertEqual(bridge.choose_fh6_install_folder(), r"E:\FH6")
+        fake_webview.start.assert_called_once()
 
     def test_udp_conflict_cancel_raises_before_backend_starts(self):
         from telemetry_tracker.port_conflicts import PortBinding, ProcessConflict
