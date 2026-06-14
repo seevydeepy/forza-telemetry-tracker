@@ -104,9 +104,7 @@ class AppPathTests(unittest.TestCase):
             self.assertEqual(paths.imports_dir, data / "imports")
             self.assertEqual(paths.backups_dir, data / "backups")
             self.assertEqual(paths.exports_dir, data / "exports")
-            self.assertEqual(paths.updates_dir, data / "updates")
             self.assertEqual(paths.release_metadata, root / "release-metadata.json")
-            self.assertEqual(paths.updater_helper, root / "dist" / "ForzaTelemetryTrackerUpdater.exe")
             self.assertEqual(paths.frontend_dist, root / "web" / "telemetry-tracker" / "dist")
             self.assertEqual(
                 paths.car_catalog_supplements,
@@ -134,7 +132,6 @@ class AppPathTests(unittest.TestCase):
             self.assertTrue(paths.imports_dir.is_dir())
             self.assertTrue(paths.backups_dir.is_dir())
             self.assertTrue(paths.exports_dir.is_dir())
-            self.assertTrue(paths.updates_dir.is_dir())
             self.assertFalse(resources.exists())
 
     def test_default_desktop_paths_exports_dir_respects_user_data_override(self):

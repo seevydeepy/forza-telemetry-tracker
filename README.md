@@ -1,6 +1,6 @@
 # Forza Telemetry Tracker
 
-Windows desktop telemetry companion for Forza Horizon 6 Data Out; records local UDP telemetry, stores sessions in SQLite, shows live/review dashboards, supports route/map visualisation from locally owned game files, and can install signed updates from GitHub Releases.
+Windows desktop telemetry companion for Forza Horizon 6 Data Out; records local UDP telemetry, stores sessions in SQLite, shows live/review dashboards, supports route/map visualisation from locally owned game files, and can check GitHub Releases for manual updates.
 
 ## User install flow
 

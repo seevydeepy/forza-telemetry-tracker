@@ -790,7 +790,6 @@ export interface AppAboutUpdates {
   token_configured: boolean;
   token_source: 'credential_manager' | 'environment' | null;
   token_storage_available: boolean;
-  trusted_signer_configured: boolean;
 }
 
 export interface AppAboutPayload {
@@ -816,18 +815,9 @@ export interface AppUpdateCheckResponse {
   message: string;
 }
 
-export type AppUpdateInstallStatus = 'installing' | 'blocked' | 'error';
-
-export interface AppUpdateInstallResponse {
-  status: AppUpdateInstallStatus;
-  message: string;
-  version: string | null;
-}
-
 export interface AppUpdateTokenResponse {
   token_configured: boolean;
   token_source: 'credential_manager' | 'environment' | null;
   token_storage_available: boolean;
-  trusted_signer_configured: boolean;
   message?: string;
 }

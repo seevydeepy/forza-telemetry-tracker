@@ -111,19 +111,7 @@ class DesktopBackend:
             start_udp_listener=True,
             refresh_car_catalog=True,
             refresh_track_catalog=True,
-            request_shutdown=self.request_process_shutdown,
         )
-
-    def request_process_shutdown(self) -> None:
-        """Exit the desktop process shortly after an update install response is sent."""
-
-        def exit_soon() -> None:
-            if self._server is not None:
-                self._server.should_exit = True
-            time.sleep(0.2)
-            os._exit(0)
-
-        threading.Thread(target=exit_soon, name="forza-update-shutdown", daemon=True).start()
 
     def start(self) -> None:
         self.paths.ensure_user_directories()

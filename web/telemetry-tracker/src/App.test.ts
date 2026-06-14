@@ -7,7 +7,6 @@ import { DASHBOARD_WIDGETS } from './dashboardWidgets';
 import type {
   AppAboutPayload,
   AppUpdateCheckResponse,
-  AppUpdateInstallResponse,
   CarInfo,
   DiagnosticsPayload,
   IssueMarker,
@@ -206,8 +205,7 @@ const defaultAppAboutPayload: AppAboutPayload = {
     supported: true,
     token_configured: false,
     token_source: null,
-    token_storage_available: true,
-    trusted_signer_configured: true
+    token_storage_available: true
   }
 };
 
@@ -943,7 +941,6 @@ type StubOptions = {
   diagnostics?: DiagnosticsPayload;
   appAbout?: AppAboutPayload;
   updateCheck?: AppUpdateCheckResponse;
-  updateInstall?: AppUpdateInstallResponse;
   stats?: StatsSummary;
   listenerRestart?: ListenerStatus;
   worldMapStatus?: WorldMapStatus;
@@ -1107,11 +1104,6 @@ function createDefaultFetchHandler(options?: StubOptions) {
   let diagnostics = options?.diagnostics ?? defaultDiagnosticsPayload;
   let appAbout = options?.appAbout ?? defaultAppAboutPayload;
   const updateCheck = options?.updateCheck ?? defaultUpdateCheckPayload;
-  const updateInstall = options?.updateInstall ?? {
-    status: 'installing',
-    message: 'The update installer will run after the app closes.',
-    version: updateCheck.latest_version
-  } satisfies AppUpdateInstallResponse;
   const stats = options?.stats ?? defaultStatsSummary;
   const listenerRestart = options?.listenerRestart ?? {
     ...status.listener,
@@ -1162,7 +1154,6 @@ function createDefaultFetchHandler(options?: StubOptions) {
     if (pathname === '/api/capture') return jsonResponse(capture);
     if (pathname === '/api/app/about') return jsonResponse(appAbout);
     if (pathname === '/api/app/update/check' && init?.method === 'POST') return jsonResponse(updateCheck);
-    if (pathname === '/api/app/update/install' && init?.method === 'POST') return jsonResponse(updateInstall);
     if (pathname === '/api/app/update/token' && init?.method === 'POST') {
       appAbout = {
         ...appAbout,
@@ -1176,7 +1167,6 @@ function createDefaultFetchHandler(options?: StubOptions) {
         token_configured: true,
         token_source: 'credential_manager',
         token_storage_available: true,
-        trusted_signer_configured: true,
         message: 'GitHub update token saved.'
       });
     }
@@ -1193,7 +1183,6 @@ function createDefaultFetchHandler(options?: StubOptions) {
         token_configured: false,
         token_source: null,
         token_storage_available: true,
-        trusted_signer_configured: true,
         message: 'GitHub update token removed.'
       });
     }

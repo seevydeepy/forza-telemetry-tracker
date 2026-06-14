@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -26,10 +26,7 @@ from telemetry_tracker.app_paths import DesktopPaths, default_desktop_paths
 from telemetry_tracker.app_updates import (
     FORZA_APP_ACTION_HEADER,
     FORZA_APP_ACTION_VALUE,
-    UpdateError,
     UpdateService,
-    UpdateUnsupported,
-    UpdateVerificationError,
 )
 from telemetry_tracker.car_catalog import load_local_fh6_catalog
 from telemetry_tracker.car_info import (
@@ -273,10 +270,6 @@ class TrackProfileMergeRequest(BaseModel):
 
 class AppUpdateCheckRequest(BaseModel):
     force: bool = False
-
-
-class AppUpdateInstallRequest(BaseModel):
-    version: str | None = None
 
 
 class AppUpdateTokenRequest(BaseModel):
@@ -2126,7 +2119,6 @@ def create_app(
     map_cache_dir: Path | None = None,
     fh6_media_root: Path | None = None,
     update_service: UpdateService | None = None,
-    request_shutdown: Callable[[], None] | None = None,
 ) -> FastAPI:
     if runtime_paths is not None:
         runtime_paths.ensure_user_directories()
@@ -2175,15 +2167,9 @@ def create_app(
     if update_service is not None and hasattr(update_service, "metadata"):
         release_metadata = update_service.metadata
     if update_service is None:
-        update_paths = runtime_paths or default_desktop_paths()
-        update_service = UpdateService(
-            metadata=release_metadata,
-            updates_dir=update_paths.updates_dir,
-            updater_helper_path=update_paths.updater_helper,
-        )
+        update_service = UpdateService(metadata=release_metadata)
     app.state.release_metadata = release_metadata
     app.state.update_service = update_service
-    app.state.request_shutdown = request_shutdown
     app.state.update_check_lock = asyncio.Lock()
     default_export_dir = (
         Path(runtime_paths.exports_dir)
@@ -2309,34 +2295,6 @@ def create_app(
                 force=bool(request.force) if request is not None else False,
             )
         return result.to_payload()
-
-    @app.post("/api/app/update/install")
-    async def app_update_install(
-        background_tasks: BackgroundTasks,
-        request: AppUpdateInstallRequest | None = None,
-        x_forza_app_action: str | None = Header(default=None, alias=FORZA_APP_ACTION_HEADER),
-    ) -> dict:
-        _require_app_action_header(x_forza_app_action)
-        if bool(capture.status()["recording"]["active"]):
-            raise HTTPException(
-                status_code=409,
-                detail="Stop telemetry capture before installing an update.",
-            )
-        try:
-            payload = await asyncio.to_thread(
-                app.state.update_service.install_update,
-                version=request.version if request is not None else None,
-            )
-        except UpdateUnsupported as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except UpdateVerificationError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except UpdateError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        shutdown = app.state.request_shutdown
-        if callable(shutdown) and payload.get("status") == "installing":
-            background_tasks.add_task(shutdown)
-        return payload
 
     @app.patch("/api/settings")
     async def update_settings(request: VisualiserSettingsRequest) -> dict:

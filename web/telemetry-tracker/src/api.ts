@@ -1,7 +1,6 @@
 import type {
   AppAboutPayload,
   AppUpdateCheckResponse,
-  AppUpdateInstallResponse,
   AppUpdateTokenResponse,
   CaptureMode,
   CaptureStatus,
@@ -100,18 +99,6 @@ export async function checkForUpdates(force = false): Promise<AppUpdateCheckResp
     body: JSON.stringify({ force })
   });
   return expectJson<AppUpdateCheckResponse>(response, 'Update check request failed');
-}
-
-export async function installAppUpdate(version?: string | null): Promise<AppUpdateInstallResponse> {
-  const response = await fetch('/api/app/update/install', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Forza-App-Action': '1'
-    },
-    body: JSON.stringify(version ? { version } : {})
-  });
-  return expectJson<AppUpdateInstallResponse>(response, 'Update install request failed');
 }
 
 export async function saveAppUpdateToken(token: string): Promise<AppUpdateTokenResponse> {

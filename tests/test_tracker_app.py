@@ -46,12 +46,10 @@ class FakeUpdateService:
             git_sha="abc123",
             repository="owner/repo",
             channel="stable",
-            trusted_signer_thumbprints=("ABC",),
             packaged=True,
         )
         self.saved_token = None
         self.cleared = False
-        self.install_calls = []
         self.check_calls = []
 
     def about_update_payload(self):
@@ -60,7 +58,6 @@ class FakeUpdateService:
             "token_configured": self.saved_token is not None,
             "token_source": "credential_manager" if self.saved_token else None,
             "token_storage_available": True,
-            "trusted_signer_configured": True,
         }
 
     def token_status_payload(self):
@@ -68,7 +65,6 @@ class FakeUpdateService:
             "token_configured": self.saved_token is not None,
             "token_source": "credential_manager" if self.saved_token else None,
             "token_storage_available": True,
-            "trusted_signer_configured": True,
         }
 
     def save_token(self, token):
@@ -89,14 +85,6 @@ class FakeUpdateService:
             asset_name="ForzaTelemetryTrackerSetup-v1.1.0-x64.exe",
             message="Update 1.1.0 is available.",
         )
-
-    def install_update(self, *, version=None):
-        self.install_calls.append(version)
-        return {
-            "status": "installing",
-            "message": "The update installer will run after the app closes.",
-            "version": version or "1.1.0",
-        }
 
 
 def _frame_payload(frame: str) -> dict:
@@ -249,42 +237,6 @@ class TrackerAppTests(unittest.TestCase):
         self.assertNotIn("ghp_secret", status.text)
         self.assertEqual(cleared.status_code, 200)
         self.assertTrue(update_service.cleared)
-
-    def test_update_install_endpoint_refuses_active_capture(self):
-        update_service = FakeUpdateService()
-        app = create_app(db_path=Path(tempfile.mkdtemp()) / "telemetry_tracker.sqlite3", update_service=update_service)
-        app.state.capture.start_manual()
-
-        with TestClient(app) as client:
-            response = client.post(
-                "/api/app/update/install",
-                headers={"X-Forza-App-Action": "1"},
-                json={"version": "1.1.0"},
-            )
-
-        self.assertEqual(response.status_code, 409)
-        self.assertEqual(update_service.install_calls, [])
-
-    def test_update_install_endpoint_launches_and_requests_shutdown(self):
-        update_service = FakeUpdateService()
-        shutdown = []
-        app = create_app(
-            db_path=Path(tempfile.mkdtemp()) / "telemetry_tracker.sqlite3",
-            update_service=update_service,
-            request_shutdown=lambda: shutdown.append(True),
-        )
-
-        with TestClient(app) as client:
-            response = client.post(
-                "/api/app/update/install",
-                headers={"X-Forza-App-Action": "1"},
-                json={"version": "1.1.0"},
-            )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["status"], "installing")
-        self.assertEqual(update_service.install_calls, ["1.1.0"])
-        self.assertEqual(shutdown, [True])
 
     def test_export_defaults_endpoint_uses_app_data_exports_dir(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -3294,7 +3294,6 @@
   {/if}
   {#if activeUtilityModal === 'about'}
     <AboutModal
-      {capture}
       on:close={closeUtilityModal}
       on:toast={(event) => pushToast(event.detail.level, event.detail.message, event.detail.sticky ?? false)}
     />

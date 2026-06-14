@@ -10,12 +10,7 @@ param(
     [string]$Channel = "stable",
     [string]$ReleaseDate = "",
     [string]$GitSha = "",
-    [string]$TrustedSignerThumbprints = "",
     [string]$WebView2StandaloneInstaller = "",
-    [string]$SignToolPath = "",
-    [string]$CertificateSubject = "",
-    [string]$TimestampUrl = "http://timestamp.digicert.com",
-    [switch]$SkipSigning,
     [switch]$SkipInstaller,
     [switch]$SkipSmoke
 )
@@ -41,26 +36,6 @@ function Invoke-Step {
     & $Action
 }
 
-function Invoke-Sign {
-    param([string]$FilePath)
-    if ($SkipSigning) { return }
-    if (-not $SignToolPath -or -not $CertificateSubject) {
-        throw "Signing is required but SignToolPath and CertificateSubject were not provided. Use -SkipSigning to skip."
-    }
-    & $SignToolPath sign /n $CertificateSubject /fd SHA256 /tr $TimestampUrl /td SHA256 $FilePath
-    if ($LASTEXITCODE -ne 0) { throw "signtool failed for $FilePath (exit $LASTEXITCODE)" }
-}
-
-function Split-Thumbprints {
-    param([string]$Value)
-    if (-not $Value) { return @() }
-    return @(
-        $Value -split '[,;]' |
-            ForEach-Object { ($_ -replace '[:\s]', '').ToUpperInvariant() } |
-            Where-Object { $_ }
-    )
-}
-
 if (-not $ReleaseDate) {
     $ReleaseDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
 }
@@ -76,7 +51,6 @@ Invoke-Step "Generate release metadata" {
         git_sha = $GitSha
         repository = $Repository
         channel = $Channel
-        trusted_signer_thumbprints = @(Split-Thumbprints $TrustedSignerThumbprints)
     }
     New-Item -ItemType Directory -Force -Path "build" | Out-Null
     $metadata | ConvertTo-Json -Depth 5 | Set-Content -Path "build\release-metadata.json" -Encoding UTF8
@@ -138,7 +112,6 @@ Invoke-Step "Publish FH6 map converter" {
     if (-not (Test-Path $ConverterExe)) {
         throw "Expected output not found: $ConverterExe"
     }
-    Invoke-Sign $ConverterExe
 }
 
 # Desktop Python app
@@ -155,20 +128,6 @@ Invoke-Step "Build PyInstaller app" {
     if (-not (Test-Path $AppExe)) {
         throw "Expected output not found: $AppExe"
     }
-    Invoke-Sign $AppExe
-}
-
-Invoke-Step "Build updater helper" {
-    python -m PyInstaller --clean --noconfirm --onefile --noconsole --name ForzaTelemetryTrackerUpdater telemetry_tracker\update_helper.py
-    if ($LASTEXITCODE -ne 0) { throw "Updater helper PyInstaller build failed" }
-
-    $UpdaterExe = "dist\ForzaTelemetryTrackerUpdater.exe"
-    if (-not (Test-Path $UpdaterExe)) {
-        throw "Expected updater helper not found: $UpdaterExe"
-    }
-    Invoke-Sign $UpdaterExe
-
-    Copy-Item -LiteralPath $UpdaterExe -Destination "dist\ForzaTelemetryTracker\ForzaTelemetryTrackerUpdater.exe" -Force
 }
 
 # Installer
@@ -190,7 +149,6 @@ if (-not $SkipInstaller) {
         if (-not (Test-Path $InstallerExe)) {
             throw "Expected installer not found: $InstallerExe"
         }
-        Invoke-Sign $InstallerExe
     }
 }
 

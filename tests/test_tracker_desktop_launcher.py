@@ -37,7 +37,6 @@ class DesktopLauncherTests(unittest.TestCase):
             start_udp_listener=True,
             refresh_car_catalog=True,
             refresh_track_catalog=True,
-            request_shutdown=backend.request_process_shutdown,
         )
 
     def test_backend_start_and_stop_delegate_to_uvicorn_server(self):

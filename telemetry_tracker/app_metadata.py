@@ -17,7 +17,6 @@ ENV_RELEASE_DATE = "FORZA_TRACKER_RELEASE_DATE"
 ENV_GIT_SHA = "FORZA_TRACKER_GIT_SHA"
 ENV_RELEASE_REPOSITORY = "FORZA_TRACKER_RELEASE_REPOSITORY"
 ENV_UPDATE_CHANNEL = "FORZA_TRACKER_UPDATE_CHANNEL"
-ENV_TRUSTED_SIGNER_THUMBPRINTS = "FORZA_TRACKER_TRUSTED_SIGNER_THUMBPRINTS"
 
 
 def _clean_text(value: Any) -> str | None:
@@ -25,24 +24,6 @@ def _clean_text(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
-
-
-def _split_thumbprints(value: Any) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, list):
-        raw_items = value
-    else:
-        raw_items = str(value).replace(";", ",").split(",")
-    thumbprints: list[str] = []
-    for item in raw_items:
-        text = _clean_text(item)
-        if text is None:
-            continue
-        normalized = text.replace(" ", "").replace(":", "").upper()
-        if normalized:
-            thumbprints.append(normalized)
-    return thumbprints
 
 
 @dataclass(frozen=True)
@@ -54,7 +35,6 @@ class ReleaseMetadata:
     git_sha: str | None = None
     repository: str = DEFAULT_RELEASE_REPOSITORY
     channel: str = DEFAULT_UPDATE_CHANNEL
-    trusted_signer_thumbprints: tuple[str, ...] = field(default_factory=tuple)
     packaged: bool = field(default_factory=lambda: bool(getattr(sys, "frozen", False)))
 
     @property
@@ -81,13 +61,6 @@ def metadata_from_mapping(data: dict[str, Any], *, packaged: bool | None = None)
         git_sha=_clean_text(data.get("git_sha") or data.get("gitSha")),
         repository=_clean_text(data.get("repository") or data.get("repo")) or DEFAULT_RELEASE_REPOSITORY,
         channel=_clean_text(data.get("channel")) or DEFAULT_UPDATE_CHANNEL,
-        trusted_signer_thumbprints=tuple(
-            _split_thumbprints(
-                data.get("trusted_signer_thumbprints")
-                or data.get("trustedSignerThumbprints")
-                or data.get("trusted_signer_thumbprint")
-            )
-        ),
         packaged=bool(getattr(sys, "frozen", False)) if packaged is None else packaged,
     )
 
@@ -116,7 +89,6 @@ def load_release_metadata(path: Path | None = None) -> ReleaseMetadata:
         "git_sha": os.environ.get(ENV_GIT_SHA),
         "repository": os.environ.get(ENV_RELEASE_REPOSITORY),
         "channel": os.environ.get(ENV_UPDATE_CHANNEL),
-        "trusted_signer_thumbprints": os.environ.get(ENV_TRUSTED_SIGNER_THUMBPRINTS),
     }
     for key, value in env_overrides.items():
         if _clean_text(value) is not None:
@@ -133,7 +105,6 @@ def write_release_metadata(path: Path, metadata: ReleaseMetadata) -> None:
         "git_sha": metadata.git_sha,
         "repository": metadata.repository,
         "channel": metadata.channel,
-        "trusted_signer_thumbprints": list(metadata.trusted_signer_thumbprints),
     }
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

@@ -23,9 +23,7 @@ class DesktopPaths:
     imports_dir: Path
     backups_dir: Path
     exports_dir: Path
-    updates_dir: Path
     release_metadata: Path
-    updater_helper: Path
 
     def ensure_user_directories(self) -> None:
         self.user_data_root.mkdir(parents=True, exist_ok=True)
@@ -35,7 +33,6 @@ class DesktopPaths:
             self.imports_dir,
             self.backups_dir,
             self.exports_dir,
-            self.updates_dir,
         ):
             path.mkdir(parents=True, exist_ok=True)
 
@@ -93,9 +90,5 @@ def default_desktop_paths(*, resource_base: Path | None = None, user_data_base: 
         imports_dir=data / "imports",
         backups_dir=data / "backups",
         exports_dir=data / "exports",
-        updates_dir=data / "updates",
         release_metadata=resources / "release-metadata.json",
-        updater_helper=Path(sys.executable).resolve().parent / "ForzaTelemetryTrackerUpdater.exe"
-        if getattr(sys, "frozen", False)
-        else resources / "dist" / "ForzaTelemetryTrackerUpdater.exe",
     )

@@ -4,7 +4,6 @@
     checkForUpdates,
     clearAppUpdateToken,
     fetchAppAbout,
-    installAppUpdate,
     saveAppUpdateToken
   } from './api';
   import AppModal from './AppModal.svelte';
@@ -12,11 +11,8 @@
     AppAboutPayload,
     AppAboutUpdates,
     AppUpdateCheckResponse,
-    CaptureStatus,
     ToastLevel
   } from './types';
-
-  export let capture: CaptureStatus;
 
   const dispatch = createEventDispatcher<{
     close: void;
@@ -28,19 +24,17 @@
   let aboutError: string | null = null;
   let checkResult: AppUpdateCheckResponse | null = null;
   let checking = false;
-  let installing = false;
   let updateError: string | null = null;
   let tokenPanelOpen = false;
   let tokenInput = '';
   let tokenBusy = false;
 
-  $: recordingActive = Boolean(capture?.recording?.active);
   $: updates = about?.updates ?? null;
   $: updateAvailable = checkResult?.status === 'update_available';
   $: latestVersion = checkResult?.latest_version ?? null;
+  $: releaseUrl = updateAvailable ? checkResult?.release_url ?? null : null;
   $: updateSupported = Boolean(updates?.supported);
-  $: checkDisabled = !updateSupported || checking || installing;
-  $: installDisabled = !updateAvailable || recordingActive || installing || checking;
+  $: checkDisabled = !updateSupported || checking;
 
   function toast(level: ToastLevel, message: string, sticky = false) {
     dispatch('toast', { level, message, sticky });
@@ -89,31 +83,6 @@
       updateError = errorMessage(error, 'Could not contact GitHub Releases.');
     } finally {
       checking = false;
-    }
-  }
-
-  async function startUpdate() {
-    if (installDisabled) return;
-    const confirmed = window.confirm(
-      latestVersion
-        ? `Install update ${latestVersion}? The tracker will close, run the installer, then relaunch.`
-        : 'Install this update? The tracker will close, run the installer, then relaunch.'
-    );
-    if (!confirmed) return;
-
-    installing = true;
-    updateError = null;
-    try {
-      const result = await installAppUpdate(latestVersion);
-      if (result.status === 'installing') {
-        toast('info', result.message || 'Update installer will start after the app closes.', true);
-      } else {
-        updateError = result.message || 'Update installation could not start.';
-      }
-    } catch (error) {
-      updateError = errorMessage(error, 'Update installation could not start.');
-    } finally {
-      installing = false;
     }
   }
 
@@ -229,10 +198,6 @@
               {/if}
             </dd>
           </div>
-          <div>
-            <dt>Signature trust</dt>
-            <dd>{updates?.trusted_signer_configured ? 'Signer allowlist configured' : 'Signer allowlist missing'}</dd>
-          </div>
         </dl>
 
         {#if !updates?.supported}
@@ -253,7 +218,7 @@
               </strong>
               <span>{checkResult.message}</span>
               {#if checkResult.release_url}
-                <a href={checkResult.release_url} target="_blank" rel="noreferrer">Open release notes</a>
+                <a href={checkResult.release_url} target="_blank" rel="noreferrer">Open GitHub release</a>
               {/if}
             </div>
           {/if}
@@ -264,15 +229,13 @@
 
           <div class="modal-actions">
             {#if updateAvailable}
-              <button
-                type="button"
-                class="primary-action"
-                disabled={installDisabled}
-                title={recordingActive ? 'Stop telemetry capture before updating' : undefined}
-                on:click={startUpdate}
-              >
-                {installing ? 'Starting update…' : `Update to ${latestVersion}`}
-              </button>
+              {#if releaseUrl}
+                <a class="primary-action release-action" href={releaseUrl} target="_blank" rel="noreferrer">
+                  Open release {latestVersion}
+                </a>
+              {:else}
+                <button type="button" class="primary-action" disabled>Release link unavailable</button>
+              {/if}
             {:else}
               <button type="button" class="primary-action" disabled={checkDisabled} on:click={runUpdateCheck}>
                 {checking ? 'Checking…' : 'Check for updates'}
@@ -280,8 +243,10 @@
             {/if}
           </div>
 
-          {#if updateAvailable && recordingActive}
-            <p class="about-warning">Stop telemetry capture before installing this update.</p>
+          {#if updateAvailable}
+            <p class="settings-hint">
+              Download and run the installer from GitHub Releases when you are ready.
+            </p>
           {/if}
 
           {#if !updates?.token_configured && updates?.token_storage_available}
@@ -467,17 +432,16 @@
     text-underline-offset: 0.16rem;
   }
 
-  .about-error-text,
-  .about-warning {
+  .about-error-text {
     margin: 0;
-  }
-
-  .about-warning {
-    color: #fbbf24;
   }
 
   .about-inline-action {
     justify-self: start;
+  }
+
+  .release-action {
+    text-decoration: none;
   }
 
   .token-card {
