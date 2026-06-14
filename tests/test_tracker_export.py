@@ -6,6 +6,7 @@ import inspect
 import json
 import os
 import threading
+import time
 import zipfile
 from pathlib import Path
 
@@ -395,7 +396,10 @@ def test_concurrent_exports_from_same_candidate_use_distinct_unique_temp_files(t
     session_id = store.create_session("One row", status="complete")
     _insert_samples(store, session_id, [_race_packet(1)])
     output_dir = tmp_path / "exports"
-    barrier = threading.Barrier(2)
+    timeout_seconds = 60.0
+    both_writers_ready = threading.Event()
+    release_writers = threading.Event()
+    temp_paths_lock = threading.Lock()
     temp_paths: list[Path] = []
 
     import telemetry_tracker.export as export_module
@@ -403,8 +407,12 @@ def test_concurrent_exports_from_same_candidate_use_distinct_unique_temp_files(t
     original_write_raw_csv = export_module._write_raw_csv
 
     def waiting_write_raw_csv(con, path, should_cancel):
-        temp_paths.append(Path(path))
-        barrier.wait(timeout=10)
+        with temp_paths_lock:
+            temp_paths.append(Path(path))
+            if len(temp_paths) == 2:
+                both_writers_ready.set()
+        if not release_writers.wait(timeout=timeout_seconds):
+            raise AssertionError("Timed out waiting for the test to release concurrent exports")
         return original_write_raw_csv(con, path, should_cancel)
 
     monkeypatch.setattr(export_module, "_write_raw_csv", waiting_write_raw_csv)
@@ -421,7 +429,23 @@ def test_concurrent_exports_from_same_candidate_use_distinct_unique_temp_files(t
             )
             for _index in range(2)
         ]
-        results = [future.result(timeout=10) for future in futures]
+        deadline = time.monotonic() + timeout_seconds
+        try:
+            while not both_writers_ready.is_set():
+                for future in futures:
+                    if future.done():
+                        future.result()
+                if time.monotonic() >= deadline:
+                    with temp_paths_lock:
+                        observed_temp_paths = list(temp_paths)
+                    raise AssertionError(
+                        "Timed out waiting for both concurrent exports to reach raw CSV writing; "
+                        f"observed temp paths: {observed_temp_paths!r}"
+                    )
+                both_writers_ready.wait(timeout=0.05)
+        finally:
+            release_writers.set()
+        results = [future.result(timeout=timeout_seconds) for future in futures]
 
     output_paths = [result.output_files[0].path for result in results]
     assert set(output_paths) == {output_dir / "same-raw-999.csv", output_dir / "same-raw-999-1.csv"}
