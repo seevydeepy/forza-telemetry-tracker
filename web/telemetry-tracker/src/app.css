@@ -225,7 +225,6 @@ button {
   z-index: 8;
 }
 
-#app .shortcut-backdrop,
 #app .diagnostics-backdrop {
   z-index: 30;
 }

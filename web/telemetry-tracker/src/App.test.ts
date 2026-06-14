@@ -2,7 +2,6 @@ import '@testing-library/jest-dom/vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import App from './App.svelte';
-import { SHORTCUTS } from './KeyboardShortcuts';
 import { DASHBOARD_WIDGETS } from './dashboardWidgets';
 import type {
   AppAboutPayload,
@@ -1889,12 +1888,8 @@ describe('App', () => {
     expect(expandedMenuLabels.indexOf('Export telemetry')).toBeLessThan(expandedMenuLabels.indexOf('Session browser'));
     expect(expandedMenuLabels.indexOf('About')).toBeGreaterThan(expandedMenuLabels.indexOf('Settings'));
     expect(within(menu).queryByRole('button', { name: 'Track tools' })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole('button', { name: 'Open keyboard shortcuts' })).not.toBeInTheDocument();
     expect(stage).toHaveAttribute('data-menu-overlay', 'true');
-
-    await fireEvent.click(screen.getByRole('button', { name: 'Open keyboard shortcuts' }));
-    expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
-    expect(menu).toHaveAttribute('data-expanded', 'false');
-    expect(stage).toHaveAttribute('data-menu-overlay', 'false');
 
     expect(screen.getByRole('button', { name: 'Open diagnostics' })).toHaveAttribute('title', 'Open diagnostics');
     expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('title', 'Open telemetry tracker settings');
@@ -3355,29 +3350,6 @@ describe('App', () => {
     expect(overlayEvent.defaultPrevented).toBe(false);
     expect(canvas).toHaveAttribute('data-overlay', 'issues');
     expect(screen.getByRole('dialog', { name: 'Telemetry diagnostics' })).toBeInTheDocument();
-  });
-
-  it('renders keyboard shortcut help with every registered shortcut', async () => {
-    render(App);
-
-    const helpButton = await screen.findByRole('button', { name: 'Open keyboard shortcuts' });
-    expect(helpButton).toHaveAttribute('title', 'Open keyboard shortcuts');
-
-    await fireEvent.click(helpButton);
-
-    const dialog = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
-    for (const shortcut of SHORTCUTS) {
-      expect(within(dialog).getByText(shortcut.key)).toBeInTheDocument();
-      expect(within(dialog).getByText(shortcut.label)).toBeInTheDocument();
-    }
-
-    const closeButton = within(dialog).getByRole('button', { name: 'Close keyboard shortcuts' });
-    expect(closeButton).toHaveAttribute('title', 'Close keyboard shortcuts');
-
-    await fireEvent.keyDown(window, { key: 'Escape' });
-
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).not.toBeInTheDocument());
-    await waitFor(() => expect(helpButton).toHaveFocus());
   });
 
   it('defaults to the Issues overlay and renders overlay icon buttons with labels and tooltips', async () => {

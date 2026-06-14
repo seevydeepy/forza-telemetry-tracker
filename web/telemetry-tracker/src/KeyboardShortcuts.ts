@@ -1,11 +1,5 @@
 export type ShortcutAction = 'cycleOverlay' | 'clearSelection' | 'toggleLiveFollow';
 
-export const SHORTCUTS = [
-  { key: 'O', action: 'cycleOverlay', label: 'Cycle overlay view' },
-  { key: 'Esc', action: 'clearSelection', label: 'Clear selection or close popover' },
-  { key: 'Space', action: 'toggleLiveFollow', label: 'Pause or resume live follow' }
-] as const satisfies ReadonlyArray<{ key: string; action: ShortcutAction; label: string }>;
-
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return true;

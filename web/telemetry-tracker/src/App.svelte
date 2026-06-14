@@ -58,7 +58,6 @@
   import ReviewTimeline from './ReviewTimeline.svelte';
   import SettingsModal from './SettingsModal.svelte';
   import SessionBrowserModal from './SessionBrowserModal.svelte';
-  import ShortcutHelp from './ShortcutHelp.svelte';
   import StatsModal from './StatsModal.svelte';
   import SlideOutMenu, { type MenuAction } from './SlideOutMenu.svelte';
   import StatusStrip from './StatusStrip.svelte';
@@ -338,8 +337,6 @@
   let diagnosticsPayload: DiagnosticsPayload | null = null;
   let diagnosticsRequestId = 0;
   let diagnosticsOpener: HTMLElement | null = null;
-  let shortcutHelpOpen = false;
-  let shortcutHelpOpener: HTMLElement | null = null;
   let liveFollowPaused = false;
   let menuExpanded = false;
   let activeUtilityModal: UtilityModal | null = null;
@@ -2146,30 +2143,6 @@
     });
   }
 
-  function openShortcutHelp(eventOrOpener?: Event | HTMLElement) {
-    if (eventOrOpener instanceof HTMLElement) {
-      shortcutHelpOpener = eventOrOpener;
-    } else if (eventOrOpener?.currentTarget instanceof HTMLElement) {
-      shortcutHelpOpener = eventOrOpener.currentTarget;
-    } else if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
-      shortcutHelpOpener = document.activeElement;
-    }
-    shortcutHelpOpen = true;
-  }
-
-  function closeShortcutHelp() {
-    const opener = shortcutHelpOpener;
-    shortcutHelpOpen = false;
-    void tick().then(() => {
-      if (opener?.isConnected) {
-        opener.focus({ preventScroll: true });
-      }
-      if (shortcutHelpOpener === opener) {
-        shortcutHelpOpener = null;
-      }
-    });
-  }
-
   function handleOverlayChange(overlay: OverlayId) {
     if (!overlayAllowedForCurrentContext(overlay)) return;
     overlayTouchedByUser = true;
@@ -2181,10 +2154,6 @@
   }
 
   function clearSelectionAndPopover() {
-    if (shortcutHelpOpen) {
-      closeShortcutHelp();
-      return;
-    }
     if (issuePopoverOpen) {
       closeIssuePopover();
     }
@@ -2528,9 +2497,6 @@
       case 'diagnostics':
         openDiagnostics(event.detail.opener);
         break;
-      case 'shortcuts':
-        openShortcutHelp(event.detail.opener);
-        break;
       case 'settings':
         openUtilityModal('settings');
         break;
@@ -2543,8 +2509,8 @@
   function handleWindowKeydown(event: KeyboardEvent) {
     const action = actionForKey(event);
     if (!action) return;
-    const modalOpen = activeUtilityModal !== null || diagnosticsOpen || shortcutHelpOpen;
-    if (modalOpen && !(shortcutHelpOpen && action === 'clearSelection')) return;
+    const modalOpen = activeUtilityModal !== null || diagnosticsOpen;
+    if (modalOpen) return;
     if (action === 'toggleLiveFollow' && event.target instanceof HTMLButtonElement) return;
 
     event.preventDefault();
@@ -3309,9 +3275,6 @@
       on:restart={handleRestartListener}
       on:deleteAllTelemetry={handleDeleteAllTelemetry}
     />
-  {/if}
-  {#if shortcutHelpOpen}
-    <ShortcutHelp on:close={closeShortcutHelp} />
   {/if}
 </main>
 

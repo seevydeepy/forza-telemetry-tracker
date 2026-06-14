@@ -8,7 +8,6 @@
     | 'session-browser'
     | 'stats'
     | 'diagnostics'
-    | 'shortcuts'
     | 'settings'
     | 'about';
 
@@ -75,13 +74,6 @@
       label: 'Open diagnostics',
       title: 'Open diagnostics',
       text: 'Diagnostics'
-    },
-    {
-      action: 'shortcuts',
-      icon: 'keyboard',
-      label: 'Open keyboard shortcuts',
-      title: 'Open keyboard shortcuts',
-      text: 'Shortcuts'
     },
     {
       action: 'settings',

@@ -27,7 +27,6 @@ The following source SVGs were used:
 - `import` from [`upload_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/upload/materialsymbolsoutlined/upload_fill1_24px.svg)
 - `info` from [`info_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/info/materialsymbolsoutlined/info_fill1_24px.svg)
 - `inputs` from [`gamepad_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/gamepad/materialsymbolsoutlined/gamepad_fill1_24px.svg)
-- `keyboard` from [`keyboard_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/keyboard/materialsymbolsoutlined/keyboard_fill1_24px.svg)
 - `laps` from [`laps_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/laps/materialsymbolsoutlined/laps_fill1_24px.svg)
 - `leaderboard` from [`leaderboard_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/leaderboard/materialsymbolsoutlined/leaderboard_fill1_24px.svg)
 - `map` from [`map_fill1_24px.svg`](https://github.com/google/material-design-icons/blob/27aa4d49e4fabcb2a7f3acc86d205d33b159fad3/symbols/web/map/materialsymbolsoutlined/map_fill1_24px.svg)
