@@ -340,8 +340,7 @@ button {
   min-width: min(520px, calc(100vw - 96px));
 }
 
-.settings-section,
-.settings-info {
+.settings-section {
   background: var(--canvas-overlay-control-bg);
   border: 1px solid var(--panel-border-muted);
   border-radius: 0.9rem;
@@ -351,7 +350,6 @@ button {
 }
 
 .settings-section h3,
-.settings-info h3,
 .import-telemetry p {
   margin: 0;
 }
@@ -394,26 +392,6 @@ button {
 .form-field input:disabled {
   color: #d4d4d8;
   opacity: 1;
-}
-
-.settings-info dl {
-  display: grid;
-  gap: 0.55rem;
-  margin: 0;
-}
-
-.settings-info dl div {
-  display: grid;
-  gap: 0.2rem;
-}
-
-.settings-info dt {
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-}
-
-.settings-info dd {
-  margin: 0;
 }
 
 .modal-actions {

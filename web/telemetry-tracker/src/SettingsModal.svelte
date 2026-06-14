@@ -47,18 +47,11 @@
   $: settings = status?.settings ?? capture.settings ?? fallbackSettings;
   $: udpHost = settings.udp_host || listener.udp_host;
   $: udpPort = String(settings.udp_port || listener.udp_port);
-  $: captureMode = capture.mode ?? settings.capture_mode;
-  $: listenerPacketSummary = `${formatPacketCount(listener.packets_received)} received / ${formatPacketCount(listener.packets_recorded)} recorded`;
-  $: localStorageSummary = 'Dashboard layout changes are kept in this browser session until persistent layout storage is added.';
   $: if (!savingOverlay) {
     selectedDefaultOverlay = normaliseOverlay(settings.preferred_overlay);
   }
   $: if (!savingUnits) {
     selectedUnitSystem = normaliseUnitSystem(settings.unit_system);
-  }
-
-  function formatPacketCount(value: number | null | undefined) {
-    return Number(value ?? 0).toLocaleString();
   }
 
   function normaliseUnitSystem(value: string | null | undefined): UnitSystem {
@@ -130,7 +123,6 @@
           <input value={udpPort} readonly aria-readonly="true" inputmode="numeric" />
         </label>
       </div>
-      <p class="settings-hint">For desktop v1, run Forza and this tracker on the same Windows PC.</p>
       <p class="settings-hint">Set Forza Data Out to IP {udpHost} and port {udpPort}.</p>
     </section>
 
@@ -141,7 +133,6 @@
         <select
           value={selectedDefaultOverlay}
           disabled={savingOverlay}
-          aria-describedby="overlay-setting-hint"
           on:change={handleDefaultOverlayChange}
         >
           {#each overlayOptions as option}
@@ -149,9 +140,9 @@
           {/each}
         </select>
       </label>
-      <p id="overlay-setting-hint" class="settings-hint">
-        {savingOverlay ? 'Saving default overlay…' : 'New site loads start with this overlay; saving also switches the current overlay.'}
-      </p>
+      {#if savingOverlay}
+        <p class="settings-hint">Saving default overlay…</p>
+      {/if}
       {#if overlayErrorMessage}
         <p class="settings-error" role="alert">{overlayErrorMessage}</p>
       {/if}
@@ -179,24 +170,6 @@
       on:worldmapchange={(event) => dispatch('worldmapchange', event.detail)}
       on:worldmaperror={(event) => dispatch('worldmaperror', event.detail)}
     />
-
-    <section class="settings-info" aria-label="Tracker status summary">
-      <h3>Status summary</h3>
-      <dl>
-        <div>
-          <dt>Capture mode</dt>
-          <dd>{captureMode}</dd>
-        </div>
-        <div>
-          <dt>Listener packets</dt>
-          <dd>{listenerPacketSummary}</dd>
-        </div>
-        <div>
-          <dt>Local storage</dt>
-          <dd>{localStorageSummary}</dd>
-        </div>
-      </dl>
-    </section>
 
     <div class="modal-actions">
       <button type="button" class="secondary-action" on:click={() => dispatch('resetlayout')}>

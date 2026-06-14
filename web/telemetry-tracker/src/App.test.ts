@@ -2471,8 +2471,17 @@ describe('App', () => {
     const defaultOverlaySelect = within(dialog).getByRole('combobox', { name: 'Default overlay' });
     expect(defaultOverlaySelect).toHaveValue('issues');
     expect(defaultOverlaySelect).toBeEnabled();
-    expect(within(dialog).getByLabelText('FH6 world map settings')).toBeInTheDocument();
+    const mapSettings = within(dialog).getByLabelText('FH6 world map settings');
+    expect(mapSettings).toBeInTheDocument();
+    expect(mapSettings).toHaveClass('settings-section');
+    expect(within(mapSettings).getAllByRole('button').map((button) => button.textContent?.trim())).toEqual([
+      'Build local map cache',
+      'Save map settings'
+    ]);
     expect(within(dialog).getByText('FH6 media path is not configured.')).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent('For desktop v1');
+    expect(dialog).not.toHaveTextContent('New site loads start with this overlay');
+    expect(dialog).not.toHaveTextContent('Status summary');
     expect(within(dialog).getByRole('button', { name: 'Reset floating panels and layout' })).toBeInTheDocument();
   });
 
@@ -2779,7 +2788,8 @@ describe('App', () => {
     const dialog = await openSettingsModal();
 
     expect(within(dialog).getByLabelText('UDP port')).toHaveValue('5401');
-    expect(within(dialog).getByText('1,234 received / 0 recorded')).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent('1,234 received / 0 recorded');
+    expect(dialog).not.toHaveTextContent('Listener packets');
   });
 
   it('resets history drawer layout from telemetry tracker settings', async () => {
@@ -2802,10 +2812,10 @@ describe('App', () => {
     expect(await findToast('Layout reset')).toBeInTheDocument();
   });
 
-  it('explains same-PC Data Out setup in settings', async () => {
+  it('shows concise Data Out setup in settings', async () => {
     render(App);
     const dialog = await openSettingsModal();
-    expect(within(dialog).getByText('For desktop v1, run Forza and this tracker on the same Windows PC.')).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent('For desktop v1');
     expect(within(dialog).getByText('Set Forza Data Out to IP 127.0.0.1 and port 5400.')).toBeInTheDocument();
   });
 

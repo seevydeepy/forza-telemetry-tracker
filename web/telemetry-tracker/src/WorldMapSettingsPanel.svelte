@@ -120,7 +120,7 @@
   }
 </script>
 
-<section class="world-map-panel" aria-label="FH6 world map settings">
+<section class="settings-section world-map-panel" aria-label="FH6 world map settings">
   <h3>FH6 world map</h3>
   <p class="settings-hint">
     Map tiles are generated from your local FH6 install and stored only in your local tracker cache.
@@ -173,11 +173,11 @@
   {/if}
 
   <div class="world-map-actions">
-    <button type="button" class="secondary-action" disabled={busy} on:click={handleSave}>
-      {saving ? 'Saving map settings…' : 'Save map settings'}
-    </button>
     <button type="button" class="primary-action" disabled={busy || !mediaRoot.trim()} on:click={handleBuild}>
       {building ? 'Building local map cache…' : 'Build local map cache'}
+    </button>
+    <button type="button" class="secondary-action" disabled={busy} on:click={handleSave}>
+      {saving ? 'Saving map settings…' : 'Save map settings'}
     </button>
   </div>
 </section>
@@ -244,6 +244,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
+    justify-content: flex-end;
   }
 
   @media (max-width: 720px) {
