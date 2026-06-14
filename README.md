@@ -10,6 +10,7 @@ The intended user experience is a single Windows setup executable downloaded fro
 
 ```powershell
 python -m pip install -r requirements-telemetry-tracker.txt
+python -m pip install -r requirements-telemetry-test.txt
 npm --prefix web\telemetry-tracker install
 python tools\run-telemetry-tracker.py
 ```

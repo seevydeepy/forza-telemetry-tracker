@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Opt into GitHub's upcoming Node 24 JavaScript action runtime before it becomes the default.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     name: Build unsigned Windows desktop package
@@ -39,6 +43,7 @@ jobs:
           cache: pip
           cache-dependency-path: |
             requirements-telemetry-tracker.txt
+            requirements-telemetry-test.txt
             requirements-telemetry-desktop.txt
 
       - name: Set up Node.js

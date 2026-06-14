@@ -1,0 +1,2 @@
+-r requirements-telemetry-tracker.txt
+pytest>=9.0,<10.0

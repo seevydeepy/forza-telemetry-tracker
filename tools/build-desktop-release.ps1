@@ -88,6 +88,11 @@ Invoke-Step "Build frontend" {
 }
 
 # Python tests
+Invoke-Step "Install Python test dependencies" {
+    python -m pip install -r requirements-telemetry-test.txt
+    if ($LASTEXITCODE -ne 0) { throw "pip install test dependencies failed" }
+}
+
 Invoke-Step "Run Python tests" {
     python -m pytest
     if ($LASTEXITCODE -ne 0) { throw "pytest failed" }
