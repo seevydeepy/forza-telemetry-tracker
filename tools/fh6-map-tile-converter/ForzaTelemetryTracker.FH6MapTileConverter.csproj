@@ -12,7 +12,7 @@
     <ProjectReference Include="vendor\ForzaTechStudio\ForzaTools.Bundles\ForzaTools.Bundles.csproj" />
     <ProjectReference Include="vendor\ForzaTechStudio\ForzaTools.Shared\ForzaTools.Shared.csproj" />
     <ProjectReference Include="vendor\ForzaTechStudio\DurangoTypes\DurangoTypes.csproj" />
-    <PackageReference Include="BCnEncoder.Net" Version="2.1.0" />
+    <PackageReference Include="BCnEncoder.Net" Version="2.3.0" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
   </ItemGroup>
 </Project>
