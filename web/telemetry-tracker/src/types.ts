@@ -787,9 +787,7 @@ export interface ToastMessage {
 
 export interface AppAboutUpdates {
   supported: boolean;
-  token_configured: boolean;
-  token_source: 'credential_manager' | 'environment' | null;
-  token_storage_available: boolean;
+  release_access: 'public';
 }
 
 export interface AppAboutPayload {
@@ -803,7 +801,7 @@ export interface AppAboutPayload {
   updates: AppAboutUpdates;
 }
 
-export type AppUpdateCheckStatus = 'update_available' | 'up_to_date' | 'not_configured' | 'unsupported' | 'error';
+export type AppUpdateCheckStatus = 'update_available' | 'up_to_date' | 'unsupported' | 'error';
 
 export interface AppUpdateCheckResponse {
   status: AppUpdateCheckStatus;
@@ -813,11 +811,4 @@ export interface AppUpdateCheckResponse {
   published_at: string | null;
   asset_name: string | null;
   message: string;
-}
-
-export interface AppUpdateTokenResponse {
-  token_configured: boolean;
-  token_source: 'credential_manager' | 'environment' | null;
-  token_storage_available: boolean;
-  message?: string;
 }

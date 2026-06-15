@@ -1,15 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
-  import {
-    checkForUpdates,
-    clearAppUpdateToken,
-    fetchAppAbout,
-    saveAppUpdateToken
-  } from './api';
+  import { checkForUpdates, fetchAppAbout } from './api';
   import AppModal from './AppModal.svelte';
   import type {
     AppAboutPayload,
-    AppAboutUpdates,
     AppUpdateCheckResponse,
     ToastLevel
   } from './types';
@@ -27,9 +21,6 @@
   let checkResult: AppUpdateCheckResponse | null = null;
   let checking = false;
   let updateError: string | null = null;
-  let tokenPanelOpen = false;
-  let tokenInput = '';
-  let tokenBusy = false;
 
   $: updates = about?.updates ?? null;
   $: updateAvailable = checkResult?.status === 'update_available';
@@ -38,18 +29,8 @@
   $: updateSupported = Boolean(updates?.supported);
   $: checkDisabled = !updateSupported || checking;
 
-  function toast(level: ToastLevel, message: string, sticky = false) {
-    dispatch('toast', { level, message, sticky });
-  }
-
   function errorMessage(error: unknown, fallback: string): string {
     return error instanceof Error && error.message ? error.message : fallback;
-  }
-
-  function describeTokenSource(source: AppAboutUpdates['token_source']): string {
-    if (source === 'environment') return 'environment variable';
-    if (source === 'credential_manager') return 'Windows Credential Manager';
-    return 'unknown source';
   }
 
   function formatDate(value: string | null): string {
@@ -85,49 +66,6 @@
       updateError = errorMessage(error, 'Could not contact GitHub Releases.');
     } finally {
       checking = false;
-    }
-  }
-
-  function applyTokenStatus(next: Partial<AppAboutUpdates>) {
-    if (!about) return;
-    about = {
-      ...about,
-      updates: {
-        ...about.updates,
-        ...next
-      }
-    };
-    checkResult = null;
-  }
-
-  async function saveToken() {
-    const token = tokenInput.trim();
-    if (!token || tokenBusy) return;
-    tokenBusy = true;
-    try {
-      const status = await saveAppUpdateToken(token);
-      tokenInput = '';
-      tokenPanelOpen = false;
-      applyTokenStatus(status);
-      toast('success', status.message || 'GitHub token saved.');
-    } catch {
-      toast('error', 'Could not save GitHub token.');
-    } finally {
-      tokenBusy = false;
-    }
-  }
-
-  async function clearToken() {
-    if (tokenBusy) return;
-    tokenBusy = true;
-    try {
-      const status = await clearAppUpdateToken();
-      applyTokenStatus(status);
-      toast('success', status.message || 'GitHub token removed.');
-    } catch {
-      toast('error', 'Could not remove GitHub token.');
-    } finally {
-      tokenBusy = false;
     }
   }
 
@@ -195,13 +133,7 @@
           </div>
           <div>
             <dt>Release access</dt>
-            <dd>
-              {#if updates?.token_configured}
-                Token configured ({describeTokenSource(updates.token_source)})
-              {:else}
-                No private token configured
-              {/if}
-            </dd>
+            <dd>{updates?.release_access === 'public' ? 'Public GitHub Releases' : 'Unavailable'}</dd>
           </div>
         </dl>
 
@@ -253,41 +185,6 @@
               Download and run the installer from GitHub Releases when you are ready.
             </p>
           {/if}
-
-          {#if !updates?.token_configured && updates?.token_storage_available}
-            <div class="token-card">
-              <button
-                type="button"
-                class="link-action"
-                aria-expanded={tokenPanelOpen}
-                on:click={() => (tokenPanelOpen = !tokenPanelOpen)}
-              >
-                {tokenPanelOpen ? 'Hide token setup' : 'Configure private GitHub token'}
-              </button>
-              {#if tokenPanelOpen}
-                <form class="token-form" on:submit|preventDefault={saveToken}>
-                  <label>
-                    <span>Fine-grained PAT with repository Contents: read</span>
-                    <input
-                      type="password"
-                      bind:value={tokenInput}
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="github_pat_…"
-                      disabled={tokenBusy}
-                    />
-                  </label>
-                  <button type="submit" class="secondary-action" disabled={!tokenInput.trim() || tokenBusy}>
-                    {tokenBusy ? 'Saving…' : 'Save token'}
-                  </button>
-                </form>
-              {/if}
-            </div>
-          {:else if updates?.token_configured && updates.token_source === 'credential_manager'}
-            <button type="button" class="secondary-action about-inline-action" disabled={tokenBusy} on:click={clearToken}>
-              {tokenBusy ? 'Removing…' : 'Remove stored token'}
-            </button>
-          {/if}
         {/if}
       </section>
     {/if}
@@ -304,8 +201,7 @@
 
   .modal-state,
   .about-detail-grid,
-  .update-result,
-  .token-card {
+  .update-result {
     background: rgb(255 255 255 / 6%);
     border: 1px solid var(--panel-border-muted);
     border-radius: 0.85rem;
@@ -433,7 +329,6 @@
   }
 
   .update-result[data-status='error'],
-  .update-result[data-status='not_configured'],
   .update-result[data-status='unsupported'] {
     border-color: rgb(239 68 68 / 55%);
   }
@@ -446,8 +341,7 @@
     color: var(--text-secondary);
   }
 
-  .update-result a,
-  .link-action {
+  .update-result a {
     color: #7dd3fc;
     text-decoration: underline;
     text-underline-offset: 0.16rem;
@@ -463,40 +357,6 @@
 
   .release-action {
     text-decoration: none;
-  }
-
-  .token-card {
-    display: grid;
-    gap: 0.75rem;
-    padding: 0.8rem;
-  }
-
-  .link-action {
-    background: none;
-    border: 0;
-    cursor: pointer;
-    justify-self: start;
-    padding: 0;
-  }
-
-  .token-form {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  .token-form label {
-    color: var(--text-secondary);
-    display: grid;
-    gap: 0.35rem;
-    font-size: 0.82rem;
-  }
-
-  .token-form input {
-    background: rgb(24 24 27 / 86%);
-    border: 1px solid var(--panel-border-muted);
-    border-radius: 0.6rem;
-    color: var(--text-primary);
-    padding: 0.55rem 0.65rem;
   }
 
   @media (max-width: 42rem) {

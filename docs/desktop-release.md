@@ -65,9 +65,7 @@ The About window is opened from the left slide-out menu. It shows installed buil
 - channel,
 - packaging/update readiness.
 
-Update checks are user-initiated only. The app checks GitHub Releases, ignores drafts and prereleases, and compares SemVer tags instead of publish dates.
-
-For private-repository testing, configure a fine-grained GitHub PAT with repository-only `Contents: read`. Installed Windows builds store the token in Windows Credential Manager. Development runs can use the `FORZA_TRACKER_GITHUB_TOKEN` environment variable. Tokens are never returned by the API or logged by the app.
+Update checks are user-initiated only. The app checks public GitHub Releases without credentials, ignores drafts and prereleases, and compares SemVer tags instead of publish dates.
 
 When a newer stable release exists, the About button changes from `Check for updates` to `Open release X.Y.Z`. The app opens the GitHub Release page in the user's browser. The user downloads the installer, optionally checks the attached SHA-256 file, closes the tracker, and runs the installer manually.
 
@@ -88,7 +86,7 @@ There is intentionally no automatic installer launch and no in-app executable ve
 11. Build the world-map cache from a valid local FH6 install folder.
 12. Confirm generated tiles under `%LOCALAPPDATA%\Forza Telemetry Tracker\map-cache`.
 13. Close the app and verify HTTP and UDP ports are released.
-14. Install an older build, configure a private release token if the repo is private, detect a newer stable release from About, open the GitHub Release link, and install the newer build manually.
-15. Confirm update-check failure handling for invalid token, no network, missing checksum asset, prerelease ignored, and malformed release tags.
+14. Install an older build, detect a newer stable release from About, open the GitHub Release link, and install the newer build manually.
+15. Confirm update-check failure handling for no network, inaccessible public repository, missing checksum asset, prerelease ignored, and malformed release tags.
 16. Install a newer build over an older build and confirm user data remains.
 17. Uninstall and confirm app files are removed while user data remains.

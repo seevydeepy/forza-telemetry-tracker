@@ -202,9 +202,7 @@ const defaultAppAboutPayload: AppAboutPayload = {
   packaged: true,
   updates: {
     supported: true,
-    token_configured: false,
-    token_source: null,
-    token_storage_available: true
+    release_access: 'public'
   }
 };
 
@@ -1153,38 +1151,6 @@ function createDefaultFetchHandler(options?: StubOptions) {
     if (pathname === '/api/capture') return jsonResponse(capture);
     if (pathname === '/api/app/about') return jsonResponse(appAbout);
     if (pathname === '/api/app/update/check' && init?.method === 'POST') return jsonResponse(updateCheck);
-    if (pathname === '/api/app/update/token' && init?.method === 'POST') {
-      appAbout = {
-        ...appAbout,
-        updates: {
-          ...appAbout.updates,
-          token_configured: true,
-          token_source: 'credential_manager'
-        }
-      };
-      return jsonResponse({
-        token_configured: true,
-        token_source: 'credential_manager',
-        token_storage_available: true,
-        message: 'GitHub update token saved.'
-      });
-    }
-    if (pathname === '/api/app/update/token' && init?.method === 'DELETE') {
-      appAbout = {
-        ...appAbout,
-        updates: {
-          ...appAbout.updates,
-          token_configured: false,
-          token_source: null
-        }
-      };
-      return jsonResponse({
-        token_configured: false,
-        token_source: null,
-        token_storage_available: true,
-        message: 'GitHub update token removed.'
-      });
-    }
     if (pathname === '/api/map/status') return jsonResponse(worldMapStatus);
     if (pathname === '/api/map/settings' && init?.method === 'PATCH') {
       const body = JSON.parse(String(init.body ?? '{}')) as Partial<WorldMapStatus['settings']>;

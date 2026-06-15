@@ -23,11 +23,7 @@ from pydantic import BaseModel
 
 from telemetry_tracker.app_metadata import load_release_metadata
 from telemetry_tracker.app_paths import DesktopPaths, default_desktop_paths
-from telemetry_tracker.app_updates import (
-    FORZA_APP_ACTION_HEADER,
-    FORZA_APP_ACTION_VALUE,
-    UpdateService,
-)
+from telemetry_tracker.app_updates import UpdateService
 from telemetry_tracker.car_catalog import load_local_fh6_catalog
 from telemetry_tracker.car_info import (
     car_identity_from_packet,
@@ -64,7 +60,6 @@ from telemetry_tracker.track_catalog import load_local_fh6_track_catalog
 from telemetry_tracker.track_matcher import MATCHER_VERSION, match_lap_track
 from telemetry_tracker.track_assets import validate_asset, validate_transform
 from telemetry_tracker.udp_listener import UdpTelemetryListener
-from telemetry_tracker.github_token_store import TokenStorageUnavailable
 from telemetry_tracker.world_map import (
     build_world_map_cache,
     safe_cache_tile_path,
@@ -270,10 +265,6 @@ class TrackProfileMergeRequest(BaseModel):
 
 class AppUpdateCheckRequest(BaseModel):
     force: bool = False
-
-
-class AppUpdateTokenRequest(BaseModel):
-    token: str
 
 
 class TrackAssetCreateRequest(BaseModel):
@@ -2240,52 +2231,11 @@ def create_app(
             "capture": capture.status(),
         }
 
-    def _require_app_action_header(value: str | None) -> None:
-        if value != FORZA_APP_ACTION_VALUE:
-            raise HTTPException(
-                status_code=400,
-                detail=f"{FORZA_APP_ACTION_HEADER} header with value {FORZA_APP_ACTION_VALUE} is required",
-            )
-
     @app.get("/api/app/about")
     async def app_about() -> dict:
         return release_metadata.to_about_payload(
             updates=app.state.update_service.about_update_payload(),
         )
-
-    @app.get("/api/app/update/token")
-    async def app_update_token_status() -> dict:
-        return app.state.update_service.token_status_payload()
-
-    @app.post("/api/app/update/token")
-    async def app_update_token_configure(
-        request: AppUpdateTokenRequest,
-        x_forza_app_action: str | None = Header(default=None, alias=FORZA_APP_ACTION_HEADER),
-    ) -> dict:
-        _require_app_action_header(x_forza_app_action)
-        token = request.token.strip()
-        if not token:
-            raise HTTPException(status_code=400, detail="token must not be empty")
-        try:
-            await asyncio.to_thread(app.state.update_service.save_token, token)
-        except (TokenStorageUnavailable, ValueError) as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        payload = app.state.update_service.token_status_payload()
-        payload["message"] = "GitHub update token saved."
-        return payload
-
-    @app.delete("/api/app/update/token")
-    async def app_update_token_clear(
-        x_forza_app_action: str | None = Header(default=None, alias=FORZA_APP_ACTION_HEADER),
-    ) -> dict:
-        _require_app_action_header(x_forza_app_action)
-        try:
-            await asyncio.to_thread(app.state.update_service.clear_token)
-        except TokenStorageUnavailable as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        payload = app.state.update_service.token_status_payload()
-        payload["message"] = "GitHub update token removed."
-        return payload
 
     @app.post("/api/app/update/check")
     async def app_update_check(request: AppUpdateCheckRequest | None = None) -> dict:

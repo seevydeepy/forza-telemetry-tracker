@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import httpx
+
 from telemetry_tracker.app_metadata import (
     ENV_RELEASE_REPOSITORY,
     ENV_UPDATE_CHANNEL,
@@ -17,7 +19,6 @@ from telemetry_tracker.app_updates import (
     release_candidate_from_github,
     select_latest_stable_release,
 )
-from telemetry_tracker.github_token_store import GitHubTokenStore, TokenStatus
 
 
 def _release(
@@ -116,25 +117,6 @@ class AppUpdateSemVerTests(unittest.TestCase):
         self.assertIsNone(candidate)
 
 
-class FakeTokenStore(GitHubTokenStore):
-    def __init__(self, token: str | None = None) -> None:
-        self.token = token
-
-    def read_token(self) -> str | None:
-        return self.token
-
-    def status(self) -> TokenStatus:
-        return TokenStatus(configured=bool(self.token), source="credential_manager" if self.token else None)
-
-    def save_token(self, token: str) -> TokenStatus:
-        self.token = token
-        return self.status()
-
-    def clear_token(self) -> TokenStatus:
-        self.token = None
-        return self.status()
-
-
 class FakeGitHubClient:
     def __init__(self, releases: list[dict]) -> None:
         self.releases = releases
@@ -143,11 +125,20 @@ class FakeGitHubClient:
         return self.releases
 
 
+class FailingGitHubClient:
+    def __init__(self, status_code: int) -> None:
+        self.status_code = status_code
+
+    def list_releases(self) -> list[dict]:
+        request = httpx.Request("GET", "https://api.github.example/repos/owner/repo/releases")
+        response = httpx.Response(self.status_code, request=request)
+        raise httpx.HTTPStatusError("release check failed", request=request, response=response)
+
+
 class AppUpdateServiceTests(unittest.TestCase):
     def test_update_check_reports_unsupported_for_dev_channel(self):
         service = UpdateService(
             metadata=ReleaseMetadata(version="1.0.0", channel="dev", repository="owner/repo"),
-            token_store=FakeTokenStore(),
         )
 
         result = service.check_for_updates(force=True)
@@ -159,7 +150,6 @@ class AppUpdateServiceTests(unittest.TestCase):
         factory = Mock(return_value=client)
         service = UpdateService(
             metadata=ReleaseMetadata(version="1.0.0", channel="stable", repository="owner/repo"),
-            token_store=FakeTokenStore("token"),
             client_factory=factory,
             cache_ttl_seconds=60,
         )
@@ -170,24 +160,34 @@ class AppUpdateServiceTests(unittest.TestCase):
         self.assertEqual(first.status, "update_available")
         self.assertEqual(second.latest_version, "1.1.0")
         self.assertEqual(factory.call_count, 1)
+        factory.assert_called_once_with("owner/repo")
 
-    def test_token_status_redacts_token_value(self):
+    def test_about_update_payload_reports_public_release_access(self):
         service = UpdateService(
             metadata=ReleaseMetadata(version="1.0.0", channel="stable", repository="owner/repo"),
-            token_store=FakeTokenStore("secret-token"),
         )
 
-        payload = service.token_status_payload()
+        payload = service.about_update_payload()
 
         self.assertEqual(
             payload,
             {
-                "token_configured": True,
-                "token_source": "credential_manager",
-                "token_storage_available": True,
+                "supported": True,
+                "release_access": "public",
             },
         )
-        self.assertNotIn("secret-token", repr(payload))
+
+    def test_update_check_error_mentions_public_repository_not_token_setup(self):
+        service = UpdateService(
+            metadata=ReleaseMetadata(version="1.0.0", channel="stable", repository="owner/repo"),
+            client_factory=lambda repository: FailingGitHubClient(404),
+        )
+
+        result = service.check_for_updates(force=True)
+
+        self.assertEqual(result.status, "error")
+        self.assertIn("public and reachable", result.message)
+        self.assertNotIn("token", result.message.lower())
 
 
 if __name__ == "__main__":

@@ -9,15 +9,12 @@ from typing import Any, Callable
 import httpx
 
 from telemetry_tracker.app_metadata import ReleaseMetadata
-from telemetry_tracker.github_token_store import GitHubTokenStore, TokenStatus
 
 SEMVER_TAG_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
 INSTALLER_ASSET_RE = re.compile(r"^ForzaTelemetryTrackerSetup-v\d+\.\d+\.\d+-x64\.exe$", re.IGNORECASE)
 CHECKSUM_ASSET_RE = re.compile(r"\.(sha256|sha256sum|sha256\.txt|txt)$", re.IGNORECASE)
 DEFAULT_CACHE_TTL_SECONDS = 15 * 60
 GITHUB_API_ROOT = "https://api.github.com"
-FORZA_APP_ACTION_HEADER = "X-Forza-App-Action"
-FORZA_APP_ACTION_VALUE = "1"
 
 
 class UpdateError(RuntimeError):
@@ -147,25 +144,18 @@ def select_latest_stable_release(
 
 
 class GitHubReleaseClient:
-    """Small GitHub Releases API client.
+    """Small public GitHub Releases API client."""
 
-    Token values are used only in Authorization headers and never returned.
-    """
-
-    def __init__(self, repository: str, token: str | None = None, *, api_root: str = GITHUB_API_ROOT) -> None:
+    def __init__(self, repository: str, *, api_root: str = GITHUB_API_ROOT) -> None:
         self.repository = repository.strip().strip("/")
-        self.token = token
         self.api_root = api_root.rstrip("/")
 
     def _headers(self, accept: str = "application/vnd.github+json") -> dict[str, str]:
-        headers = {
+        return {
             "Accept": accept,
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "Forza-Telemetry-Tracker",
         }
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-        return headers
 
     def list_releases(self) -> list[dict[str, Any]]:
         url = f"{self.api_root}/repos/{self.repository}/releases?per_page=100"
@@ -177,40 +167,32 @@ class GitHubReleaseClient:
                 raise UpdateError("GitHub releases response was not a list")
             return payload
 
+
 class UpdateService:
     def __init__(
         self,
         *,
         metadata: ReleaseMetadata,
-        token_store: GitHubTokenStore | None = None,
         cache_ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS,
-        client_factory: Callable[[str, str | None], GitHubReleaseClient] | None = None,
+        client_factory: Callable[[str], GitHubReleaseClient] | None = None,
     ) -> None:
         self.metadata = metadata
-        self.token_store = token_store or GitHubTokenStore()
         self.cache_ttl_seconds = cache_ttl_seconds
-        self.client_factory = client_factory or (lambda repository, token: GitHubReleaseClient(repository, token))
+        self.client_factory = client_factory or (lambda repository: GitHubReleaseClient(repository))
         self._cached_at = 0.0
         self._cached_result: UpdateCheckResult | None = None
 
-    def token_status_payload(self) -> dict[str, Any]:
-        status = self.token_store.status()
-        return {
-            "token_configured": status.configured,
-            "token_source": status.source,
-            "token_storage_available": status.storage_available,
-        }
-
     def about_update_payload(self) -> dict[str, Any]:
-        payload = self.token_status_payload()
-        payload["supported"] = self.update_check_supported()
-        return payload
+        return {
+            "supported": self.update_check_supported(),
+            "release_access": "public",
+        }
 
     def update_check_supported(self) -> bool:
         return bool(self.metadata.repository and SemVer.parse(self.metadata.version) and self.metadata.stable_channel)
 
     def _client(self) -> GitHubReleaseClient:
-        return self.client_factory(self.metadata.repository, self.token_store.read_token())
+        return self.client_factory(self.metadata.repository)
 
     def check_for_updates(self, *, force: bool = False) -> UpdateCheckResult:
         now = time.monotonic()
@@ -258,8 +240,8 @@ class UpdateService:
                 )
         except httpx.HTTPStatusError as exc:
             message = f"GitHub release check failed with HTTP {exc.response.status_code}."
-            if not self.token_store.status().configured and exc.response.status_code in {401, 403, 404}:
-                message += " Configure a repository-only GitHub token for private release testing."
+            if exc.response.status_code in {401, 403, 404}:
+                message += " Confirm the configured release repository is public and reachable."
             result = UpdateCheckResult(
                 status="error",
                 current_version=self.metadata.version,
@@ -279,13 +261,3 @@ class UpdateService:
     def _cache(self, result: UpdateCheckResult) -> None:
         self._cached_result = result
         self._cached_at = time.monotonic()
-
-    def save_token(self, token: str) -> TokenStatus:
-        status = self.token_store.save_token(token)
-        self._cached_result = None
-        return status
-
-    def clear_token(self) -> TokenStatus:
-        status = self.token_store.clear_token()
-        self._cached_result = None
-        return status

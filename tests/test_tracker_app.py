@@ -48,31 +48,13 @@ class FakeUpdateService:
             channel="stable",
             packaged=True,
         )
-        self.saved_token = None
-        self.cleared = False
         self.check_calls = []
 
     def about_update_payload(self):
         return {
             "supported": True,
-            "token_configured": self.saved_token is not None,
-            "token_source": "credential_manager" if self.saved_token else None,
-            "token_storage_available": True,
+            "release_access": "public",
         }
-
-    def token_status_payload(self):
-        return {
-            "token_configured": self.saved_token is not None,
-            "token_source": "credential_manager" if self.saved_token else None,
-            "token_storage_available": True,
-        }
-
-    def save_token(self, token):
-        self.saved_token = token
-
-    def clear_token(self):
-        self.cleared = True
-        self.saved_token = None
 
     def check_for_updates(self, *, force=False):
         self.check_calls.append(force)
@@ -189,9 +171,8 @@ class SpyEventBus(EventBus):
 
 
 class TrackerAppTests(unittest.TestCase):
-    def test_about_endpoint_returns_release_metadata_without_token_secret(self):
+    def test_about_endpoint_returns_release_metadata_with_public_update_access(self):
         update_service = FakeUpdateService()
-        update_service.saved_token = "ghp_secret"
         app = create_app(db_path=Path(tempfile.mkdtemp()) / "telemetry_tracker.sqlite3", update_service=update_service)
 
         with TestClient(app) as client:
@@ -202,8 +183,7 @@ class TrackerAppTests(unittest.TestCase):
         self.assertEqual(payload["version"], "1.0.0")
         self.assertEqual(payload["release_date"], "2026-06-13")
         self.assertEqual(payload["repository"], "owner/repo")
-        self.assertEqual(payload["updates"]["token_configured"], True)
-        self.assertNotIn("ghp_secret", response.text)
+        self.assertEqual(payload["updates"], {"supported": True, "release_access": "public"})
 
     def test_update_check_endpoint_delegates_force_flag(self):
         update_service = FakeUpdateService()
@@ -216,27 +196,18 @@ class TrackerAppTests(unittest.TestCase):
         self.assertEqual(response.json()["status"], "update_available")
         self.assertEqual(update_service.check_calls, [True])
 
-    def test_update_token_endpoints_require_action_header_and_redact_token(self):
+    def test_update_token_endpoint_is_removed_for_public_releases(self):
         update_service = FakeUpdateService()
         app = create_app(db_path=Path(tempfile.mkdtemp()) / "telemetry_tracker.sqlite3", update_service=update_service)
 
         with TestClient(app) as client:
-            rejected = client.post("/api/app/update/token", json={"token": "ghp_secret"})
-            accepted = client.post(
-                "/api/app/update/token",
-                headers={"X-Forza-App-Action": "1"},
-                json={"token": "ghp_secret"},
-            )
-            status = client.get("/api/app/update/token")
-            cleared = client.delete("/api/app/update/token", headers={"X-Forza-App-Action": "1"})
+            get_response = client.get("/api/app/update/token")
+            post_response = client.post("/api/app/update/token", json={"token": "ghp_secret"})
+            delete_response = client.delete("/api/app/update/token")
 
-        self.assertEqual(rejected.status_code, 400)
-        self.assertEqual(accepted.status_code, 200)
-        self.assertNotIn("ghp_secret", accepted.text)
-        self.assertEqual(status.status_code, 200)
-        self.assertNotIn("ghp_secret", status.text)
-        self.assertEqual(cleared.status_code, 200)
-        self.assertTrue(update_service.cleared)
+        self.assertEqual(get_response.status_code, 404)
+        self.assertEqual(post_response.status_code, 404)
+        self.assertEqual(delete_response.status_code, 404)
 
     def test_export_defaults_endpoint_uses_app_data_exports_dir(self):
         with tempfile.TemporaryDirectory() as tmp:

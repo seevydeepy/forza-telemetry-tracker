@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AboutModal from './AboutModal.svelte';
 import type { AppAboutPayload, AppUpdateCheckResponse } from './types';
@@ -14,9 +14,7 @@ const aboutPayload: AppAboutPayload = {
   packaged: true,
   updates: {
     supported: true,
-    token_configured: false,
-    token_source: null,
-    token_storage_available: true
+    release_access: 'public'
   }
 };
 
@@ -54,6 +52,8 @@ describe('AboutModal', () => {
     expect(within(dialog).getByText('Installed version 1.0.0')).toBeInTheDocument();
     expect(within(dialog).getByText('stable')).toBeInTheDocument();
     expect(within(dialog).getByText('owner/repo')).toBeInTheDocument();
+    expect(within(dialog).getByText('Public GitHub Releases')).toBeInTheDocument();
+    expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
     const supportLink = within(dialog).getByRole('link', { name: 'Support SeevyDeepy on Ko-fi' });
     expect(supportLink).toHaveAttribute('href', 'https://ko-fi.com/Z4I021C66X');
     expect(supportLink).toHaveAttribute('target', '_blank');
@@ -89,31 +89,20 @@ describe('AboutModal', () => {
     expect(fetchMock.mock.calls.some(([input]) => String(input).endsWith('/install'))).toBe(false);
   });
 
-  it('saves private release tokens without displaying the token value', async () => {
+  it('does not render credential setup for public releases', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
       if (url === '/api/app/about') return jsonResponse(aboutPayload);
-      if (url === '/api/app/update/token') {
-        return jsonResponse({
-          token_configured: true,
-          token_source: 'credential_manager',
-          token_storage_available: true,
-          message: 'GitHub update token saved.'
-        });
-      }
       return jsonResponse({}, 404);
     });
     vi.stubGlobal('fetch', fetchMock);
 
     renderAboutModal();
 
-    await fireEvent.click(await screen.findByRole('button', { name: 'Configure private GitHub token' }));
-    await fireEvent.input(screen.getByPlaceholderText('github_pat_…'), {
-      target: { value: 'github_pat_secret' }
-    });
-    await fireEvent.click(screen.getByRole('button', { name: 'Save token' }));
+    const dialog = await screen.findByRole('dialog', { name: 'About' });
+    await within(dialog).findByText('Public GitHub Releases');
 
-    await waitFor(() => expect(screen.getByText('Token configured (Windows Credential Manager)')).toBeInTheDocument());
-    expect(screen.queryByText('github_pat_secret')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/app/update/token', expect.anything());
   });
 });

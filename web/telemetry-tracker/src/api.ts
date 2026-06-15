@@ -1,7 +1,6 @@
 import type {
   AppAboutPayload,
   AppUpdateCheckResponse,
-  AppUpdateTokenResponse,
   CaptureMode,
   CaptureStatus,
   DeltaResponse,
@@ -99,26 +98,6 @@ export async function checkForUpdates(force = false): Promise<AppUpdateCheckResp
     body: JSON.stringify({ force })
   });
   return expectJson<AppUpdateCheckResponse>(response, 'Update check request failed');
-}
-
-export async function saveAppUpdateToken(token: string): Promise<AppUpdateTokenResponse> {
-  const response = await fetch('/api/app/update/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Forza-App-Action': '1'
-    },
-    body: JSON.stringify({ token })
-  });
-  return expectJson<AppUpdateTokenResponse>(response, 'Update token save request failed');
-}
-
-export async function clearAppUpdateToken(): Promise<AppUpdateTokenResponse> {
-  const response = await fetch('/api/app/update/token', {
-    method: 'DELETE',
-    headers: { 'X-Forza-App-Action': '1' }
-  });
-  return expectJson<AppUpdateTokenResponse>(response, 'Update token clear request failed');
 }
 
 export async function restartListener(): Promise<StatusPayload['listener']> {
