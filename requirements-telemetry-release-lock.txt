@@ -399,9 +399,9 @@ pythonnet==3.1.0 \
     --hash=sha256:7b34c382905d10a371509ffafd64cae0416305c28817738a9cd138336f4e9991 \
     --hash=sha256:7bdd4de03df3547a48122a3989265c8b31d5be0d19dadffa009eec7df8085e0b
     # via pywebview
-pywebview==5.4 \
-    --hash=sha256:0559c47db543556498dd38604a2a0479896c320f86c9b23499b8e580b58b699d \
-    --hash=sha256:b5e2c6c7502aaf72a9ae6034daf83785f5fad874fac7fa82bf4fcf854f1f083a
+pywebview==6.2.1 \
+    --hash=sha256:71b7136752e40824655304d938efb62014218d1a90bd8e87e1cbdb1ce9c466af \
+    --hash=sha256:9d07275f53894ab4d5e2e0e996227193e7187dec276d9b624dccbce029216b46
     # via -r requirements-telemetry-desktop.txt
 pywin32-ctypes==0.2.3 \
     --hash=sha256:8a1513379d709975552d202d942d9837758905c8d01eb82b8bcc30918929e7b8 \
