@@ -60,8 +60,8 @@ Invoke-Step "Generate release metadata" {
 Invoke-Step "Install frontend dependencies" {
     Push-Location "web\telemetry-tracker"
     try {
-        npm install
-        if ($LASTEXITCODE -ne 0) { throw "npm install failed" }
+        npm ci
+        if ($LASTEXITCODE -ne 0) { throw "npm ci failed" }
     } finally {
         Pop-Location
     }
@@ -88,9 +88,9 @@ Invoke-Step "Build frontend" {
 }
 
 # Python tests
-Invoke-Step "Install Python test dependencies" {
-    python -m pip install -r requirements-telemetry-test.txt
-    if ($LASTEXITCODE -ne 0) { throw "pip install test dependencies failed" }
+Invoke-Step "Install locked Python release dependencies" {
+    python -m pip install -r requirements-telemetry-release-lock.txt
+    if ($LASTEXITCODE -ne 0) { throw "pip install locked Python release dependencies failed" }
 }
 
 Invoke-Step "Run Python tests" {
@@ -117,12 +117,6 @@ Invoke-Step "Publish FH6 map converter" {
     if (-not (Test-Path $ConverterExe)) {
         throw "Expected output not found: $ConverterExe"
     }
-}
-
-# Desktop Python app
-Invoke-Step "Install desktop Python dependencies" {
-    python -m pip install -r requirements-telemetry-desktop.txt
-    if ($LASTEXITCODE -ne 0) { throw "pip install failed" }
 }
 
 Invoke-Step "Build PyInstaller app" {

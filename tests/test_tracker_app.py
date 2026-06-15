@@ -202,7 +202,7 @@ class TrackerAppTests(unittest.TestCase):
 
         with TestClient(app) as client:
             get_response = client.get("/api/app/update/token")
-            post_response = client.post("/api/app/update/token", json={"token": "ghp_secret"})
+            post_response = client.post("/api/app/update/token", json={"token": "fake-token"})
             delete_response = client.delete("/api/app/update/token")
 
         self.assertEqual(get_response.status_code, 404)

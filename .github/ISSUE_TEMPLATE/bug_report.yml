@@ -1,0 +1,50 @@
+name: Bug report
+description: Report something that is broken or confusing.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not attach telemetry databases, local game files, or generated map-cache files unless a maintainer explicitly asks for a redacted sample.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the behavior and what you expected instead.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Use the version shown in the About window when possible.
+      placeholder: "1.2.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: install_type
+    attributes:
+      label: How are you running the app?
+      options:
+        - Windows installer release
+        - Developer checkout
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Include relevant logs, screenshots, or error text. Redact personal paths if needed.

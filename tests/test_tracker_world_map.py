@@ -184,7 +184,7 @@ class WorldMapHelperTests(unittest.TestCase):
                 cache_root.resolve() / "3" / "4" / "4.png",
             )
             with self.assertRaisesRegex(ValueError, "non-negative integer"):
-                safe_cache_tile_path(cache_root, z=0, x=0, y="../secret")
+                safe_cache_tile_path(cache_root, z=0, x=0, y="../outside")
 
     def test_build_world_map_cache_uses_fake_converter_and_persists_ready_tile_set(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Support and troubleshooting
+    url: https://github.com/seevydeepy/forza-telemetry-tracker/blob/master/SUPPORT.md
+    about: Check support routes before opening a bug report.
+  - name: Security reports
+    url: https://github.com/seevydeepy/forza-telemetry-tracker/blob/master/SECURITY.md
+    about: Please do not report security issues in public issues.

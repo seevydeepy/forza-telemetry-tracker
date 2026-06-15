@@ -1,7 +1,15 @@
 {
   "name": "forza-telemetry-tracker",
   "version": "0.1.0",
+  "description": "Frontend for the local-first Forza Telemetry Tracker desktop app.",
   "private": true,
+  "license": "MIT",
+  "author": "SeevyDeepy",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seevydeepy/forza-telemetry-tracker.git",
+    "directory": "web/telemetry-tracker"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

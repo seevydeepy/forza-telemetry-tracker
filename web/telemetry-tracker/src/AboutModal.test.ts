@@ -54,14 +54,11 @@ describe('AboutModal', () => {
     expect(within(dialog).getByText('owner/repo')).toBeInTheDocument();
     expect(within(dialog).getByText('Public GitHub Releases')).toBeInTheDocument();
     expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
-    const supportLink = within(dialog).getByRole('link', { name: 'Support SeevyDeepy on Ko-fi' });
+    const supportLink = within(dialog).getByRole('link', { name: 'Support on Ko-fi' });
     expect(supportLink).toHaveAttribute('href', 'https://ko-fi.com/Z4I021C66X');
     expect(supportLink).toHaveAttribute('target', '_blank');
     expect(supportLink).toHaveAttribute('rel', 'noreferrer');
-    expect(within(supportLink).getByAltText('Buy Me a Coffee at ko-fi.com')).toHaveAttribute(
-      'src',
-      'https://storage.ko-fi.com/cdn/kofi3.png?v=6'
-    );
+    expect(within(supportLink).queryByRole('img')).not.toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Check for updates' })).toBeInTheDocument();
   });
 

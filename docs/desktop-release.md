@@ -1,5 +1,7 @@
 # Desktop Release Guide
 
+Forza is a trademark of Microsoft. Forza Telemetry Tracker is an unofficial community tool and is not affiliated with, endorsed by, or sponsored by Microsoft, Xbox Game Studios, Turn 10 Studios, Playground Games, or the Forza franchise owners.
+
 ## Release artifact
 
 The user-facing artifact is `ForzaTelemetryTrackerSetup-vX.Y.Z-x64.exe`. Users do not install Python, Node, .NET, run PowerShell scripts, run `pip`, or start multiple programs.
@@ -23,6 +25,7 @@ The project currently publishes unsigned Windows installers. Windows SmartScreen
 - .NET 9 SDK.
 - Inno Setup with `iscc` on `PATH`.
 - Microsoft WebView2 Evergreen Standalone installer downloaded locally.
+- `uv` when refreshing `requirements-telemetry-release-lock.txt`.
 
 ## Local build
 
@@ -33,6 +36,12 @@ powershell -ExecutionPolicy Bypass -File tools\build-desktop-release.ps1 `
 ```
 
 Use `-SkipInstaller` for a local app-bundle build that does not require Inno Setup or WebView2 installer input, and `-SkipSmoke` only when the HTTP smoke test is not useful for the current packaging check.
+
+The release build uses `npm ci` for the frontend and installs Python dependencies from `requirements-telemetry-release-lock.txt`, which is generated for Windows/Python 3.12 with hashes:
+
+```powershell
+uv pip compile requirements-telemetry-desktop.txt requirements-telemetry-test.txt --python-version 3.12 --python-platform windows --generate-hashes -o requirements-telemetry-release-lock.txt
+```
 
 ## GitHub release build
 

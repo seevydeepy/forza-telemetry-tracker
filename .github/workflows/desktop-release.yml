@@ -45,6 +45,7 @@ jobs:
             requirements-telemetry-tracker.txt
             requirements-telemetry-test.txt
             requirements-telemetry-desktop.txt
+            requirements-telemetry-release-lock.txt
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
