@@ -1,15 +1,9 @@
 <script lang="ts">
-  import type { CaptureStatus, ListenerStatus, PacketRaceState } from './types';
+  import type { CaptureStatus, ListenerState, ListenerStatus, PacketRaceState } from './types';
 
   export let listener: ListenerStatus;
   export let capture: CaptureStatus;
   export let lastEvent = 'Dashboard starting';
-
-  const numberFormatter = new Intl.NumberFormat();
-
-  function formatNumber(value: number | null | undefined) {
-    return numberFormatter.format(value ?? 0);
-  }
 
   function compactEvent(value: string) {
     return value.trim().replace(/\s+/g, ' ');
@@ -64,15 +58,27 @@
     };
   }
 
+  function listenerStateLabel(state: ListenerState) {
+    switch (state) {
+      case 'starting':
+        return 'Starting';
+      case 'waiting':
+        return 'Waiting';
+      case 'receiving':
+        return 'Receiving';
+      case 'recording':
+        return 'Recording';
+      case 'error':
+        return 'Error';
+    }
+  }
+
   $: endpoint = `UDP ${listener.udp_host}:${listener.udp_port}`;
-  $: packetsObserved = Math.max(listener.packets_received, capture.packet_receipt.packets_observed);
-  $: packetText = `${formatNumber(packetsObserved)} observed · ${formatNumber(listener.packets_recorded)} recorded`;
   $: latestPacket = packetTypeDisplay(capture);
   $: listenerText = `${listener.state}: ${listener.message}`;
-  $: listenerDisplayText = listener.state;
+  $: listenerDisplayText = listenerStateLabel(listener.state);
   $: capturePhaseText = capture.recording.active ? 'recording' : compactPhase(capture.phase);
   $: captureText = `${capture.mode} · ${capturePhaseText}`;
-  $: storageText = `Prebuffer ${formatNumber(capture.prebuffer.size)}/${formatNumber(capture.prebuffer.capacity)} · saved ${formatNumber(capture.recording.total_live_packets_recorded_excluding_prebuffer)}`;
   $: eventText = lastEvent || 'No recent telemetry event';
   $: eventDisplayText = compactEvent(eventText);
 </script>
@@ -83,14 +89,9 @@
       <span class="status-label">Endpoint</span>
       <strong>{endpoint}</strong>
     </div>
-    <div class="status-segment status-segment-packets">
-      <span class="status-label">Packets</span>
-      <span>{packetText}</span>
-    </div>
     <div class="status-segment status-segment-latest">
-      <span class="status-label">Latest packet</span>
       <strong
-        class={`status-packet-pill status-packet-${latestPacket.state}`}
+        class={`status-indicator-pill status-packet-${latestPacket.state}`}
         aria-label={latestPacket.ariaLabel}
         title={latestPacket.title}
       >
@@ -99,7 +100,13 @@
     </div>
     <div class="status-segment status-segment-listener">
       <span class="status-label">Listener</span>
-      <span aria-label={`Listener ${listenerText}`} title={listenerText}>{listenerDisplayText}</span>
+      <strong
+        class={`status-indicator-pill status-listener-${listener.state}`}
+        aria-label={`Listener ${listenerText}`}
+        title={listenerText}
+      >
+        {listenerDisplayText}
+      </strong>
     </div>
     <div
       class="status-segment status-segment-capture"
@@ -107,10 +114,6 @@
     >
       <span class="status-label">Capture</span>
       <span>{captureText}</span>
-    </div>
-    <div class="status-segment status-segment-storage">
-      <span class="status-label">Storage</span>
-      <span>{storageText}</span>
     </div>
     <div class="status-segment status-segment-event" title={eventText}>
       <span class="status-label">Last event</span>
@@ -135,12 +138,10 @@
 
   .status-fields {
     --status-endpoint-min-width: 12rem;
-    --status-packets-min-width: 18rem;
-    --status-latest-min-width: 11.25rem;
-    --status-listener-min-width: 8rem;
-    --status-capture-min-width: 11.25rem;
-    --status-storage-min-width: 15rem;
-    --status-event-min-width: 11.75rem;
+    --status-latest-min-width: 6.75rem;
+    --status-listener-min-width: 12rem;
+    --status-capture-min-width: 14rem;
+    --status-event-min-width: 14rem;
 
     align-items: center;
     display: flex;
@@ -173,10 +174,6 @@
     --status-section-min-width: var(--status-endpoint-min-width);
   }
 
-  .status-segment-packets {
-    --status-section-min-width: var(--status-packets-min-width);
-  }
-
   .status-segment-latest {
     --status-section-min-width: var(--status-latest-min-width);
   }
@@ -187,10 +184,6 @@
 
   .status-segment-capture {
     --status-section-min-width: var(--status-capture-min-width);
-  }
-
-  .status-segment-storage {
-    --status-section-min-width: var(--status-storage-min-width);
   }
 
   .status-segment-event {
@@ -215,7 +208,7 @@
     font-size: 0.82rem;
   }
 
-  .status-packet-pill {
+  .status-indicator-pill {
     align-items: center;
     border: 1px solid #3f3f46;
     border-radius: 999px;
@@ -229,7 +222,7 @@
     text-transform: uppercase;
   }
 
-  .status-packet-pill::before {
+  .status-indicator-pill::before {
     background: currentColor;
     border-radius: 999px;
     content: '';
@@ -257,6 +250,26 @@
     color: #d4d4d8;
   }
 
+  .status-listener-receiving,
+  .status-listener-recording {
+    background: rgba(34, 197, 94, 0.16);
+    border-color: rgba(34, 197, 94, 0.45);
+    color: #bbf7d0;
+  }
+
+  .status-listener-starting,
+  .status-listener-waiting {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: rgba(245, 158, 11, 0.45);
+    color: #fde68a;
+  }
+
+  .status-listener-error {
+    background: rgba(239, 68, 68, 0.16);
+    border-color: rgba(239, 68, 68, 0.45);
+    color: #fecaca;
+  }
+
   .status-label {
     color: #71717a;
     flex: 0 0 auto;
@@ -269,39 +282,29 @@
     color: #f4f4f5;
   }
 
-  @media (max-width: 1540px) {
-    .status-segment-storage {
+  @media (max-width: 1020px) {
+    .status-segment-endpoint {
+      display: none;
+    }
+
+    .status-segment-latest {
+      border-left: 0;
+      padding-left: 0;
+    }
+  }
+
+  @media (max-width: 800px) {
+    .status-segment-listener {
       display: none;
     }
   }
 
-  @media (max-width: 1300px) {
+  @media (max-width: 620px) {
+    .status-fields {
+      --status-event-min-width: 8rem;
+    }
+
     .status-segment-capture {
-      display: none;
-    }
-  }
-
-  @media (max-width: 1180px) {
-    .status-fields {
-      --status-endpoint-min-width: 11rem;
-      --status-packets-min-width: 17rem;
-      --status-latest-min-width: 11rem;
-      --status-listener-min-width: 8rem;
-      --status-event-min-width: 11.5rem;
-    }
-  }
-
-  @media (max-width: 900px) {
-    .status-fields {
-      --status-endpoint-min-width: 10.5rem;
-      --status-latest-min-width: 10.5rem;
-      --status-listener-min-width: 8rem;
-      --status-event-min-width: 11rem;
-    }
-
-    .status-segment-packets,
-    .status-segment-capture,
-    .status-segment-storage {
       display: none;
     }
   }

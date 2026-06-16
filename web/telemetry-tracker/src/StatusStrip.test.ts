@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import StatusStrip from './StatusStrip.svelte';
-import type { CaptureStatus, ListenerStatus } from './types';
+import type { CaptureStatus, ListenerState, ListenerStatus } from './types';
 
 const listener: ListenerStatus = {
   state: 'receiving',
@@ -14,6 +14,14 @@ const listener: ListenerStatus = {
   packets_recorded: 4,
   message: 'receiving UDP telemetry on 127.0.0.1:5400'
 };
+
+function listenerWithState(state: ListenerState): ListenerStatus {
+  return {
+    ...listener,
+    state,
+    message: `${state} listener`
+  };
+}
 
 function captureWithPacket(lastIsRaceOn: boolean | null, hasReceivedPackets = true): CaptureStatus {
   const packetType = lastIsRaceOn === true ? 'race' : lastIsRaceOn === false ? 'non_race' : 'unknown';
@@ -55,12 +63,28 @@ describe('StatusStrip', () => {
     const statusEventCss = source.match(/\.status-segment-event\s*{(?<body>[\s\S]*?)}/)?.groups?.body ?? '';
 
     expect(statusFieldsCss).toContain('display: flex');
-    expect(statusFieldsCss).toContain('--status-packets-min-width');
+    expect(statusFieldsCss).toContain('--status-listener-min-width: 12rem');
+    expect(statusFieldsCss).toContain('--status-capture-min-width: 14rem');
+    expect(statusFieldsCss).not.toContain('--status-packets-min-width');
+    expect(statusFieldsCss).not.toContain('--status-storage-min-width');
     expect(statusSegmentCss).toContain('flex: 0 0 var(--status-section-min-width)');
     expect(statusSegmentCss).toContain('min-width: var(--status-section-min-width)');
     expect(statusEventCss).toContain('flex: 1 1 var(--status-event-min-width)');
+    expect(source).not.toContain('status-segment-packets');
+    expect(source).not.toContain('status-segment-storage');
     expect(source).not.toContain('--status-section-grow');
     expect(statusFieldsCss).not.toContain('grid-template-columns');
+  });
+
+  it('drops responsive sections in endpoint, listener, capture order', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/StatusStrip.svelte'), 'utf8');
+    const endpointHideIndex = source.search(/\.status-segment-endpoint\s*{\s*display: none;/);
+    const listenerHideIndex = source.search(/\.status-segment-listener\s*{\s*display: none;/);
+    const captureHideIndex = source.search(/\.status-segment-capture\s*{\s*display: none;/);
+
+    expect(endpointHideIndex).toBeGreaterThan(-1);
+    expect(listenerHideIndex).toBeGreaterThan(endpointHideIndex);
+    expect(captureHideIndex).toBeGreaterThan(listenerHideIndex);
   });
 
   it('shows a race packet indicator when the latest packet has IsRaceOn enabled', () => {
@@ -73,6 +97,7 @@ describe('StatusStrip', () => {
     });
 
     expect(screen.getByLabelText('Latest packet type: race packet')).toHaveTextContent('Race');
+    expect(screen.queryByText('Latest packet')).not.toBeInTheDocument();
   });
 
   it('shows a non-race packet indicator when the latest packet has IsRaceOn disabled', () => {
@@ -98,4 +123,27 @@ describe('StatusStrip', () => {
 
     expect(screen.getByLabelText('Latest packet type: waiting for telemetry')).toHaveTextContent('Waiting');
   });
+
+  it.each([
+    ['receiving', 'Receiving', 'status-listener-receiving'],
+    ['recording', 'Recording', 'status-listener-recording'],
+    ['waiting', 'Waiting', 'status-listener-waiting'],
+    ['starting', 'Starting', 'status-listener-starting'],
+    ['error', 'Error', 'status-listener-error']
+  ] satisfies [ListenerState, string, string][])(
+    'shows a %s listener status indicator',
+    (state, label, className) => {
+      render(StatusStrip, {
+        props: {
+          listener: listenerWithState(state),
+          capture: captureWithPacket(true),
+          lastEvent: 'capture updated'
+        }
+      });
+
+      const indicator = screen.getByLabelText(`Listener ${state}: ${state} listener`);
+      expect(indicator).toHaveTextContent(label);
+      expect(indicator).toHaveClass('status-indicator-pill', className);
+    }
+  );
 });
