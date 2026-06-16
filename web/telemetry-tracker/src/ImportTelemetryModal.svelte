@@ -219,40 +219,44 @@
     <form class="import-telemetry-form" on:submit|preventDefault={submitImport}>
       <div class="form-field">
         <label for={fileInputId}>Raw telemetry file or files</label>
-        <input
-          bind:this={fileInput}
-          id={fileInputId}
-          aria-label="Raw telemetry file or files"
-          type="file"
-          multiple
-          accept=".bin,.raw,application/octet-stream"
-          disabled={importing}
-          on:change={(event) => handleSelectionChange(event, 'file')}
-        />
-        {#if nativeFilePickerAvailable}
-          <button type="button" class="secondary-action" disabled={importing || choosingNativeFiles} on:click={browseNativeFiles}>
-            {choosingNativeFiles ? 'Browsing…' : 'Browse files'}
-          </button>
-        {/if}
+        <div class="file-picker-row">
+          <input
+            bind:this={fileInput}
+            id={fileInputId}
+            aria-label="Raw telemetry file or files"
+            type="file"
+            multiple
+            accept=".bin,.raw,application/octet-stream"
+            disabled={importing}
+            on:change={(event) => handleSelectionChange(event, 'file')}
+          />
+          {#if nativeFilePickerAvailable}
+            <button type="button" class="secondary-action file-picker-browse-button" disabled={importing || choosingNativeFiles} on:click={browseNativeFiles}>
+              {choosingNativeFiles ? 'Browsing…' : 'Browse files'}
+            </button>
+          {/if}
+        </div>
       </div>
 
       <div class="form-field">
         <label for={folderInputId}>Raw telemetry folder</label>
-        <input
-          bind:this={folderInput}
-          id={folderInputId}
-          aria-label="Raw telemetry folder"
-          type="file"
-          multiple
-          webkitdirectory
-          disabled={importing}
-          on:change={(event) => handleSelectionChange(event, 'folder')}
-        />
-        {#if nativeFolderPickerAvailable}
-          <button type="button" class="secondary-action" disabled={importing || choosingNativeFolder} on:click={browseNativeFolder}>
-            {choosingNativeFolder ? 'Browsing…' : 'Browse folder'}
-          </button>
-        {/if}
+        <div class="file-picker-row">
+          <input
+            bind:this={folderInput}
+            id={folderInputId}
+            aria-label="Raw telemetry folder"
+            type="file"
+            multiple
+            webkitdirectory
+            disabled={importing}
+            on:change={(event) => handleSelectionChange(event, 'folder')}
+          />
+          {#if nativeFolderPickerAvailable}
+            <button type="button" class="secondary-action file-picker-browse-button" disabled={importing || choosingNativeFolder} on:click={browseNativeFolder}>
+              {choosingNativeFolder ? 'Browsing…' : 'Browse folder'}
+            </button>
+          {/if}
+        </div>
         <p class="settings-hint">Folder selection imports every selected file; invalid raw telemetry files are listed as job errors.</p>
       </div>
 

@@ -89,7 +89,7 @@
       <Icon name="help" size={18} />
     </button>
   </div>
-  <div class="world-map-install-location-input-row">
+  <div class="world-map-install-location-input-row file-picker-row">
     <input
       id={inputId}
       aria-describedby={helpOpen ? helpId : undefined}
@@ -102,7 +102,7 @@
     {#if folderPickerAvailable}
       <button
         type="button"
-        class="world-map-install-location-browse"
+        class="world-map-install-location-browse file-picker-browse-button"
         aria-label="Browse for FH6 install folder"
         disabled={disabled || choosingFolder}
         on:click={browseForInstallFolder}

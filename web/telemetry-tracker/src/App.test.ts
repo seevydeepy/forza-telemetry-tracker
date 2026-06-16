@@ -3177,9 +3177,11 @@ describe('App', () => {
 
   it('starts a raw telemetry import job from native file paths', async () => {
     const choose_raw_telemetry_files = vi.fn(async () => ['D:\\captures\\native-a.bin', 'D:\\captures\\native-b.bin']);
+    const choose_raw_telemetry_folder = vi.fn(async () => 'D:\\captures');
     vi.stubGlobal('pywebview', {
       api: {
-        choose_raw_telemetry_files
+        choose_raw_telemetry_files,
+        choose_raw_telemetry_folder
       }
     });
     const defaultHandler = createDefaultFetchHandler();
@@ -3232,7 +3234,14 @@ describe('App', () => {
     await findToast('Tracker ready');
 
     const dialog = await openImportTelemetryModal();
-    await fireEvent.click(within(dialog).getByRole('button', { name: 'Browse files' }));
+    const fileInput = within(dialog).getByLabelText('Raw telemetry file or files');
+    const browseFilesButton = within(dialog).getByRole('button', { name: 'Browse files' });
+    const folderInput = within(dialog).getByLabelText('Raw telemetry folder');
+    const browseFolderButton = within(dialog).getByRole('button', { name: 'Browse folder' });
+    expect(fileInput.closest('.file-picker-row')).toContainElement(browseFilesButton);
+    expect(folderInput.closest('.file-picker-row')).toContainElement(browseFolderButton);
+
+    await fireEvent.click(browseFilesButton);
     await waitFor(() => expect(choose_raw_telemetry_files).toHaveBeenCalled());
     expect(within(dialog).getByText(/Selected 2 native files/i)).toBeInTheDocument();
     await fireEvent.input(within(dialog).getByLabelText('Import label'), { target: { value: 'Native sprint' } });

@@ -165,22 +165,24 @@
     <form class="export-telemetry-form" on:submit|preventDefault>
       <div class="form-field">
         <label for={outputDirInputId}>Output folder</label>
-        <input
-          id={outputDirInputId}
-          aria-label="Output folder"
-          type="text"
-          bind:value={outputDir}
-          placeholder={defaultsLoading ? 'Loading default exports folder…' : 'Choose an exports folder'}
-          disabled={defaultsLoading || exporting}
-        />
+        <div class="file-picker-row">
+          <input
+            id={outputDirInputId}
+            aria-label="Output folder"
+            type="text"
+            bind:value={outputDir}
+            placeholder={defaultsLoading ? 'Loading default exports folder…' : 'Choose an exports folder'}
+            disabled={defaultsLoading || exporting}
+          />
+          {#if nativeFolderPickerAvailable}
+            <button type="button" class="secondary-action file-picker-browse-button" disabled={defaultsLoading || exporting || choosingNativeFolder} on:click={browseForOutputFolder}>
+              {choosingNativeFolder ? 'Browsing…' : 'Browse'}
+            </button>
+          {/if}
+        </div>
       </div>
 
-      <div class="modal-actions">
-        {#if nativeFolderPickerAvailable}
-          <button type="button" class="secondary-action" disabled={defaultsLoading || exporting || choosingNativeFolder} on:click={browseForOutputFolder}>
-            {choosingNativeFolder ? 'Browsing…' : 'Browse'}
-          </button>
-        {/if}
+      <div class="modal-actions export-default-actions">
         <button type="button" class="secondary-action" disabled={!defaults || defaultsLoading || exporting} on:click={useDefaultExportsFolder}>
           Use default exports folder
         </button>

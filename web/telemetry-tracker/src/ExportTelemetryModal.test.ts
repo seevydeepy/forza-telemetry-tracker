@@ -114,10 +114,14 @@ describe('ExportTelemetryModal', () => {
     vi.stubGlobal('pywebview', { api: { choose_export_folder } });
     renderExportModal();
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
+    const outputFolder = screen.getByRole('textbox', { name: 'Output folder' });
+    const browseButton = screen.getByRole('button', { name: 'Browse' });
+    expect(outputFolder.closest('.file-picker-row')).toContainElement(browseButton);
+
+    await fireEvent.click(browseButton);
 
     expect(choose_export_folder).toHaveBeenCalledWith(defaultsFixture.output_dir);
-    expect(screen.getByRole('textbox', { name: 'Output folder' })).toHaveValue('E:\\Telemetry Exports');
+    expect(outputFolder).toHaveValue('E:\\Telemetry Exports');
   });
 
   it('dispatches curated CSV exports with the chosen folder and prefix', async () => {

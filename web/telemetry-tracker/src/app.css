@@ -390,6 +390,28 @@ button {
   opacity: 1;
 }
 
+.file-picker-row {
+  align-items: stretch;
+  display: flex;
+  gap: 0.5rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.file-picker-row > input {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.file-picker-row > .secondary-action,
+.file-picker-row > .file-picker-browse-button {
+  flex: 0 0 auto;
+  min-width: 5.5rem;
+  white-space: nowrap;
+}
+
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
