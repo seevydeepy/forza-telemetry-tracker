@@ -1888,7 +1888,7 @@ describe('App', () => {
     expect(screen.getAllByRole('region', { name: /Review timeline/i })).toHaveLength(1);
     expect(within(footer).queryByRole('region', { name: 'Review timeline' })).toBeNull();
     expect(within(footer).getByRole('status', { name: 'Telemetry status' })).toHaveTextContent('UDP 127.0.0.1:5400');
-    expect(getTelemetryStatus()).toHaveTextContent('Listener waiting');
+    expect(getTelemetryStatus()).toHaveTextContent('Listener Waiting');
     expect(within(footer).queryByRole('button', { name: 'Live follow' })).toBeNull();
     expect(within(stage).getByRole('button', { name: 'Live follow' })).toHaveTextContent('Live follow running');
     expect(consoleError).not.toHaveBeenCalled();
