@@ -151,6 +151,9 @@ class DesktopLauncherTests(unittest.TestCase):
         fake_backend.start.assert_called_once()
         fake_backend.stop.assert_called_once()
         fake_webview.create_window.assert_called_once()
+        self.assertEqual(fake_webview.create_window.call_args.kwargs["width"], 1600)
+        self.assertEqual(fake_webview.create_window.call_args.kwargs["height"], 900)
+        self.assertEqual(fake_webview.create_window.call_args.kwargs["background_color"], "#101820")
         bridge = fake_webview.create_window.call_args.kwargs["js_api"]
         self.assertIsInstance(bridge, DesktopBridge)
         fake_window.create_file_dialog.return_value = [r"E:\FH6"]

@@ -53,7 +53,12 @@ Invoke-Step "Generate release metadata" {
         channel = $Channel
     }
     New-Item -ItemType Directory -Force -Path "build" | Out-Null
-    $metadata | ConvertTo-Json -Depth 5 | Set-Content -Path "build\release-metadata.json" -Encoding UTF8
+    $metadataJson = ($metadata | ConvertTo-Json -Depth 5) + [Environment]::NewLine
+    [System.IO.File]::WriteAllText(
+        (Join-Path $RepoRoot "build\release-metadata.json"),
+        $metadataJson,
+        [System.Text.UTF8Encoding]::new($false)
+    )
 }
 
 # Frontend

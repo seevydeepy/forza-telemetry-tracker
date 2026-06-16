@@ -236,7 +236,10 @@ def run_desktop_app(paths: DesktopPaths | None = None) -> int:
         window = webview.create_window(
             "Forza Telemetry Tracker",
             desktop_url(port),
+            width=1600,
+            height=900,
             min_size=(1200, 780),
+            background_color="#101820",
             js_api=bridge,
         )
         bridge.bind_window(window)

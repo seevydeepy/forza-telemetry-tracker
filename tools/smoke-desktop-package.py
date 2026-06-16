@@ -14,6 +14,12 @@ from pathlib import Path
 
 import httpx
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from telemetry_tracker.storage import TelemetryStore
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Smoke-test a built ForzaTelemetryTracker desktop package")
@@ -26,6 +32,25 @@ def _pick_free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         return int(sock.getsockname()[1])
+
+
+def _pick_free_udp_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+def _prepare_smoke_user_data(user_data_root: Path, udp_port: int) -> None:
+    store = TelemetryStore(user_data_root / "telemetry_tracker.sqlite3")
+    store.migrate()
+    with store.connect() as con:
+        con.execute(
+            """
+            UPDATE user_settings
+            SET udp_host = ?, udp_port = ?, updated_at_ms = ?
+            """,
+            ("127.0.0.1", int(udp_port), int(time.time() * 1000)),
+        )
 
 
 def wait_for_status(base_url: str, timeout: float) -> dict:
@@ -91,11 +116,14 @@ def main() -> int:
         return 1
 
     port = _pick_free_port()
+    udp_port = _pick_free_udp_port()
     base_url = f"http://127.0.0.1:{port}"
 
     with tempfile.TemporaryDirectory() as tmpdir:
+        user_data_root = Path(tmpdir) / "data"
+        _prepare_smoke_user_data(user_data_root, udp_port)
         env = os.environ.copy()
-        env["FORZA_TRACKER_USER_DATA_ROOT"] = str(Path(tmpdir) / "data")
+        env["FORZA_TRACKER_USER_DATA_ROOT"] = str(user_data_root)
         env["FORZA_TRACKER_RESOURCE_ROOT"] = str(resource_root)
         env["FORZA_TRACKER_SMOKE_HTTP_PORT"] = str(port)
 
@@ -105,13 +133,16 @@ def main() -> int:
             env=env,
         )
         try:
-            print(f"Launched PID {proc.pid}, waiting for {base_url}/api/status …")
+            print(f"Launched PID {proc.pid}, waiting for {base_url}/api/status (UDP {udp_port}) …")
             status = wait_for_status(base_url, timeout)
 
             udp_host = status.get("settings", {}).get("udp_host")
+            status_udp_port = int(status.get("settings", {}).get("udp_port") or 0)
             if udp_host != "127.0.0.1":
                 raise AssertionError(f"Expected udp_host '127.0.0.1', got {udp_host!r}")
-            print(f"  /api/status OK — udp_host={udp_host}")
+            if status_udp_port != udp_port:
+                raise AssertionError(f"Expected udp_port {udp_port}, got {status_udp_port!r}")
+            print(f"  /api/status OK — udp_host={udp_host}, udp_port={status_udp_port}")
 
             resp = httpx.get(base_url + "/", timeout=5.0)
             if resp.status_code != 200:

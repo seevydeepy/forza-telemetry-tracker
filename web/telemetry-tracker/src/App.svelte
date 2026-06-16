@@ -119,6 +119,8 @@
     WorldMapStatus
   } from './types';
 
+  export let initialLoadedSessionId: string | null = null;
+
   const RECENT_LIVE_SAMPLE_LIMIT = 200;
   const LIVE_SAMPLE_HISTORY_LIMIT = 2_000;
   const RECONNECT_DELAY_MS = 500;
@@ -219,7 +221,7 @@
   let laps: LapSummary[] = [];
   let sessions: SessionSummary[] = [];
   let activeSession: SessionSummary | null = null;
-  let loadedSessionId: string | null = null;
+  let loadedSessionId: string | null = initialLoadedSessionId;
   let sessionPage: SessionPageResponse = {
     sessions: [],
     page: 1,
@@ -340,7 +342,7 @@
   let liveFollowPaused = false;
   let menuExpanded = false;
   let activeUtilityModal: UtilityModal | null = null;
-  let historyDrawerOpen = true;
+  let historyDrawerOpen = Boolean(initialLoadedSessionId);
   let historyView: LapHistoryView = 'laps';
   let deletingLapIds: string[] = [];
   let summaryCardVisible = true;
@@ -1017,6 +1019,7 @@
       carCardExpanded = false;
       if (activeSession) {
         loadedSessionId = activeSession.id;
+        historyDrawerOpen = true;
       }
       clearLapContext();
       if (canvasMode !== 'route') {
@@ -1430,6 +1433,7 @@
     const lapSessionId = laps.find((lap) => lap.id === lapId)?.session_id;
     if (lapSessionId) {
       loadedSessionId = lapSessionId;
+      historyDrawerOpen = true;
     }
     selectedLapId = lapId;
     clearLapDrilldownState();
@@ -1587,9 +1591,6 @@
 
   async function refreshActiveSession() {
     activeSession = await fetchActiveSession();
-    if (!loadedSessionId && activeSession) {
-      loadedSessionId = activeSession.id;
-    }
   }
 
   async function loadSession(sessionId: string, loadingScope: CanvasLoadingScope | null = null) {
@@ -1598,6 +1599,7 @@
     try {
       updateCanvasLoading(sessionLoadingScope, 'Preparing session view…', 0.08);
       loadedSessionId = sessionId;
+      historyDrawerOpen = true;
       clearLapContext();
       updateCanvasLoading(sessionLoadingScope, 'Loading session laps…', 0.25);
       const nextLaps = await fetchSessionLaps(sessionId);
@@ -1889,6 +1891,7 @@
     const sessionId = loadedSessionId;
     if (!sessionId) {
       laps = [];
+      historyDrawerOpen = false;
       clearLapContext();
       return;
     }
@@ -1909,9 +1912,6 @@
     activeSession = nextActiveSession;
     sessionPage = nextPage;
     sessions = nextPage.sessions;
-    if (!loadedSessionId && activeSession) {
-      loadedSessionId = activeSession.id;
-    }
     if (sessionId && loadedSessionId === sessionId) {
       laps = nextLaps;
       ensureSelectedLap(nextLaps);
@@ -1981,7 +1981,7 @@
       fetchWorldMapStatus().catch(() => null)
     ]);
     if (disposed) return false;
-    const nextLoadedSessionId = loadedSessionId ?? nextActiveSession?.id ?? nextSessionPage.sessions[0]?.id ?? null;
+    const nextLoadedSessionId = loadedSessionId;
     const nextLaps = nextLoadedSessionId ? await fetchSessionLaps(nextLoadedSessionId) : [];
     if (disposed) return false;
     const recoveredCapture = {
@@ -2011,6 +2011,7 @@
     if (disposed) return false;
     activeSession = nextActiveSession;
     loadedSessionId = nextLoadedSessionId;
+    historyDrawerOpen = Boolean(nextLoadedSessionId);
     laps = nextLaps;
     sessionPage = nextSessionPage;
     sessionFilters = { page: 1, pageSize: 100 };
@@ -2091,6 +2092,7 @@
       loadedSessionId = null;
       activeSession = null;
       laps = [];
+      historyDrawerOpen = false;
       liveSessionId = null;
       liveCarInfo = null;
       resetLiveSamples();
@@ -2325,7 +2327,7 @@
 
   function resetFloatingPanelsAndLayout() {
     activeUtilityModal = null;
-    historyDrawerOpen = true;
+    historyDrawerOpen = Boolean(loadedSessionId);
     summaryCardVisible = true;
     summaryCardX = 0;
     summaryCardY = 0;
@@ -2407,6 +2409,7 @@
     const session = await startSession();
     activeSession = session;
     loadedSessionId = session.id;
+    historyDrawerOpen = true;
     laps = [];
     clearLapContext();
     await refreshSessionPage({ page: 1, pageSize: 100 });
@@ -2461,6 +2464,7 @@
       if (loadedSessionId === sessionId) {
         loadedSessionId = null;
         laps = [];
+        historyDrawerOpen = false;
         clearLapContext();
       }
       if (activeSession?.id === sessionId) {
@@ -2846,6 +2850,7 @@
         invalidateSessionLapContextCache(sessionId);
         loadedSessionId = null;
         laps = [];
+        historyDrawerOpen = false;
         clearLapContext();
       }
       void refreshActiveSession();

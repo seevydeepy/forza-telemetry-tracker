@@ -1757,6 +1757,15 @@ function hasSessionPageCall(calls: string[], expected: Record<string, string> = 
   return calls.some((url) => sessionPageCallMatches(url, expected));
 }
 
+function renderApp(options: { loadedSessionId?: string | null } = {}) {
+  if (Object.prototype.hasOwnProperty.call(options, 'loadedSessionId')) {
+    return options.loadedSessionId
+      ? render(App, { props: { initialLoadedSessionId: options.loadedSessionId } })
+      : render(App);
+  }
+  return render(App, { props: { initialLoadedSessionId: 'session-b' } });
+}
+
 async function openSessionBrowser() {
   await waitFor(() => expect(FakeEventSource.instances.length).toBeGreaterThan(0));
   const menu = screen.getByRole('navigation', { name: 'Main menu' });
@@ -1834,7 +1843,7 @@ describe('App', () => {
 
   it('renders the fixed dashboard shell, slide-out menu, floating timeline, and status strip', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    render(App);
+    renderApp();
 
     expect(await screen.findByText('Forza Telemetry Tracker')).toBeInTheDocument();
     expect(await findListenerStatus(/Listener waiting: waiting for telemetry/i)).toBeInTheDocument();
@@ -1859,10 +1868,15 @@ describe('App', () => {
     expect(screen.getByText('Import raw telemetry')).toBeInTheDocument();
     expect(screen.getByText('Export telemetry')).toBeInTheDocument();
     expect(screen.getByText('About')).toBeInTheDocument();
+    expect(screen.getByText('Feedback')).toBeInTheDocument();
     const expandedMenuLabels = within(menu).getAllByRole('button').map((button) => button.textContent?.trim());
     expect(expandedMenuLabels.indexOf('Export telemetry')).toBe(expandedMenuLabels.indexOf('Import raw telemetry') + 1);
     expect(expandedMenuLabels.indexOf('Export telemetry')).toBeLessThan(expandedMenuLabels.indexOf('Session browser'));
     expect(expandedMenuLabels.indexOf('About')).toBeGreaterThan(expandedMenuLabels.indexOf('Settings'));
+    const feedbackLink = within(menu).getByRole('link', { name: 'Feedback' });
+    expect(feedbackLink).toHaveAttribute('href', 'https://github.com/seevydeepy/forza-telemetry-tracker/issues');
+    expect(feedbackLink).toHaveAttribute('target', '_blank');
+    expect(feedbackLink).toHaveAttribute('rel', 'noreferrer');
     expect(within(menu).queryByRole('button', { name: 'Track tools' })).not.toBeInTheDocument();
     expect(within(menu).queryByRole('button', { name: 'Open keyboard shortcuts' })).not.toBeInTheDocument();
     expect(stage).toHaveAttribute('data-menu-overlay', 'true');
@@ -1880,8 +1894,23 @@ describe('App', () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
+  it('starts without auto-loading the active or first session when no session is explicitly loaded', async () => {
+    const fetchMock = stubApiFetch();
+    renderApp({ loadedSessionId: null });
+
+    await findToast('Tracker ready');
+
+    expect(screen.queryByRole('complementary', { name: /Loaded session laps/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show history drawer' })).toHaveAttribute('aria-expanded', 'false');
+    await waitFor(() => {
+      const calls = fetchMock.mock.calls.map(([input]) => requestUrl(input as RequestInfo | URL));
+      expect(calls).not.toContain('/api/sessions/session-a/laps');
+      expect(calls).not.toContain('/api/sessions/session-b/laps');
+    });
+  });
+
   it('places capture controls on the map and toggles a draggable section summary card', async () => {
-    render(App);
+    renderApp();
 
     await screen.findByRole('heading', { name: /Forza Telemetry Tracker/i });
     const stage = getVisualisationStage();
@@ -1899,7 +1928,7 @@ describe('App', () => {
   });
 
   it('shows the compact car card and expands curated details', async () => {
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(getCarInfoCard()).toHaveTextContent('Mazda Furai'));
     const card = getCarInfoCard();
@@ -1943,7 +1972,7 @@ describe('App', () => {
       status: { ...statusPayload, capture: liveCapture },
       recent: { session_id: 'session-live', samples: recoveredSamples, car: defaultCarInfo }
     });
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-sample-count', '2'));
     const card = getCarInfoCard();
@@ -1974,7 +2003,7 @@ describe('App', () => {
         car: defaultCarInfo
       }
     });
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-sample-count', '2'));
@@ -1984,7 +2013,7 @@ describe('App', () => {
 
   it('updates the live car card from live sample car payloads', async () => {
     stubApiFetch({ laps: [] });
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
 
@@ -2021,7 +2050,7 @@ describe('App', () => {
       status: { ...statusPayload, capture: liveCapture },
       recent: { session_id: 'session-live', samples: recoveredSamples, car: defaultCarInfo }
     });
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(getCarInfoCard()).toHaveTextContent('Mazda Furai'));
     await fireEvent.click(within(getCarInfoCard()).getByRole('button', { name: 'Expand car details' }));
@@ -2069,7 +2098,7 @@ describe('App', () => {
 
   it('toggles and resets car details to compact when another lap is selected', async () => {
     stubApiFetch({ laps: defaultLoadedSessionLaps });
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(getCarInfoCard()).toHaveTextContent('Mazda Furai'));
     await fireEvent.click(within(getCarInfoCard()).getByRole('button', { name: 'Expand car details' }));
@@ -2092,7 +2121,7 @@ describe('App', () => {
   });
 
   it('shows floating canvas zoom controls and toggles auto fit to screen', async () => {
-    render(App);
+    renderApp();
 
     await screen.findByRole('heading', { name: /Forza Telemetry Tracker/i });
     const stage = getVisualisationStage();
@@ -2139,7 +2168,7 @@ describe('App', () => {
   });
 
   it('temporarily pauses auto fit after viewport zoom activity and resumes after inactivity', async () => {
-    render(App);
+    renderApp();
 
     await screen.findByRole('heading', { name: /Forza Telemetry Tracker/i });
     const stage = getVisualisationStage();
@@ -2171,7 +2200,7 @@ describe('App', () => {
 
   it('starts a new session when New session is selected from the menu', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     const menu = screen.getByRole('navigation', { name: 'Main menu' });
     await fireEvent.click(within(menu).getByRole('button', { name: 'New session' }));
@@ -2182,7 +2211,7 @@ describe('App', () => {
 
   it('opens the stats window from the main menu and requests stats window data', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
     const menu = screen.getByRole('navigation', { name: 'Main menu' });
 
     await fireEvent.click(within(menu).getByRole('button', { name: 'Expand menu' }));
@@ -2198,7 +2227,7 @@ describe('App', () => {
 
   it('opens the About window from the main menu and requests app metadata', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
     const menu = screen.getByRole('navigation', { name: 'Main menu' });
 
     await fireEvent.click(within(menu).getByRole('button', { name: 'Expand menu' }));
@@ -2212,7 +2241,7 @@ describe('App', () => {
 
   it('opens the session browser from the main menu and requests the first 100-session page', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
     const menu = screen.getByRole('navigation', { name: 'Main menu' });
 
     await fireEvent.click(within(menu).getByRole('button', { name: 'Session browser' }));
@@ -2237,7 +2266,7 @@ describe('App', () => {
         { ...defaultSessions[1] }
       ]
     });
-    render(App);
+    renderApp();
 
     await fireEvent.click(within(screen.getByRole('navigation', { name: 'Main menu' })).getByRole('button', { name: 'Session browser' }));
 
@@ -2249,7 +2278,7 @@ describe('App', () => {
 
   it('session browser filters, renames, and confirms before deleting sessions', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     await fireEvent.click(within(screen.getByRole('navigation', { name: 'Main menu' })).getByRole('button', { name: 'Session browser' }));
     const dialog = await screen.findByRole('dialog', { name: 'Sessions' });
@@ -2304,7 +2333,7 @@ describe('App', () => {
 
   it('selecting a session in the browser loads only that session laps', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     await loadSessionFromBrowser('Sunset Sprint');
 
@@ -2319,7 +2348,7 @@ describe('App', () => {
 
   it('selecting a session in the browser activates it before loading laps', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     await loadSessionFromBrowser('Sunset Sprint');
 
@@ -2342,7 +2371,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-sample-count', '3'));
     await openSessionBrowser();
@@ -2370,7 +2399,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-sample-count', '3'));
     await openSessionBrowser();
@@ -2385,7 +2414,7 @@ describe('App', () => {
     const fetchMock = stubApiFetch({
       activeSession: { ...defaultSessions[1], id: 'session-b', status: 'active' }
     });
-    render(App);
+    renderApp();
     await loadSessionFromBrowser('Sunset Sprint');
     fetchMock.mockClear();
 
@@ -2406,7 +2435,7 @@ describe('App', () => {
   });
 
   it('moves the section summary with keyboard and mouse while clamping extreme drag positions', async () => {
-    render(App);
+    renderApp();
 
     const summary = getSectionSummaryCard();
     const dragHandle = getSummaryDragHandle();
@@ -2432,7 +2461,7 @@ describe('App', () => {
   });
 
   it('opens telemetry tracker settings from the slide-out menu', async () => {
-    render(App);
+    renderApp();
 
     const dialog = await openSettingsModal();
 
@@ -2467,7 +2496,7 @@ describe('App', () => {
   it('uses the desktop folder picker for FH6 world map settings when the bridge is available', async () => {
     const chooseInstallFolder = stubDesktopFolderPicker('D:\\SteamLibrary\\steamapps\\common\\ForzaHorizon6');
     stubApiFetch({ worldMapStatus: readyWorldMapStatus });
-    render(App);
+    renderApp();
 
     const dialog = await openSettingsModal();
     const mapSettings = within(dialog).getByLabelText('FH6 world map settings');
@@ -2482,7 +2511,7 @@ describe('App', () => {
 
   it('shows the FH6 install folder browse button when the desktop bridge becomes ready after mount', async () => {
     stubApiFetch({ worldMapStatus: readyWorldMapStatus });
-    render(App);
+    renderApp();
 
     const dialog = await openSettingsModal();
     const mapSettings = within(dialog).getByLabelText('FH6 world map settings');
@@ -2497,7 +2526,7 @@ describe('App', () => {
   it('leaves the current FH6 install location unchanged when the desktop folder picker is cancelled', async () => {
     const chooseInstallFolder = stubDesktopFolderPicker(null);
     stubApiFetch({ worldMapStatus: readyWorldMapStatus });
-    render(App);
+    renderApp();
 
     const dialog = await openSettingsModal();
     const mapSettings = within(dialog).getByLabelText('FH6 world map settings');
@@ -2512,7 +2541,7 @@ describe('App', () => {
 
   it('saves FH6 world map settings and builds the local map cache from settings', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     const dialog = await openSettingsModal();
     expect(within(dialog).getByText(/Link the tracker to your FH6 game install folder/i)).toBeInTheDocument();
@@ -2560,7 +2589,7 @@ describe('App', () => {
 
   it('toggles a ready world map overlay from the floating map button', async () => {
     const fetchMock = stubApiFetch({ worldMapStatus: readyWorldMapStatus });
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-world-map-tile-set-id', 'fh6-brio-summer'));
@@ -2592,7 +2621,7 @@ describe('App', () => {
 
   it('opens first-run map setup from the floating map button and enables the overlay after building the cache', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     await screen.findByRole('heading', { name: /Forza Telemetry Tracker/i });
     const stage = getVisualisationStage();
@@ -2670,7 +2699,7 @@ describe('App', () => {
       error_message: 'Seasonal map archive was not found.'
     };
     stubApiFetch({ mapBuildStatus: failedStatus });
-    render(App);
+    renderApp();
 
     await screen.findByRole('heading', { name: /Forza Telemetry Tracker/i });
     const stage = getVisualisationStage();
@@ -2689,7 +2718,7 @@ describe('App', () => {
 
   it('persists metric speed units from settings and updates the lap summary', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(within(getSectionSummaryCard()).getByText('Top speed (MPH)')).toBeInTheDocument());
     expect(within(getSectionSummaryCard()).getByText('102.2')).toBeInTheDocument();
@@ -2714,7 +2743,7 @@ describe('App', () => {
 
   it('persists the default overlay from settings and switches the active overlay immediately', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     expect(canvas).toHaveAttribute('data-overlay', 'issues');
@@ -2743,7 +2772,7 @@ describe('App', () => {
       status: statusWithPreferredOverlay('grip'),
       capture
     });
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
 
     const canvas = await screen.findByLabelText('Live telemetry path');
@@ -2788,7 +2817,7 @@ describe('App', () => {
         return defaultHandler(requestUrl(input), init);
       })
     );
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     const dialog = await openSettingsModal();
@@ -2820,7 +2849,7 @@ describe('App', () => {
       }
     } as unknown as typeof statusPayload;
     stubApiFetch({ status: statusWithoutRecordedPacketCount, capture: captureAtLivePort });
-    render(App);
+    renderApp();
     await findListenerStatus(/Listener receiving: receiving UDP telemetry on 127\.0\.0\.1:5401/i);
 
     const dialog = await openSettingsModal();
@@ -2831,7 +2860,7 @@ describe('App', () => {
   });
 
   it('resets history drawer layout from telemetry tracker settings', async () => {
-    render(App);
+    renderApp();
 
     const drawer = await screen.findByRole('complementary', { name: /Loaded session laps/i });
     expect(drawer).toHaveAttribute('data-width', '400');
@@ -2851,7 +2880,7 @@ describe('App', () => {
   });
 
   it('shows concise Data Out setup in settings', async () => {
-    render(App);
+    renderApp();
     const dialog = await openSettingsModal();
     expect(dialog).not.toHaveTextContent('For desktop v1');
     expect(within(dialog).getByText('Set Forza Data Out to IP 127.0.0.1 and port 5400.')).toBeInTheDocument();
@@ -2866,7 +2895,7 @@ describe('App', () => {
       source: { ...defaultWorldMapStatus.source, available: true }
     };
     stubApiFetch({ worldMapStatus });
-    render(App);
+    renderApp();
     const dialog = await openSettingsModal();
     await waitFor(() => {
       expect(within(dialog).getByText('Map converter is missing from this installation. Reinstall the tracker or install a repaired build.')).toBeInTheDocument();
@@ -2877,7 +2906,7 @@ describe('App', () => {
   });
 
   it('opens raw telemetry import from the slide-out menu with a browser file picker', async () => {
-    render(App);
+    renderApp();
 
     const dialog = await openImportTelemetryModal();
 
@@ -2892,7 +2921,7 @@ describe('App', () => {
 
   it('opens telemetry export from the slide-out menu and loads defaults plus existing jobs', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     const dialog = await openExportTelemetryModal();
 
@@ -2905,7 +2934,7 @@ describe('App', () => {
 
   it('starts a curated telemetry export job with export headers and reports the started job', async () => {
     const fetchMock = stubApiFetch({ telemetryExportJobs: [] });
-    render(App);
+    renderApp();
 
     const dialog = await openExportTelemetryModal();
     await waitFor(() => expect(within(dialog).getByLabelText('Output folder')).toHaveValue('D:/Telemetry Exports'));
@@ -2946,7 +2975,7 @@ describe('App', () => {
     };
     const fetchMock = stubApiFetch({ telemetryExportJobs: [runningJob] });
     vi.useFakeTimers();
-    render(App);
+    renderApp();
 
     const menu = screen.getByRole('navigation', { name: 'Main menu' });
     await fireEvent.click(within(menu).getByRole('button', { name: 'Export telemetry' }));
@@ -3026,7 +3055,7 @@ describe('App', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     vi.useFakeTimers();
-    render(App);
+    renderApp();
 
     const menu = screen.getByRole('navigation', { name: 'Main menu' });
     await fireEvent.click(within(menu).getByRole('button', { name: 'Export telemetry' }));
@@ -3123,7 +3152,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
     await findToast('Tracker ready');
 
     const dialog = await openImportTelemetryModal();
@@ -3143,7 +3172,7 @@ describe('App', () => {
 
   it('renders lap history in a toggleable fixed-width right drawer without capture controls', async () => {
     stubApiFetch({ laps: defaultLoadedSessionLaps });
-    render(App);
+    renderApp();
 
     const drawer = await screen.findByRole('complementary', { name: /Loaded session laps/i });
     expect(within(drawer).queryByRole('heading', { name: /Loaded session laps/i })).not.toBeInTheDocument();
@@ -3170,7 +3199,7 @@ describe('App', () => {
 
   it('opens diagnostics from the main menu and renders database, status, count, and version details', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     const diagnosticsButton = await screen.findByRole('button', { name: 'Open diagnostics' });
     expect(diagnosticsButton).toHaveAttribute('title', 'Open diagnostics');
@@ -3208,7 +3237,7 @@ describe('App', () => {
 
   it('restarts the listener from diagnostics and refreshes diagnostics', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     await fireEvent.click(await screen.findByRole('button', { name: 'Open diagnostics' }));
     const dialog = await screen.findByRole('dialog', { name: 'Telemetry diagnostics' });
@@ -3224,7 +3253,7 @@ describe('App', () => {
 
   it('asks for confirmation before deleting all telemetry from diagnostics', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     await fireEvent.click(await screen.findByRole('button', { name: 'Open diagnostics' }));
     const dialog = await screen.findByRole('dialog', { name: 'Telemetry diagnostics' });
@@ -3245,7 +3274,7 @@ describe('App', () => {
 
   it('deletes all telemetry after confirmation and refreshes diagnostics', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     await fireEvent.click(await screen.findByRole('button', { name: 'Open diagnostics' }));
     const dialog = await screen.findByRole('dialog', { name: 'Telemetry diagnostics' });
@@ -3282,7 +3311,7 @@ describe('App', () => {
       }
       return defaultHandler(url, init);
     }));
-    render(App);
+    renderApp();
 
     await fireEvent.click(await screen.findByRole('button', { name: 'Open diagnostics' }));
     const dialog = await screen.findByRole('dialog', { name: 'Telemetry diagnostics' });
@@ -3302,7 +3331,7 @@ describe('App', () => {
       }
       return defaultHandler(url, init);
     }));
-    render(App);
+    renderApp();
 
     await fireEvent.click(await screen.findByRole('button', { name: 'Open diagnostics' }));
     const dialog = await screen.findByRole('dialog', { name: 'Telemetry diagnostics' });
@@ -3321,7 +3350,7 @@ describe('App', () => {
       }
       return defaultHandler(url, init);
     }));
-    render(App);
+    renderApp();
 
     await fireEvent.click(await screen.findByRole('button', { name: 'Open diagnostics' }));
 
@@ -3330,7 +3359,7 @@ describe('App', () => {
   });
 
   it('moves focus into diagnostics and contains keyboard focus while open', async () => {
-    render(App);
+    renderApp();
 
     const diagnosticsButton = await screen.findByRole('button', { name: 'Open diagnostics' });
     await fireEvent.click(diagnosticsButton);
@@ -3355,7 +3384,7 @@ describe('App', () => {
   });
 
   it('closes diagnostics on Escape and restores focus to the opener', async () => {
-    render(App);
+    renderApp();
 
     const diagnosticsButton = await screen.findByRole('button', { name: 'Open diagnostics' });
     await fireEvent.click(diagnosticsButton);
@@ -3369,7 +3398,7 @@ describe('App', () => {
   });
 
   it('does not run dashboard shortcuts while diagnostics is open', async () => {
-    render(App);
+    renderApp();
 
     const liveFollowButton = await screen.findByRole('button', { name: 'Live follow' });
     const canvas = await screen.findByLabelText('Live telemetry path');
@@ -3396,7 +3425,7 @@ describe('App', () => {
   });
 
   it('defaults to the Issues overlay and renders overlay icon buttons with labels and tooltips', async () => {
-    render(App);
+    renderApp();
 
     const issuesButton = await screen.findByRole('button', { name: 'Issues' });
     const issuesIcon = issuesButton.querySelector('svg');
@@ -3414,7 +3443,7 @@ describe('App', () => {
   });
 
   it('cycles overlay mode with the O shortcut', async () => {
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     expect(canvas).toHaveAttribute('data-overlay', 'issues');
@@ -3434,7 +3463,7 @@ describe('App', () => {
       status: statusWithPreferredOverlay('grip'),
       capture
     });
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
 
     const canvas = await screen.findByLabelText('Live telemetry path');
@@ -3454,7 +3483,7 @@ describe('App', () => {
   });
 
   it('switches from Issues to Speed when recording starts and Issues is the preferred default', async () => {
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
 
     const canvas = await screen.findByLabelText('Live telemetry path');
@@ -3482,7 +3511,7 @@ describe('App', () => {
       laps: defaultLoadedSessionLaps,
       recent: { session_id: 'session-live', samples: [makeLiveSample(1), makeLiveSample(2)] }
     });
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Issues' })).toBeDisabled());
@@ -3508,7 +3537,7 @@ describe('App', () => {
       laps: defaultLoadedSessionLaps,
       recent: { session_id: 'session-live', samples: [makeLiveSample(1), makeLiveSample(2)] }
     });
-    render(App);
+    renderApp();
 
     await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Issues' })).toBeDisabled());
@@ -3533,7 +3562,7 @@ describe('App', () => {
   });
 
   it('skips disabled Issues when cycling overlays during recording', async () => {
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
 
     FakeEventSource.instances[0].emit('capture', {
@@ -3554,7 +3583,7 @@ describe('App', () => {
   });
 
   it('changes selected overlay state when Speed is chosen', async () => {
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     expect(canvas).toHaveAttribute('data-overlay', 'issues');
@@ -3567,7 +3596,7 @@ describe('App', () => {
   });
 
   it('preserves the user-selected overlay across reconnect recovery', async () => {
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
 
     await fireEvent.click(await screen.findByRole('button', { name: 'Speed' }));
@@ -3583,7 +3612,7 @@ describe('App', () => {
   });
 
   it('passes overlay and loaded marker props to the canvas without crashing', async () => {
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-marker-count', '1'));
@@ -3591,7 +3620,7 @@ describe('App', () => {
   });
 
   it('renders full-lap summary by default for the newest finalized lap', async () => {
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-marker-count', '1'));
     const summary = getSectionSummaryCard();
@@ -3602,7 +3631,7 @@ describe('App', () => {
 
   it('renders automatic reference split labels for the full-lap summary', async () => {
     stubApiFetch({ laps: defaultLoadedSessionLaps });
-    render(App);
+    renderApp();
 
     const history = await screen.findByRole('region', { name: 'Session laps' });
     await fireEvent.click(await within(history).findByRole('button', { name: /^Lap 1/i }));
@@ -3710,7 +3739,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
 
     expect(await screen.findByLabelText('Lap time split: 0.000')).toHaveTextContent('0.000');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
@@ -3727,7 +3756,7 @@ describe('App', () => {
 
   it('does not pin a reference when the R key is pressed', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-ghost-sample-count', '2'));
 
     fetchMock.mockClear();
@@ -3744,7 +3773,7 @@ describe('App', () => {
   });
 
   it('passes ghost samples to the canvas and reports them via data attributes', async () => {
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-ghost-sample-count', '2'));
@@ -3753,7 +3782,7 @@ describe('App', () => {
 
   it('reuses cached selected lap samples when switching back to a loaded lap', async () => {
     const fetchMock = stubApiFetch({ laps: defaultLoadedSessionLaps });
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-sample-count', '3'));
     const history = await screen.findByRole('region', { name: 'Session laps' });
@@ -3779,7 +3808,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-sample-count', '3'));
@@ -3818,7 +3847,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-sample-count', '3'));
@@ -3864,7 +3893,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-sample-count', '3'));
@@ -3880,7 +3909,7 @@ describe('App', () => {
   });
 
   it('renders the full-lap delta summary in the floating section summary', async () => {
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(getSectionSummaryCard()).toHaveTextContent('3/2 samples'));
     const summary = getSectionSummaryCard();
@@ -3892,7 +3921,7 @@ describe('App', () => {
 
   it('auto-selects the newest completed lap when lap statuses are replay-complete or lap-boundary', async () => {
     stubApiFetch({ laps: replayCompletedLaps });
-    render(App);
+    renderApp();
 
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-marker-count', '1'));
     const summary = getSectionSummaryCard();
@@ -3913,7 +3942,7 @@ describe('App', () => {
         }
       ]
     });
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-marker-count', '1'));
@@ -3924,7 +3953,7 @@ describe('App', () => {
   it('does not auto-select an active recording lap ahead of a completed lap', async () => {
     const activeLoadedSessionLaps: LapSummary[] = activeRecordingLaps.map((lap) => ({ ...lap, session_id: 'session-b' }));
     stubApiFetch({ laps: activeLoadedSessionLaps });
-    render(App);
+    renderApp();
 
     const history = await screen.findByRole('region', { name: 'Session laps' });
     await waitFor(() => expect(screen.getByText('49.7')).toBeInTheDocument());
@@ -3938,7 +3967,7 @@ describe('App', () => {
 
   it('coalesces quick timeline changes into one section-summary request for the final range', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-marker-count', '1'));
 
     vi.useFakeTimers();
@@ -3957,7 +3986,7 @@ describe('App', () => {
   });
 
   it('passes selected route segment state to the canvas', async () => {
-    render(App);
+    renderApp();
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-marker-count', '1'));
 
     vi.useFakeTimers();
@@ -3971,7 +4000,7 @@ describe('App', () => {
 
   it('fetches selected-section delta and updates the displayed delta summary', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-marker-count', '1'));
 
     vi.useFakeTimers();
@@ -4001,7 +4030,7 @@ describe('App', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    render(App);
+    renderApp();
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-marker-count', '1'));
 
     vi.useFakeTimers();
@@ -4048,7 +4077,7 @@ describe('App', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    render(App);
+    renderApp();
     await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(screen.getByText('102.2')).toBeInTheDocument());
 
@@ -4088,7 +4117,7 @@ describe('App', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(screen.getByText('102.2')).toBeInTheDocument());
     expect(canvas).toHaveAttribute('data-marker-count', '1');
@@ -4102,7 +4131,7 @@ describe('App', () => {
   });
 
   it('clicking a lap route sample opens the dashboard scrubbed to that sample', async () => {
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-marker-count', '1'));
 
@@ -4124,7 +4153,7 @@ describe('App', () => {
       boundary_confidence: null
     };
     stubApiFetch({ laps: [defaultLoadedSessionLaps[0], recordingLap] });
-    render(App);
+    renderApp();
 
     const history = await screen.findByRole('region', { name: 'Session laps' });
     await fireEvent.click(await within(history).findByRole('button', { name: /^Lap 2/i }));
@@ -4140,7 +4169,7 @@ describe('App', () => {
   });
 
   it('clicking an issue marker opens the issue popover without switching to dashboard', async () => {
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-issue-target-count', '1'));
 
@@ -4154,7 +4183,7 @@ describe('App', () => {
   });
 
   it('opens the issue popover on hover and closes it when hover clears', async () => {
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-issue-target-count', '1'));
 
@@ -4171,7 +4200,7 @@ describe('App', () => {
   });
 
   it('pins the issue popover on click so mouse leave does not close it', async () => {
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-issue-target-count', '1'));
 
@@ -4191,7 +4220,7 @@ describe('App', () => {
   });
 
   it('clears the section selection and closes the issue popover with Escape', async () => {
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-issue-target-count', '1'));
 
@@ -4224,7 +4253,7 @@ describe('App', () => {
       status: { ...statusPayload, capture: liveCapture },
       recent: { session_id: 'session-live', samples: liveSamples }
     });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-sample-count', '3'));
     fetchMock.mockClear();
@@ -4238,7 +4267,7 @@ describe('App', () => {
   });
 
   it('issue popover close button has tooltip and accessibility label', async () => {
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-issue-target-count', '1'));
 
@@ -4268,7 +4297,7 @@ describe('App', () => {
           }
     );
     stubApiFetch({ laps: lapsWithTracks });
-    render(App);
+    renderApp();
 
     const history = await screen.findByRole('region', { name: 'Session laps' });
     expect(await within(history).findByText('Emerald Circuit — Full')).toBeInTheDocument();
@@ -4287,13 +4316,13 @@ describe('App', () => {
         : lap
     );
     stubApiFetch({ laps: lapsWithTrack });
-    render(App);
+    renderApp();
 
     expect(await screen.findByRole('button', { name: 'Change track assignment: Emerald Circuit — Full' })).toBeInTheDocument();
   });
 
   it('opens track picker from lap summary and orders suggested tracks first', async () => {
-    render(App);
+    renderApp();
 
     await fireEvent.click(await screen.findByRole('button', { name: /Change track assignment:/ }));
 
@@ -4307,7 +4336,7 @@ describe('App', () => {
 
   it('track picker filters known tracks and assigns selected lap only', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
 
     await fireEvent.click(await screen.findByRole('button', { name: /Change track assignment:/ }));
     const picker = await screen.findByRole('dialog', { name: 'Change lap track' });
@@ -4350,7 +4379,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
 
     const history = await screen.findByRole('region', { name: 'Session laps' });
     expect((await within(history).findAllByText('Unknown track')).length).toBeGreaterThan(0);
@@ -4404,7 +4433,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
 
     const history = await screen.findByRole('region', { name: 'Session laps' });
     expect((await within(history).findAllByText('Unknown track')).length).toBeGreaterThan(0);
@@ -4478,7 +4507,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
 
     await fireEvent.click(await screen.findByRole('button', { name: /Change track assignment:/ }));
 
@@ -4489,7 +4518,7 @@ describe('App', () => {
 
   it('renders Auto/Manual controls, newest-first loaded-session laps, and selectable lap buttons', async () => {
     stubApiFetch({ laps: defaultLoadedSessionLaps });
-    render(App);
+    renderApp();
 
     const captureControls = getFloatingCaptureControls();
     expect(within(captureControls).getByRole('button', { name: 'Auto capture' })).toHaveAttribute('aria-pressed', 'true');
@@ -4511,7 +4540,7 @@ describe('App', () => {
 
   it('switches the history drawer to the loaded session aggregate summary', async () => {
     stubApiFetch({ laps: defaultLoadedSessionLaps });
-    render(App);
+    renderApp();
 
     const drawer = await screen.findByRole('complementary', { name: /Loaded session laps/i });
     expect(within(drawer).getByRole('button', { name: 'Laps' })).toHaveAttribute('aria-pressed', 'true');
@@ -4538,7 +4567,7 @@ describe('App', () => {
   it('keeps sidebar Session mode scoped to the loaded session instead of listing all sessions', async () => {
     const laps = defaultLaps.map((lap) => ({ ...lap, session_id: lap.id === 'newer-lap' ? 'session-b' : 'session-a' }));
     stubApiFetch({ laps });
-    render(App);
+    renderApp();
 
     const drawer = await screen.findByRole('complementary', { name: /Loaded session laps/i });
     await fireEvent.click(within(drawer).getByRole('button', { name: 'Session' }));
@@ -4553,7 +4582,7 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     const fetchMock = stubApiFetch({ laps: defaultLoadedSessionLaps });
     try {
-      render(App);
+      renderApp();
 
       const history = await screen.findByRole('region', { name: 'Session laps' });
       expect(await within(history).findByRole('button', { name: /^Lap 2/i })).toHaveAttribute('aria-pressed', 'true');
@@ -4577,7 +4606,7 @@ describe('App', () => {
 
   it('removes an auto-discarded lap from the loaded history immediately', async () => {
     stubApiFetch({ laps: defaultLoadedSessionLaps });
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
 
     const history = await screen.findByRole('region', { name: 'Session laps' });
@@ -4607,7 +4636,7 @@ describe('App', () => {
       lap_time_ms: null
     };
     const fetchMock = stubApiFetch({ laps: [defaultLoadedSessionLaps[0], inProgressLap] });
-    render(App);
+    renderApp();
 
     const history = await screen.findByRole('region', { name: 'Session laps' });
     expect(await within(history).findByText('TBD')).toBeInTheDocument();
@@ -4625,7 +4654,7 @@ describe('App', () => {
   });
 
   it('shows top-centre toast region and accepts live samples', async () => {
-    render(App);
+    renderApp();
     await findToast('Tracker ready');
 
     FakeEventSource.instances[0].emit('live_sample', {
@@ -4638,7 +4667,7 @@ describe('App', () => {
 
   it('keeps the live canvas blank for recovered and incoming idle telemetry', async () => {
     stubApiFetch({ laps: [] });
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-sample-count', '0'));
@@ -4653,7 +4682,7 @@ describe('App', () => {
   });
 
   it('pauses and resumes live follow with the Space shortcut outside form controls', async () => {
-    render(App);
+    renderApp();
 
     const liveFollowButton = await screen.findByRole('button', { name: 'Live follow' });
     expect(liveFollowButton).toHaveAttribute('title', 'Pause live follow');
@@ -4678,7 +4707,7 @@ describe('App', () => {
   });
 
   it('pauses and resumes live follow from the floating canvas button', async () => {
-    render(App);
+    renderApp();
 
     const stage = getVisualisationStage();
     const liveFollowButton = await within(stage).findByRole('button', { name: 'Live follow' });
@@ -4696,7 +4725,7 @@ describe('App', () => {
   });
 
   it('does not toggle live follow with the Space shortcut while a utility modal is open', async () => {
-    render(App);
+    renderApp();
 
     const liveFollowButton = await screen.findByRole('button', { name: 'Live follow' });
     expect(liveFollowButton).toHaveAttribute('aria-pressed', 'false');
@@ -4711,7 +4740,7 @@ describe('App', () => {
   });
 
   it('does not fire shortcuts while typing in input, textarea, or select controls', async () => {
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-marker-count', '1'));
     expect(canvas).toHaveAttribute('data-overlay', 'issues');
@@ -4742,7 +4771,7 @@ describe('App', () => {
   });
 
   it('shows a warning toast when lap boundary confidence is uncertain', async () => {
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
 
     FakeEventSource.instances[0].emit('lap_finalized', {
@@ -4757,7 +4786,7 @@ describe('App', () => {
 
   it('disables manual start while auto idle and does not call capture start', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
     const captureControls = getFloatingCaptureControls();
     const startButton = within(captureControls).getByRole('button', { name: 'Start manual capture' });
     await waitFor(() => expect(within(captureControls).getByRole('button', { name: 'Auto capture' })).toHaveAttribute('aria-pressed', 'true'));
@@ -4780,7 +4809,7 @@ describe('App', () => {
       }
     };
     const fetchMock = stubApiFetch({ capture: autoRecordingCapture, status: { ...statusPayload, capture: autoRecordingCapture } });
-    render(App);
+    renderApp();
     const captureControls = getFloatingCaptureControls();
     await waitFor(() => expect(within(captureControls).getByRole('button', { name: 'Stop manual capture' })).toBeInTheDocument());
     const stopButton = within(captureControls).getByRole('button', { name: 'Stop manual capture' });
@@ -4806,7 +4835,7 @@ describe('App', () => {
       capture: manualCapture,
       status: { ...statusPayload, settings: { ...statusPayload.settings, capture_mode: 'manual' }, capture: manualCapture }
     });
-    render(App);
+    renderApp();
 
     const captureControls = getFloatingCaptureControls();
     await waitFor(() => expect(within(captureControls).getByRole('button', { name: 'Manual capture' })).toHaveAttribute('aria-pressed', 'true'));
@@ -4830,7 +4859,7 @@ describe('App', () => {
       capture: manualRecordingCapture,
       status: { ...statusPayload, settings: { ...statusPayload.settings, capture_mode: 'manual' }, capture: manualRecordingCapture }
     });
-    render(App);
+    renderApp();
 
     const captureControls = getFloatingCaptureControls();
     await waitFor(() => expect(within(captureControls).getByRole('button', { name: 'Manual capture' })).toHaveAttribute('aria-pressed', 'true'));
@@ -4844,7 +4873,7 @@ describe('App', () => {
 
   it('keeps the recovered live listener status when the SSE stream sends its initial placeholder status', async () => {
     stubApiFetch({ status: receivingStatusPayload });
-    render(App);
+    renderApp();
 
     expect(await findListenerStatus(/Listener receiving: receiving replay packets/i)).toBeInTheDocument();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
@@ -4856,7 +4885,7 @@ describe('App', () => {
   });
 
   it('ignores malformed SSE payloads without closing the stream and warns once', async () => {
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
 
@@ -4869,7 +4898,7 @@ describe('App', () => {
 
   it('redraws the telemetry path when live samples update', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps });
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     FakeEventSource.instances[0].emit('capture', {
       ...capturePayload,
@@ -4892,7 +4921,7 @@ describe('App', () => {
 
   it('does not draw non-race live samples while live follow is active', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -4914,7 +4943,7 @@ describe('App', () => {
 
   it('starts a new live trace when a resumed race sample marks a lap split', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -4945,7 +4974,7 @@ describe('App', () => {
 
   it('starts a fresh live trace when an impossible live jump arrives', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -4969,7 +4998,7 @@ describe('App', () => {
 
   it('resets stale live trace when live follow resumes after a teleport', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -4999,7 +5028,7 @@ describe('App', () => {
 
   it('clears the live canvas on an auto race-on reset before drawing the new lap', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -5049,7 +5078,7 @@ describe('App', () => {
       recent: { session_id: 'session-live', samples: [makeLiveSample(1), makeLiveSample(2), legacyPauseSample] }
     });
 
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
 
     await waitFor(() => expect(canvas).toHaveAttribute('data-sample-count', '2'));
@@ -5059,7 +5088,7 @@ describe('App', () => {
 
   it('ignores legacy non-race zero packets missing race flags during live follow', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -5096,7 +5125,7 @@ describe('App', () => {
 
   it('splits implausible live points immediately and keeps the fresh trace on non-race capture', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -5145,7 +5174,7 @@ describe('App', () => {
 
   it('keeps the last race point on non-race capture when the pause edge is continuous', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -5186,7 +5215,7 @@ describe('App', () => {
 
   it('keeps the whole active live lap in the browser sample history', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -5208,7 +5237,7 @@ describe('App', () => {
 
   it('caps live browser sample history during long recording runs', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -5230,7 +5259,7 @@ describe('App', () => {
 
   it('starts a fresh live sample history when a lap finalizes during recording', async () => {
     stubApiFetch({ laps: [] as typeof defaultLaps, recent: { session_id: 'session-live', samples: [] } });
-    render(App);
+    renderApp();
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -5272,7 +5301,7 @@ describe('App', () => {
       return defaultHandler(url, init);
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     fetchMock.mockClear();
     vi.useFakeTimers();
@@ -5309,7 +5338,7 @@ describe('App', () => {
 
   it('does not add duplicate sticky disconnect toasts during repeated recovery failures', async () => {
     const fetchMock = stubApiFetch();
-    render(App);
+    renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     fetchMock.mockImplementation(async () => {
       throw new Error('offline');
@@ -5330,7 +5359,7 @@ describe('App', () => {
   });
 
   it('closes the telemetry event stream on unmount', async () => {
-    const { unmount } = render(App);
+    const { unmount } = renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
 
     const source = FakeEventSource.instances[0];
@@ -5342,7 +5371,7 @@ describe('App', () => {
 
   it('does not reconnect the event stream after unmount', async () => {
     const fetchMock = stubApiFetch();
-    const { unmount } = render(App);
+    const { unmount } = renderApp();
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     fetchMock.mockClear();
     vi.useFakeTimers();
@@ -5363,7 +5392,7 @@ describe('App', () => {
       pendingResponses.push(resolve);
     })));
 
-    const { unmount } = render(App);
+    const { unmount } = renderApp();
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(7));
 
     unmount();
@@ -5382,7 +5411,7 @@ describe('App', () => {
   });
 
   it('renders main and overlay icon buttons as local svg icons instead of Material Symbols text', async () => {
-    render(App);
+    renderApp();
 
     await screen.findByRole('heading', { name: /Forza Telemetry Tracker/i });
 
@@ -5401,7 +5430,7 @@ describe('App', () => {
   });
 
   it('switches the canvas from a reviewed lap to live telemetry when recording becomes active', async () => {
-    render(App);
+    renderApp();
 
     await screen.findByRole('button', { name: /^Lap 2/i });
     const canvas = document.querySelector('canvas');
@@ -5442,7 +5471,7 @@ describe('App', () => {
       status: { ...statusPayload, capture: activeCapture },
       recent: { session_id: 'session-live', samples: [] }
     });
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     await waitFor(() => expect(canvas).toHaveAttribute('data-sample-count', '0'));
@@ -5471,7 +5500,7 @@ describe('App', () => {
       status: { ...statusPayload, capture: activeCapture },
       recent: { session_id: 'session-live', samples: [] }
     });
-    render(App);
+    renderApp();
 
     const canvas = await screen.findByLabelText('Live telemetry path');
     const lapButton = await screen.findByRole('button', { name: /^Lap 2/i });
@@ -5514,7 +5543,7 @@ describe('App', () => {
       status: { ...statusPayload, capture: activeCapture },
       recent: { session_id: 'session-live', samples: [] }
     });
-    render(App);
+    renderApp();
 
     const lapButton = await screen.findByRole('button', { name: /^Lap 2/i });
     await fireEvent.click(lapButton);
@@ -5533,7 +5562,7 @@ describe('App', () => {
 
   it('renders one disabled review timeline until a saved lap is selected for review', async () => {
     stubApiFetch({ laps: [] });
-    render(App);
+    renderApp();
 
     await screen.findByRole('heading', { name: /Forza Telemetry Tracker/i });
     const [timeline] = screen.getAllByRole('region', { name: /Review timeline/i });
@@ -5545,7 +5574,7 @@ describe('App', () => {
   });
 
   it('switches between route visualiser and telemetry dashboard modes', async () => {
-    render(App);
+    renderApp();
 
     await screen.findByRole('heading', { name: /Forza Telemetry Tracker/i });
     expect(screen.getByLabelText('Live telemetry path')).toBeInTheDocument();
@@ -5595,7 +5624,7 @@ describe('App', () => {
         car: defaultCarInfo
       }
     });
-    render(App);
+    renderApp();
 
     await screen.findByRole('heading', { name: /Forza Telemetry Tracker/i });
     await waitFor(() => expect(screen.getByLabelText('Live telemetry path')).toHaveAttribute('data-sample-count', '1'));
@@ -5611,7 +5640,7 @@ describe('App', () => {
   });
 
   it('scrubs the selected-lap dashboard playback and keeps selected-lap car details available', async () => {
-    render(App);
+    renderApp();
 
     await screen.findByRole('button', { name: /^Lap 2/i });
     await fireEvent.click(screen.getByRole('button', { name: 'Telemetry dashboard mode' }));
@@ -5634,7 +5663,7 @@ describe('App', () => {
       return frameCallbacks.length;
     });
     vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
-    render(App);
+    renderApp();
 
     await screen.findByRole('button', { name: /^Lap 2/i });
     await fireEvent.click(screen.getByRole('button', { name: 'Telemetry dashboard mode' }));
@@ -5651,7 +5680,7 @@ describe('App', () => {
   });
 
   it('lets dashboard widget visibility hide every widget and restore the default grid', async () => {
-    render(App);
+    renderApp();
 
     await screen.findByRole('heading', { name: /Forza Telemetry Tracker/i });
     await fireEvent.click(screen.getByRole('button', { name: 'Telemetry dashboard mode' }));

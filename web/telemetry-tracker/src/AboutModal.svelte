@@ -13,6 +13,7 @@
     toast: { level: ToastLevel; message: string; sticky?: boolean };
   }>();
   const KOFI_URL = 'https://ko-fi.com/Z4I021C66X';
+  const KOFI_BUTTON_IMAGE_URL = 'https://storage.ko-fi.com/cdn/kofi5.png?v=3';
 
   let about: AppAboutPayload | null = null;
   let aboutLoading = true;
@@ -90,7 +91,7 @@
           <p>Installed version {about.version}</p>
         </div>
         <a class="kofi-link" href={KOFI_URL} target="_blank" rel="noreferrer">
-          Support on Ko-fi
+          <img src={KOFI_BUTTON_IMAGE_URL} alt="Support Forza Telemetry Tracker on Ko-fi" />
         </a>
       </header>
 
@@ -241,18 +242,27 @@
 
   .kofi-link {
     align-items: center;
-    background: rgb(255 255 255 / 8%);
-    border: 1px solid var(--panel-border-muted);
+    background: #13c3ff;
+    border: 1px solid rgb(255 255 255 / 38%);
     border-radius: 0.5rem;
-    color: var(--text-primary);
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 0.85rem;
-    font-weight: 700;
     line-height: 1;
-    min-height: 2.25rem;
-    padding: 0 0.85rem;
+    min-height: 2.5rem;
+    overflow: hidden;
+    padding: 0;
     text-decoration: none;
+  }
+
+  .kofi-link:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .kofi-link img {
+    display: block;
+    height: 2.5rem;
+    width: auto;
   }
 
   .about-title-block p,

@@ -151,13 +151,12 @@
   }
 
   .status-segment {
-    --status-section-grow: 1;
     --status-section-min-width: 10rem;
 
     align-items: baseline;
     border-left: 1px solid #27272a;
     display: inline-flex;
-    flex: var(--status-section-grow, 1) 1 var(--status-section-min-width);
+    flex: 0 0 var(--status-section-min-width);
     gap: 0.4rem;
     max-width: 100%;
     min-width: var(--status-section-min-width);
@@ -171,37 +170,31 @@
   }
 
   .status-segment-endpoint {
-    --status-section-grow: 0.8;
     --status-section-min-width: var(--status-endpoint-min-width);
   }
 
   .status-segment-packets {
-    --status-section-grow: 1.25;
     --status-section-min-width: var(--status-packets-min-width);
   }
 
   .status-segment-latest {
-    --status-section-grow: 0.9;
     --status-section-min-width: var(--status-latest-min-width);
   }
 
   .status-segment-listener {
-    --status-section-grow: 2.4;
     --status-section-min-width: var(--status-listener-min-width);
   }
 
   .status-segment-capture {
-    --status-section-grow: 1.35;
     --status-section-min-width: var(--status-capture-min-width);
   }
 
   .status-segment-storage {
-    --status-section-grow: 1.5;
     --status-section-min-width: var(--status-storage-min-width);
   }
 
   .status-segment-event {
-    --status-section-grow: 1.8;
+    flex: 1 1 var(--status-event-min-width);
     --status-section-min-width: var(--status-event-min-width);
   }
 

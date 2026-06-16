@@ -80,6 +80,19 @@ class AppUpdateSemVerTests(unittest.TestCase):
         self.assertEqual(metadata.release_date, "2026-06-13")
         self.assertEqual(metadata.repository, "override/repo")
 
+    def test_release_metadata_loads_file_with_utf8_bom(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "release-metadata.json"
+            path.write_bytes(
+                b'\xef\xbb\xbf{"version":"0.1.4","channel":"stable","repository":"owner/repo"}'
+            )
+
+            metadata = load_release_metadata(path)
+
+        self.assertEqual(metadata.version, "0.1.4")
+        self.assertEqual(metadata.channel, "stable")
+        self.assertEqual(metadata.repository, "owner/repo")
+
     def test_semver_parser_accepts_stable_tags_only(self):
         self.assertEqual(SemVer.parse("v1.2.3"), SemVer(1, 2, 3))
         self.assertEqual(SemVer.parse("1.2.3"), SemVer(1, 2, 3))

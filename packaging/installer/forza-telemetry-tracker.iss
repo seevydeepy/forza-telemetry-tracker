@@ -5,6 +5,7 @@
 #endif
 #define AppPublisher "Forza Telemetry Tracker"
 #define AppExeName "ForzaTelemetryTracker.exe"
+#define AppIconName "forza-telemetry-tracker.ico"
 #define SourceRoot GetEnv("FORZA_TRACKER_INSTALLER_SOURCE")
 #if SourceRoot == ""
   #define SourceRoot "..\..\dist\ForzaTelemetryTracker"
@@ -31,17 +32,19 @@ SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
-UninstallDisplayIcon={app}\{#AppExeName}
+SetupIconFile=..\icons\{#AppIconName}
+UninstallDisplayIcon={app}\{#AppIconName}
 
 [Files]
 Source: "{#SourceRoot}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\icons\{#AppIconName}"; DestDir: "{app}"; Flags: ignoreversion
 #if WebView2Installer != ""
 Source: "{#WebView2Installer}"; Flags: dontcopy
 #endif
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
+Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppIconName}"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppIconName}"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked

@@ -25,6 +25,7 @@ from telemetry_tracker.world_map import (
     season_source_zip,
     tile_world_bounds,
 )
+from telemetry_tracker.world_map import _run_converter
 
 
 PNG_BYTES = base64.b64decode(
@@ -226,6 +227,43 @@ class WorldMapHelperTests(unittest.TestCase):
 
         self.assertEqual(status["status"], "source_missing")
         self.assertIn("top-level FH6 install folder", status["error_message"])
+
+    def test_run_converter_hides_console_window_on_windows(self):
+        class FakeStartupInfo:
+            def __init__(self) -> None:
+                self.dwFlags = 0
+                self.wShowWindow = None
+
+        with tempfile.TemporaryDirectory() as tmp:
+            converter = _make_fake_converter(Path(tmp))
+            with (
+                patch("telemetry_tracker.world_map.os.name", "nt"),
+                patch("telemetry_tracker.world_map.subprocess.STARTUPINFO", FakeStartupInfo),
+                patch("telemetry_tracker.world_map.subprocess.STARTF_USESHOWWINDOW", 1),
+                patch("telemetry_tracker.world_map.subprocess.SW_HIDE", 0),
+                patch("telemetry_tracker.world_map.subprocess.CREATE_NO_WINDOW", 0x08000000, create=True),
+                patch("telemetry_tracker.world_map.subprocess.run") as run,
+            ):
+                run.return_value.returncode = 0
+                _run_converter(converter, ["inspect-zip"])
+
+        startupinfo = run.call_args.kwargs["startupinfo"]
+        self.assertEqual(startupinfo.dwFlags, 1)
+        self.assertEqual(startupinfo.wShowWindow, 0)
+        self.assertEqual(run.call_args.kwargs["creationflags"], 0x08000000)
+
+    def test_run_converter_does_not_add_windows_startupinfo_off_windows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            converter = _make_fake_converter(Path(tmp))
+            with (
+                patch("telemetry_tracker.world_map.os.name", "posix"),
+                patch("telemetry_tracker.world_map.subprocess.run") as run,
+            ):
+                run.return_value.returncode = 0
+                _run_converter(converter, ["inspect-zip"])
+
+        self.assertNotIn("startupinfo", run.call_args.kwargs)
+        self.assertNotIn("creationflags", run.call_args.kwargs)
 
 
 class WorldMapApiTests(unittest.TestCase):

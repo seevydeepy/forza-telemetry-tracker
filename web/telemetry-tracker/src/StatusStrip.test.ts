@@ -48,15 +48,18 @@ function captureWithPacket(lastIsRaceOn: boolean | null, hasReceivedPackets = tr
 afterEach(() => cleanup());
 
 describe('StatusStrip', () => {
-  it('uses flex-growing sections with explicit minimum widths so live text can expand without jitter', () => {
+  it('keeps known sections fixed-width and lets Last event absorb remaining space', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/StatusStrip.svelte'), 'utf8');
     const statusFieldsCss = source.match(/\.status-fields\s*{(?<body>[\s\S]*?)}/)?.groups?.body ?? '';
     const statusSegmentCss = source.match(/\.status-segment\s*{(?<body>[\s\S]*?)}/)?.groups?.body ?? '';
+    const statusEventCss = source.match(/\.status-segment-event\s*{(?<body>[\s\S]*?)}/)?.groups?.body ?? '';
 
     expect(statusFieldsCss).toContain('display: flex');
     expect(statusFieldsCss).toContain('--status-packets-min-width');
-    expect(statusSegmentCss).toContain('flex: var(--status-section-grow, 1) 1 var(--status-section-min-width)');
+    expect(statusSegmentCss).toContain('flex: 0 0 var(--status-section-min-width)');
     expect(statusSegmentCss).toContain('min-width: var(--status-section-min-width)');
+    expect(statusEventCss).toContain('flex: 1 1 var(--status-event-min-width)');
+    expect(source).not.toContain('--status-section-grow');
     expect(statusFieldsCss).not.toContain('grid-template-columns');
   });
 

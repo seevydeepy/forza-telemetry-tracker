@@ -76,7 +76,7 @@ def load_release_metadata(path: Path | None = None) -> ReleaseMetadata:
     data: dict[str, Any] = {}
     if path is not None and Path(path).is_file():
         try:
-            loaded = json.loads(Path(path).read_text(encoding="utf-8"))
+            loaded = json.loads(Path(path).read_text(encoding="utf-8-sig"))
             if isinstance(loaded, dict):
                 data.update(loaded)
         except (OSError, json.JSONDecodeError):

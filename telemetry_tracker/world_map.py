@@ -478,12 +478,20 @@ def _tile_set_id(season: str) -> str:
 
 def _run_converter(converter_path: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
     command = _converter_command(converter_path, args)
+    subprocess_kwargs: dict[str, Any] = {}
+    if os.name == "nt":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        subprocess_kwargs["startupinfo"] = startupinfo
+        subprocess_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     return subprocess.run(
         command,
         timeout=180,
         capture_output=True,
         text=True,
         check=False,
+        **subprocess_kwargs,
     )
 
 

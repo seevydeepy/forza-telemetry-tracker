@@ -27,6 +27,8 @@
 
   export let expanded = false;
 
+  const FEEDBACK_URL = 'https://github.com/seevydeepy/forza-telemetry-tracker/issues';
+
   const dispatch = createEventDispatcher<{
     action: { action: MenuAction; opener: HTMLElement };
     toggle: { expanded: boolean };
@@ -133,6 +135,22 @@
       </IconButton>
     {/each}
   </div>
+
+  <div class="menu-section menu-section-feedback">
+    <a
+      class="app-icon-button app-icon-button-default slide-menu-button slide-menu-feedback-link"
+      href={FEEDBACK_URL}
+      target="_blank"
+      rel="noreferrer"
+      aria-label="Feedback"
+      title="Open feedback on GitHub"
+    >
+      <Icon name="help" />
+      {#if expanded}
+        <span class="menu-action-label">Feedback</span>
+      {/if}
+    </a>
+  </div>
 </nav>
 
 <style>
@@ -142,7 +160,7 @@
     bottom: var(--dashboard-footer-height, 42px);
     box-shadow: 10px 0 30px rgb(0 0 0 / 28%);
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: 0.75rem;
     left: 0;
     overflow: hidden;
@@ -171,6 +189,12 @@
     scrollbar-width: thin;
   }
 
+  .menu-section-feedback {
+    align-content: end;
+    border-top: 1px solid rgb(244 244 245 / 10%);
+    padding-top: 0.5rem;
+  }
+
   .slide-out-menu :global(.slide-menu-button) {
     background: transparent;
     border-color: transparent;
@@ -189,6 +213,10 @@
 
   .slide-out-menu :global(.slide-menu-button:active) {
     background: rgb(244 244 245 / 16%);
+  }
+
+  .slide-menu-feedback-link {
+    text-decoration: none;
   }
 
   .slide-out-menu[data-expanded='false'] :global(.slide-menu-button) {
