@@ -6,6 +6,12 @@ Windows desktop telemetry companion for Forza Horizon 6 Data Out. It records loc
 
 Forza is a trademark of Microsoft. This project is an unofficial community tool and is not affiliated with, endorsed by, or sponsored by Microsoft, Xbox Game Studios, Turn 10 Studios, Playground Games, or the Forza franchise owners.
 
+## Preview
+
+![Route review with telemetry speed overlay on the world map](docs/assets/route-review-demo.gif)
+
+![Dashboard replay with lap, speed, input, tire, suspension, and car details](docs/assets/dashboard-replay-demo.gif)
+
 ## User install flow
 
 The intended user experience is a single Windows setup executable downloaded from [GitHub Releases](https://github.com/seevydeepy/forza-telemetry-tracker/releases). Users do not need Python, Node.js, .NET, PowerShell scripts, or command-line setup.
