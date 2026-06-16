@@ -2915,7 +2915,21 @@ describe('App', () => {
 
     const dialog = await openImportTelemetryModal();
 
-    expect(within(dialog).getByText(/file, several files, or a whole folder/i)).toBeInTheDocument();
+    const titleHelpButton = within(dialog).getByRole('button', { name: 'Raw telemetry import help' });
+    expect(dialog.querySelector('.modal-title-row')).toContainElement(titleHelpButton);
+    expect(within(dialog).queryByText(/file, several files, or a whole folder/i)).not.toBeInTheDocument();
+    await fireEvent.click(titleHelpButton);
+    expect(within(dialog).getByRole('dialog', { name: 'Raw telemetry import help' })).toHaveTextContent(/file, several files, or a whole folder/i);
+    await fireEvent.pointerDown(document.body);
+    expect(within(dialog).queryByRole('dialog', { name: 'Raw telemetry import help' })).not.toBeInTheDocument();
+
+    const importJobsHelpButton = within(dialog).getByRole('button', { name: 'Import jobs help' });
+    expect(importJobsHelpButton.closest('.section-title-row')).toContainElement(importJobsHelpButton);
+    await fireEvent.click(importJobsHelpButton);
+    const importJobsHelp = within(dialog).getByRole('dialog', { name: 'Import jobs help' });
+    expect(importJobsHelp).toHaveTextContent(/Imports run as background jobs/i);
+    expect(importJobsHelp).toHaveTextContent(/Jobs stay here until the tracker closes/i);
+
     expect(within(dialog).getByLabelText('Raw telemetry file or files')).toHaveAttribute('type', 'file');
     expect(within(dialog).getByLabelText('Raw telemetry folder')).toHaveAttribute('webkitdirectory');
     expect(within(dialog).getByRole('button', { name: 'Start background import' })).toBeDisabled();

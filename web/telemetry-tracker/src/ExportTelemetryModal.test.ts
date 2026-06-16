@@ -97,6 +97,26 @@ describe('ExportTelemetryModal', () => {
     expect(screen.getByRole('button', { name: 'Export curated CSV' })).toBeInTheDocument();
   });
 
+  it('moves export guidance into title and jobs help popovers', async () => {
+    renderExportModal();
+    const dialog = screen.getByRole('dialog', { name: 'Export telemetry' });
+    const titleHelpButton = within(dialog).getByRole('button', { name: 'Telemetry export help' });
+
+    expect(dialog.querySelector('.modal-title-row')).toContainElement(titleHelpButton);
+    expect(within(dialog).queryByText(/Exports dump the full telemetry database/i)).not.toBeInTheDocument();
+    await fireEvent.click(titleHelpButton);
+    const titleHelp = within(dialog).getByRole('dialog', { name: 'Telemetry export help' });
+    expect(titleHelp).toHaveTextContent(/Exports dump the full telemetry database/i);
+    expect(titleHelp).toHaveTextContent(/Choose an output folder and file name prefix/i);
+    await fireEvent.pointerDown(document.body);
+    expect(within(dialog).queryByRole('dialog', { name: 'Telemetry export help' })).not.toBeInTheDocument();
+
+    const jobsHelpButton = within(dialog).getByRole('button', { name: 'Export jobs help' });
+    expect(jobsHelpButton.closest('.section-title-row')).toContainElement(jobsHelpButton);
+    await fireEvent.click(jobsHelpButton);
+    expect(within(dialog).getByRole('dialog', { name: 'Export jobs help' })).toHaveTextContent(/Jobs stay here until the tracker closes/i);
+  });
+
   it('restores the default exports folder after a manual edit', async () => {
     renderExportModal();
 

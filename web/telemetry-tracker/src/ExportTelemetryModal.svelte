@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
   import AppModal from './AppModal.svelte';
+  import HelpPopover from './HelpPopover.svelte';
   import { canChooseExportFolder, chooseExportFolder } from './desktopBridge';
   import type { TelemetryExportDefaults, TelemetryExportJob, TelemetryExportKind } from './types';
 
@@ -20,6 +21,9 @@
 
   const outputDirInputId = `telemetry-export-output-dir-${Math.random().toString(36).slice(2)}`;
   const filenamePrefixInputId = `telemetry-export-filename-prefix-${Math.random().toString(36).slice(2)}`;
+  const EXPORT_SCOPE_COPY = 'Exports dump the full telemetry database. They do not filter by session, lap, time range, timeline selection, or current review view.';
+  const EXPORT_BACKGROUND_COPY = 'Choose an output folder and file name prefix, then start a background export. You can close this window and return later to refresh job status or cancel queued/running exports.';
+  const JOBS_PERSISTENCE_COPY = 'Jobs stay here until the tracker closes.';
 
   let outputDir = '';
   let filenamePrefix = '';
@@ -152,16 +156,12 @@
 </script>
 
 <AppModal title="Export telemetry" on:close={() => dispatch('close')}>
-  <section class="export-telemetry" aria-label="Telemetry export settings">
-    <p>
-      Exports dump the full telemetry database. They do not filter by session, lap, time range, timeline selection, or
-      current review view.
-    </p>
-    <p class="settings-hint">
-      Choose an output folder and file name prefix, then start a background export. You can close this window and return
-      later to refresh job status or cancel queued/running exports.
-    </p>
+  <HelpPopover slot="titleAccessory" label="Telemetry export help" popoverLabel="Telemetry export help">
+    <p>{EXPORT_SCOPE_COPY}</p>
+    <p>{EXPORT_BACKGROUND_COPY}</p>
+  </HelpPopover>
 
+  <section class="export-telemetry" aria-label="Telemetry export settings">
     <form class="export-telemetry-form" on:submit|preventDefault>
       <div class="form-field">
         <label for={outputDirInputId}>Output folder</label>
@@ -230,9 +230,11 @@
 
   <section class="export-jobs" aria-label="Telemetry export jobs">
     <header class="export-jobs-header">
-      <div>
+      <div class="section-title-row">
         <h3>Export jobs</h3>
-        <p class="settings-hint">Jobs stay here until the tracker closes.</p>
+        <HelpPopover label="Export jobs help" popoverLabel="Export jobs help">
+          <p>{JOBS_PERSISTENCE_COPY}</p>
+        </HelpPopover>
       </div>
       <button type="button" class="secondary-action" disabled={jobsLoading} on:click={() => dispatch('refreshjobs')}>
         {jobsLoading ? 'Refreshing…' : 'Refresh'}

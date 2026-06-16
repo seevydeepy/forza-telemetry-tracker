@@ -103,7 +103,10 @@
     tabindex="-1"
   >
     <header class="modal-header">
-      <h2 id={labelledById}>{title}</h2>
+      <div class="modal-title-row">
+        <h2 id={labelledById}>{title}</h2>
+        <slot name="titleAccessory" />
+      </div>
       <IconButton icon="close" label={closeLabel ?? `Close ${title}`} title={closeLabel ?? `Close ${title}`} onClick={close} />
     </header>
     <div class="modal-body">

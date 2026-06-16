@@ -310,8 +310,17 @@ button {
   align-items: center;
   border-bottom: 1px solid var(--panel-border-muted);
   display: flex;
+  gap: 1rem;
   justify-content: space-between;
   padding: 1rem;
+}
+
+.modal-title-row,
+.section-title-row {
+  align-items: center;
+  display: flex;
+  gap: 0.4rem;
+  min-width: 0;
 }
 
 .modal-header h2 {

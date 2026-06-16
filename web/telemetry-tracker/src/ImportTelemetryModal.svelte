@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
   import AppModal from './AppModal.svelte';
+  import HelpPopover from './HelpPopover.svelte';
   import {
     canChooseRawTelemetryFiles,
     canChooseRawTelemetryFolder,
@@ -15,6 +16,10 @@
   export let cancellingJobIds: string[] = [];
 
   type ImportSourceType = 'file' | 'files' | 'folder';
+
+  const IMPORT_INTRO_COPY = 'Choose a saved raw Forza UDP packet capture file, several files, or a whole folder of raw telemetry captures. The tracker imports them through the same session and lap pipeline used for live recordings.';
+  const IMPORT_JOBS_COPY = 'Imports run as background jobs. You can close this window, keep using the tracker, then reopen it to check progress or cancel queued/running work. Empty files and partial packets are reported on the job instead of stopping the whole folder.';
+  const JOBS_PERSISTENCE_COPY = 'Jobs stay here until the tracker closes.';
 
   const dispatch = createEventDispatcher<{
     close: void;
@@ -205,17 +210,11 @@
 </script>
 
 <AppModal title="Import raw telemetry" on:close={() => dispatch('close')}>
-  <section class="import-telemetry" aria-label="Raw telemetry import">
-    <p>
-      Choose a saved raw Forza UDP packet capture file, several files, or a whole folder of raw telemetry captures.
-      The tracker imports them through the same session and lap pipeline used for live recordings.
-    </p>
-    <p class="settings-hint">
-      Imports run as background jobs. You can close this window, keep using the tracker, then reopen it to check
-      progress or cancel queued/running work. Empty files and partial packets are reported on the job instead of
-      stopping the whole folder.
-    </p>
+  <HelpPopover slot="titleAccessory" label="Raw telemetry import help" popoverLabel="Raw telemetry import help">
+    <p>{IMPORT_INTRO_COPY}</p>
+  </HelpPopover>
 
+  <section class="import-telemetry" aria-label="Raw telemetry import">
     <form class="import-telemetry-form" on:submit|preventDefault={submitImport}>
       <div class="form-field">
         <label for={fileInputId}>Raw telemetry file or files</label>
@@ -292,9 +291,12 @@
 
   <section class="import-jobs" aria-label="Raw telemetry import jobs">
     <header class="import-jobs-header">
-      <div>
+      <div class="section-title-row">
         <h3>Import jobs</h3>
-        <p class="settings-hint">Jobs stay here until the tracker closes.</p>
+        <HelpPopover label="Import jobs help" popoverLabel="Import jobs help">
+          <p>{IMPORT_JOBS_COPY}</p>
+          <p>{JOBS_PERSISTENCE_COPY}</p>
+        </HelpPopover>
       </div>
       <button type="button" class="secondary-action" disabled={jobsLoading} on:click={() => dispatch('refreshjobs')}>
         {jobsLoading ? 'Refreshing…' : 'Refresh'}
