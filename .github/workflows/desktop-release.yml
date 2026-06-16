@@ -19,6 +19,9 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
 
     steps:
       - name: Validate SemVer tag
@@ -93,6 +96,13 @@ jobs:
           "installer=$installer" >> $env:GITHUB_OUTPUT
           "checksum=$checksum" >> $env:GITHUB_OUTPUT
 
+      - name: Generate release asset attestations
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            ${{ steps.assets.outputs.installer }}
+            ${{ steps.assets.outputs.checksum }}
+
       - name: Upload release assets
         uses: actions/upload-artifact@v7
         with:
@@ -108,6 +118,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      attestations: read
 
     steps:
       - name: Download release assets
@@ -115,6 +126,50 @@ jobs:
         with:
           name: desktop-release-assets
           path: release-assets
+
+      - name: Verify downloaded release assets
+        id: downloaded_assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_version="${GITHUB_REF_NAME#v}"
+          installer="$(find release-assets -type f -name "ForzaTelemetryTrackerSetup-v${tag_version}-x64.exe" -print -quit)"
+          if [[ -z "${installer}" ]]; then
+            echo "Installer asset not found for ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+          checksum="${installer}.sha256"
+          if [[ ! -f "${checksum}" ]]; then
+            echo "Checksum asset not found: ${checksum}" >&2
+            exit 1
+          fi
+          (
+            cd "$(dirname "${installer}")"
+            sha256sum -c "$(basename "${checksum}")"
+          )
+          {
+            echo "installer=${installer}"
+            echo "checksum=${checksum}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Verify release asset attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          signer_workflow="${GITHUB_REPOSITORY}/.github/workflows/desktop-release.yml"
+          source_ref="refs/tags/${GITHUB_REF_NAME}"
+          gh attestation verify "${{ steps.downloaded_assets.outputs.installer }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --signer-workflow "${signer_workflow}" \
+            --source-ref "${source_ref}" \
+            --deny-self-hosted-runners
+          gh attestation verify "${{ steps.downloaded_assets.outputs.checksum }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --signer-workflow "${signer_workflow}" \
+            --source-ref "${source_ref}" \
+            --deny-self-hosted-runners
 
       - name: Publish GitHub Release
         env:
@@ -128,10 +183,14 @@ jobs:
 
           - Unsigned Windows installer.
           - SHA-256 checksum is attached for verification.
+          - GitHub Artifact Attestations are published for the installer and checksum.
+          - Verify installer provenance with:
+            gh attestation verify ForzaTelemetryTrackerSetup-${TAG_NAME}-x64.exe --repo ${GITHUB_REPOSITORY} --signer-workflow ${GITHUB_REPOSITORY}/.github/workflows/desktop-release.yml --source-ref refs/tags/${TAG_NAME} --deny-self-hosted-runners
           - Source commit: ${GITHUB_SHA}
           EOF
-          mapfile -t assets < <(find release-assets -type f -print)
-          gh release create "${TAG_NAME}" "${assets[@]}" \
+          gh release create "${TAG_NAME}" \
+            "${{ steps.downloaded_assets.outputs.installer }}" \
+            "${{ steps.downloaded_assets.outputs.checksum }}" \
             --repo "${GITHUB_REPOSITORY}" \
             --title "${TAG_NAME}" \
             --notes-file release-notes.md \
