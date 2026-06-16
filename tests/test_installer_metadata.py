@@ -24,5 +24,5 @@ def test_installer_refreshes_stale_start_menu_icon_cache() -> None:
     assert '[InstallDelete]\nType: files; Name: "{group}\\{#AppName}.lnk"' in script
     assert "ShellChangeNotifyAssociationChanged = $08000000;" in script
     assert "ShellChangeNotifyIdList = $0000;" in script
-    assert "external 'SHChangeNotifyW@shell32.dll stdcall'" in script
+    assert "external 'SHChangeNotify@shell32.dll stdcall'" in script
     assert "SHChangeNotify(ShellChangeNotifyAssociationChanged, ShellChangeNotifyIdList, 0, 0);" in script

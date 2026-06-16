@@ -62,8 +62,9 @@ const
   ShellChangeNotifyAssociationChanged = $08000000;
   ShellChangeNotifyIdList = $0000;
 
+// SHChangeNotify is exported without an A/W suffix.
 procedure SHChangeNotify(wEventId: Integer; uFlags: Integer; dwItem1: Integer; dwItem2: Integer);
-  external 'SHChangeNotifyW@shell32.dll stdcall';
+  external 'SHChangeNotify@shell32.dll stdcall';
 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
