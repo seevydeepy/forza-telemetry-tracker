@@ -33,7 +33,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
 SetupIconFile=..\icons\{#AppIconName}
-UninstallDisplayIcon={app}\{#AppIconName}
+UninstallDisplayIcon={app}\{#AppExeName}
 
 [Files]
 Source: "{#SourceRoot}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -42,9 +42,12 @@ Source: "..\icons\{#AppIconName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#WebView2Installer}"; Flags: dontcopy
 #endif
 
+[InstallDelete]
+Type: files; Name: "{group}\{#AppName}.lnk"
+
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppIconName}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppIconName}"; Tasks: desktopicon
+Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppExeName}"; IconIndex: 0
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\{#AppExeName}"; IconIndex: 0; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
@@ -56,6 +59,19 @@ Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait
 const
   WebView2AlreadyInstalledExitCode = -2147219416; // Inno reports 0x80040828 as a signed Integer.
   WebView2ClientKey = 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
+  ShellChangeNotifyAssociationChanged = $08000000;
+  ShellChangeNotifyIdList = $0000;
+
+procedure SHChangeNotify(wEventId: Integer; uFlags: Integer; dwItem1: Integer; dwItem2: Integer);
+  external 'SHChangeNotifyW@shell32.dll stdcall';
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then begin
+    // Prompt Windows to drop stale Start Menu shortcut icon cache entries after upgrades.
+    SHChangeNotify(ShellChangeNotifyAssociationChanged, ShellChangeNotifyIdList, 0, 0);
+  end;
+end;
 
 function HasWebView2Version(const RootKey: Integer; const RootName: String): Boolean;
 var
