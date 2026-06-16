@@ -226,10 +226,6 @@ button {
   z-index: 8;
 }
 
-#app .diagnostics-backdrop {
-  z-index: 30;
-}
-
 @media (max-width: 720px) {
   #app .floating-review-timeline .review-timeline-controls {
     align-items: center;

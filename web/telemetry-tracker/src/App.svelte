@@ -7,6 +7,7 @@
     cancelTelemetryExportJob,
     createTelemetryExportJob,
     createRawTelemetryImportJob,
+    createRawTelemetryImportPathJob,
     deleteAllTelemetry,
     deleteLap,
     deleteSession,
@@ -345,7 +346,10 @@
   let historyDrawerOpen = Boolean(initialLoadedSessionId);
   let historyView: LapHistoryView = 'laps';
   let deletingLapIds: string[] = [];
-  let summaryCardVisible = true;
+  let summaryCardVisible = false;
+  let summaryCardUserTouched = false;
+  let summaryCardAutoShown = false;
+  let previousSelectedLapSummary: AnalysisSummary | null = null;
   let summaryCardX = 0;
   let summaryCardY = 0;
   let carCardVisible = true;
@@ -1713,14 +1717,30 @@
     }
   }
 
-  async function handleImportRawTelemetry(event: CustomEvent<{ files: File[]; label: string; sourceType: 'file' | 'files' | 'folder' }>) {
+  async function handleImportRawTelemetry(event: CustomEvent<{
+    files?: File[];
+    filePaths?: string[];
+    folderPath?: string;
+    label: string;
+    sourceType: 'file' | 'files' | 'folder';
+  }>) {
     importBusy = true;
     try {
-      const job = await createRawTelemetryImportJob({
-        files: event.detail.files,
-        label: event.detail.label,
-        sourceType: event.detail.sourceType
-      });
+      const files = event.detail.files ?? [];
+      const filePaths = event.detail.filePaths ?? [];
+      const folderPath = event.detail.folderPath?.trim();
+      const job = filePaths.length > 0 || folderPath
+        ? await createRawTelemetryImportPathJob({
+            ...(filePaths.length > 0 ? { file_paths: filePaths } : {}),
+            ...(folderPath ? { folder_path: folderPath } : {}),
+            label: event.detail.label,
+            source_type: event.detail.sourceType
+          })
+        : await createRawTelemetryImportJob({
+            files,
+            label: event.detail.label,
+            sourceType: event.detail.sourceType
+          });
       if (disposed) return;
       upsertImportJob(job);
       importJobStatuses = { ...importJobStatuses, [job.id]: job.status };
@@ -2211,6 +2231,7 @@
   }
 
   async function hideSummaryCard({ restoreFocus = false } = {}) {
+    summaryCardUserTouched = true;
     summaryCardVisible = false;
     if (restoreFocus) {
       await focusSummaryToggleButton();
@@ -2218,6 +2239,7 @@
   }
 
   function toggleSummaryCard() {
+    summaryCardUserTouched = true;
     if (summaryCardVisible) {
       void hideSummaryCard({ restoreFocus: true });
       return;
@@ -2328,6 +2350,8 @@
   function resetFloatingPanelsAndLayout() {
     activeUtilityModal = null;
     historyDrawerOpen = Boolean(loadedSessionId);
+    summaryCardUserTouched = false;
+    summaryCardAutoShown = selectedLapSummary !== null;
     summaryCardVisible = true;
     summaryCardX = 0;
     summaryCardY = 0;
@@ -2890,6 +2914,15 @@
     ? { issues: ISSUES_UNAVAILABLE_DURING_RECORDING_MESSAGE }
     : {};
   $: displayedCarInfo = selectedLapId ? selectedCarInfo : isRecordingActive(capture) ? liveCarInfo : null;
+  $: {
+    const hadSummary = previousSelectedLapSummary !== null;
+    const hasSummary = selectedLapSummary !== null;
+    if (!hadSummary && hasSummary && !summaryCardAutoShown && !summaryCardUserTouched) {
+      summaryCardVisible = true;
+      summaryCardAutoShown = true;
+    }
+    previousSelectedLapSummary = selectedLapSummary;
+  }
   $: dashboardSource = selectedLapId ? 'lap' : 'live';
   $: canvasLoadingProgressPercent = canvasLoading?.progress === null || canvasLoading?.progress === undefined ? null : Math.round(canvasLoading.progress * 100);
   $: shouldBuildDashboardTimeline = selectedLapId !== null || canvasMode === 'dashboard';

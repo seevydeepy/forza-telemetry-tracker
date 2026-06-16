@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
+  import { createEventDispatcher, tick } from 'svelte';
+  import AppModal from './AppModal.svelte';
+  import IconButton from './IconButton.svelte';
   import type { DiagnosticsPayload } from './types';
 
   export let payload: DiagnosticsPayload | null = null;
@@ -20,38 +22,14 @@
   let captureStatus: AnyRecord | null = null;
   let captureRecording: AnyRecord | null = null;
   let capturePacketReceipt: AnyRecord | null = null;
-  let dialogElement: HTMLDivElement | null = null;
-  let closeButton: HTMLButtonElement | null = null;
   let deleteConfirmOpen = false;
   let deleteConfirmDialog: HTMLDivElement | null = null;
   let deleteConfirmCancelButton: HTMLButtonElement | null = null;
-
-  const FOCUSABLE_SELECTOR = [
-    'a[href]',
-    'button:not([disabled])',
-    'input:not([disabled])',
-    'select:not([disabled])',
-    'textarea:not([disabled])',
-    '[tabindex]:not([tabindex="-1"])'
-  ].join(',');
 
   $: listenerStatus = asRecord(payload?.listener_status);
   $: captureStatus = asRecord(payload?.capture_status);
   $: captureRecording = nestedRecord(captureStatus, 'recording');
   $: capturePacketReceipt = nestedRecord(captureStatus, 'packet_receipt');
-
-  onMount(() => {
-    document.addEventListener('keydown', handleDocumentKeydown, true);
-    document.addEventListener('focusin', handleDocumentFocusIn, true);
-    focusInitialControl();
-    void tick().then(focusInitialControl);
-    window.setTimeout(focusInitialControl, 0);
-  });
-
-  onDestroy(() => {
-    document.removeEventListener('keydown', handleDocumentKeydown, true);
-    document.removeEventListener('focusin', handleDocumentFocusIn, true);
-  });
 
   function asRecord(value: unknown): AnyRecord | null {
     return value && typeof value === 'object' ? (value as AnyRecord) : null;
@@ -97,79 +75,6 @@
     }
   }
 
-  function focusableElements(): HTMLElement[] {
-    const root = deleteConfirmOpen && deleteConfirmDialog ? deleteConfirmDialog : dialogElement;
-    if (!root) return [];
-    return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
-      .filter((element) => element.tabIndex >= 0 && !element.hasAttribute('aria-hidden'));
-  }
-
-  function focusInitialControl() {
-    const target = closeButton ?? focusableElements()[0] ?? dialogElement;
-    target?.focus({ preventScroll: true });
-  }
-
-  function focusLastControl() {
-    const focusable = focusableElements();
-    const target = focusable[focusable.length - 1] ?? dialogElement;
-    target?.focus({ preventScroll: true });
-  }
-
-  function handleDocumentFocusIn(event: FocusEvent) {
-    const target = event.target;
-    if (!dialogElement || !(target instanceof Node) || dialogElement.contains(target)) {
-      if (deleteConfirmOpen && deleteConfirmDialog && target instanceof Node && !deleteConfirmDialog.contains(target)) {
-        focusLastControl();
-      }
-      return;
-    }
-
-    focusLastControl();
-  }
-
-  function handleDocumentKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      if (deleteConfirmOpen) {
-        closeDeleteConfirm();
-        return;
-      }
-      dispatch('close');
-      return;
-    }
-
-    if (event.key !== 'Tab') {
-      return;
-    }
-
-    const focusable = focusableElements();
-    if (focusable.length === 0) {
-      event.preventDefault();
-      dialogElement?.focus({ preventScroll: true });
-      return;
-    }
-
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = document.activeElement;
-    if (!dialogElement?.contains(active)) {
-      event.preventDefault();
-      first.focus({ preventScroll: true });
-      return;
-    }
-
-    if (event.shiftKey && active === first) {
-      event.preventDefault();
-      last.focus({ preventScroll: true });
-      return;
-    }
-
-    if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus({ preventScroll: true });
-    }
-  }
-
   function openDeleteConfirm() {
     if (loading || deletingTelemetry) return;
     deleteConfirmOpen = true;
@@ -192,45 +97,22 @@
     deleteConfirmOpen = false;
     dispatch('deleteAllTelemetry');
   }
+
+  function handleModalClose() {
+    if (deleteConfirmOpen) {
+      closeDeleteConfirm();
+      return;
+    }
+    dispatch('close');
+  }
 </script>
 
-<section class="diagnostics-backdrop">
-  <div
-    bind:this={dialogElement}
-    class="diagnostics-panel"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Telemetry diagnostics"
-    tabindex="-1"
-  >
-    <header class="diagnostics-header">
-      <div>
-        <p class="eyebrow">Forza Telemetry Tracker</p>
-        <h2>Diagnostics</h2>
-      </div>
-      <div class="diagnostics-actions">
-        <button
-          type="button"
-          class="icon-button"
-          aria-label="Refresh diagnostics"
-          title="Refresh diagnostics"
-          disabled={loading}
-          on:click={() => dispatch('refresh')}
-        >
-          ↻
-        </button>
-        <button
-          bind:this={closeButton}
-          type="button"
-          class="icon-button"
-          aria-label="Close diagnostics"
-          title="Close diagnostics"
-          on:click={() => dispatch('close')}
-        >
-          ×
-        </button>
-      </div>
-    </header>
+<AppModal title="Diagnostics" ariaLabel="Telemetry diagnostics" closeLabel="Close diagnostics" on:close={handleModalClose}>
+  <div class="diagnostics-panel">
+    <div class="diagnostics-toolbar">
+      <p class="eyebrow">Forza Telemetry Tracker</p>
+      <IconButton icon="refresh" label="Refresh diagnostics" title="Refresh diagnostics" disabled={loading} onClick={() => dispatch('refresh')} />
+    </div>
 
     {#if loading}
       <p class="diagnostics-loading">Loading diagnostics…</p>
@@ -365,47 +247,19 @@
       </section>
     {/if}
   </div>
-</section>
+</AppModal>
 
 <style>
-  .diagnostics-backdrop {
-    align-items: flex-start;
-    background: var(--canvas-overlay-backdrop-bg);
-    display: flex;
-    inset: 0;
-    justify-content: flex-end;
-    padding: 1rem;
-    position: fixed;
-    z-index: 8;
-  }
-
   .diagnostics-panel {
-    backdrop-filter: var(--canvas-overlay-backdrop-filter);
-    background: var(--canvas-overlay-panel-bg);
-    border: 1px solid #3f3f46;
-    border-radius: 1rem;
-    box-shadow: 0 20px 60px rgb(0 0 0 / 45%);
-    color: #f4f4f5;
     display: grid;
     gap: 1rem;
-    max-height: calc(100vh - 2rem);
-    max-width: 520px;
-    overflow: auto;
-    padding: 1rem;
-    width: min(520px, calc(100vw - 2rem));
   }
 
-  .diagnostics-header {
-    align-items: start;
+  .diagnostics-toolbar {
+    align-items: center;
     display: flex;
-    justify-content: space-between;
     gap: 1rem;
-  }
-
-  .diagnostics-header h2 {
-    color: #d4d4d8;
-    font-size: 1.25rem;
-    margin: 0;
+    justify-content: space-between;
   }
 
   .eyebrow {
@@ -414,28 +268,6 @@
     letter-spacing: 0.08em;
     margin: 0 0 0.2rem;
     text-transform: uppercase;
-  }
-
-  .diagnostics-actions {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .icon-button {
-    align-items: center;
-    background: var(--canvas-overlay-control-bg);
-    border: 1px solid #3f3f46;
-    border-radius: 0.75rem;
-    color: #f4f4f5;
-    display: inline-flex;
-    height: 40px;
-    justify-content: center;
-    width: 40px;
-  }
-
-  .icon-button:disabled {
-    cursor: wait;
-    opacity: 0.55;
   }
 
   .diagnostics-loading {

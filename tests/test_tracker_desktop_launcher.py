@@ -101,6 +101,26 @@ class DesktopLauncherTests(unittest.TestCase):
             allow_multiple=False,
         )
 
+    def test_desktop_bridge_uses_existing_current_file_parent_for_fh6_dialog_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            current_file = Path(tmp) / "ForzaHorizon6.exe"
+            current_file.write_bytes(b"exe")
+            fake_window = MagicMock()
+            fake_window.create_file_dialog.return_value = [tmp]
+            fake_webview = MagicMock()
+            fake_webview.FOLDER_DIALOG = 20
+            bridge = DesktopBridge()
+            bridge.bind_window(fake_window)
+
+            with patch("telemetry_tracker.desktop_launcher.load_webview", return_value=fake_webview):
+                bridge.choose_fh6_install_folder(str(current_file))
+
+        fake_window.create_file_dialog.assert_called_once_with(
+            20,
+            directory=str(current_file.parent),
+            allow_multiple=False,
+        )
+
     def test_desktop_bridge_returns_none_when_folder_dialog_is_cancelled(self):
         fake_window = MagicMock()
         fake_window.create_file_dialog.return_value = None
@@ -113,6 +133,60 @@ class DesktopLauncherTests(unittest.TestCase):
             selected = bridge.choose_fh6_install_folder()
 
         self.assertIsNone(selected)
+
+    def test_desktop_bridge_returns_selected_export_folder(self):
+        fake_window = MagicMock()
+        fake_window.create_file_dialog.return_value = [r"D:\Telemetry Exports"]
+        fake_webview = MagicMock()
+        fake_webview.FOLDER_DIALOG = 20
+        bridge = DesktopBridge(fake_webview)
+        bridge.bind_window(fake_window)
+
+        selected = bridge.choose_export_folder()
+
+        self.assertEqual(selected, r"D:\Telemetry Exports")
+        fake_window.create_file_dialog.assert_called_once_with(
+            20,
+            directory="",
+            allow_multiple=False,
+        )
+
+    def test_desktop_bridge_returns_selected_raw_telemetry_files(self):
+        fake_window = MagicMock()
+        fake_window.create_file_dialog.return_value = [r"D:\captures\one.bin", r"D:\captures\two.raw"]
+        fake_webview = MagicMock()
+        fake_webview.OPEN_DIALOG = 10
+        bridge = DesktopBridge(fake_webview)
+        bridge.bind_window(fake_window)
+
+        selected = bridge.choose_raw_telemetry_files()
+
+        self.assertEqual(selected, [r"D:\captures\one.bin", r"D:\captures\two.raw"])
+        fake_window.create_file_dialog.assert_called_once_with(
+            10,
+            directory="",
+            allow_multiple=True,
+        )
+
+    def test_desktop_bridge_uses_existing_current_file_parent_as_dialog_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            current_file = Path(tmp) / "capture.bin"
+            current_file.write_bytes(b"raw")
+            fake_window = MagicMock()
+            fake_window.create_file_dialog.return_value = [str(current_file)]
+            fake_webview = MagicMock()
+            fake_webview.OPEN_DIALOG = 10
+            bridge = DesktopBridge(fake_webview)
+            bridge.bind_window(fake_window)
+
+            selected = bridge.choose_raw_telemetry_files(str(current_file))
+
+        self.assertEqual(selected, [str(current_file)])
+        fake_window.create_file_dialog.assert_called_once_with(
+            10,
+            directory=str(current_file.parent),
+            allow_multiple=True,
+        )
 
     def test_desktop_bridge_uses_pywebview_window_if_called_before_explicit_bind(self):
         fake_window = MagicMock()

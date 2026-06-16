@@ -12,6 +12,7 @@ import type {
   LapSummaryResponse,
   RawPointResponse,
   RawTelemetryImportJob,
+  RawTelemetryImportPathJobRequest,
   RawTelemetryImportJobResponse,
   RawTelemetryImportJobsResponse,
   RawTelemetryImportResponse,
@@ -202,6 +203,16 @@ export async function createRawTelemetryImportJob(input: {
     body
   });
   const payload = await expectJson<RawTelemetryImportJobResponse>(response, 'Raw telemetry import job request failed');
+  return payload.job;
+}
+
+export async function createRawTelemetryImportPathJob(input: RawTelemetryImportPathJobRequest): Promise<RawTelemetryImportJob> {
+  const response = await fetch('/api/replay/import-jobs/paths', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  });
+  const payload = await expectJson<RawTelemetryImportJobResponse>(response, 'Raw telemetry import path job request failed');
   return payload.job;
 }
 

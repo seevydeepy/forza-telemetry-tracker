@@ -132,6 +132,25 @@ class ReplayRequest(BaseModel):
     recording_mode: bool = False
 
 
+class RawTelemetryImportPathsRequest(BaseModel):
+    file_paths: list[str] | None = None
+    filePaths: list[str] | None = None
+    folder_path: str | None = None
+    folderPath: str | None = None
+    label: str | None = None
+    source_type: str | None = None
+    sourceType: str | None = None
+
+    def selected_file_paths(self) -> list[str]:
+        return list(self.file_paths if self.file_paths is not None else self.filePaths or [])
+
+    def selected_folder_path(self) -> str | None:
+        return self.folder_path if self.folder_path is not None else self.folderPath
+
+    def selected_source_type(self) -> str | None:
+        return self.source_type if self.source_type is not None else self.sourceType
+
+
 class CaptureModeRequest(BaseModel):
     mode: str | None = None
     capture_mode: str | None = None
@@ -431,9 +450,10 @@ class RawTelemetryImportJob:
     label: str
     source_type: str
     files: list[RawTelemetryImportSource]
-    staged_dir: Path
+    staged_dir: Path | None
     total_bytes: int
     created_at_ms: int
+    cleanup_staged_dir: bool = True
     status: str = "queued"
     status_text: str = "Queued"
     progress: float = 0.0
@@ -1662,6 +1682,80 @@ async def _stage_uploaded_raw_telemetry_files(files: list[UploadFile]) -> tuple[
         shutil.rmtree(staged_dir, ignore_errors=True)
         raise
     return staged, staged_dir, total_bytes
+
+
+def _raw_import_source_for_existing_file(path: Path, display_name: str) -> tuple[RawTelemetryImportSource, int]:
+    try:
+        resolved = path.expanduser().resolve(strict=True)
+    except OSError as exc:
+        raise HTTPException(status_code=400, detail=f"raw telemetry path does not exist: {path}") from exc
+    if not resolved.is_file():
+        raise HTTPException(status_code=400, detail=f"raw telemetry path must be a file: {path}")
+    try:
+        size_bytes = resolved.stat().st_size
+    except OSError as exc:
+        raise HTTPException(status_code=400, detail=f"failed to inspect raw telemetry path: {path}") from exc
+    if size_bytes > RAW_TELEMETRY_UPLOAD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail=_upload_size_limit_message())
+    return RawTelemetryImportSource(display_name=display_name, staged_path=resolved, size_bytes=size_bytes), size_bytes
+
+
+def _path_display_name(path: Path, index: int) -> str:
+    name = path.name.strip()
+    return name or f"raw-telemetry-{index}.bin"
+
+
+def _folder_display_name(folder: Path, path: Path) -> str:
+    try:
+        relative = path.relative_to(folder)
+    except ValueError:
+        return path.name
+    display = str(Path(folder.name) / relative).replace("\\", "/").strip("/")
+    return display or path.name
+
+
+def _raw_import_sources_for_paths(request: RawTelemetryImportPathsRequest) -> tuple[list[RawTelemetryImportSource], int, str]:
+    file_paths = [str(item or "").strip() for item in request.selected_file_paths() if str(item or "").strip()]
+    folder_path = str(request.selected_folder_path() or "").strip()
+    if file_paths and folder_path:
+        raise HTTPException(status_code=400, detail="choose either raw telemetry files or a raw telemetry folder")
+    if not file_paths and not folder_path:
+        raise HTTPException(status_code=400, detail="at least one raw telemetry file or folder is required")
+
+    paths: list[tuple[Path, str]] = []
+    source_type = "file"
+    if folder_path:
+        try:
+            folder = Path(folder_path).expanduser().resolve(strict=True)
+        except OSError as exc:
+            raise HTTPException(status_code=400, detail="raw telemetry folder does not exist") from exc
+        if not folder.is_dir():
+            raise HTTPException(status_code=400, detail="raw telemetry folder path must be a folder")
+        files = sorted((path for path in folder.rglob("*") if path.is_file()), key=lambda item: str(item).lower())
+        if not files:
+            raise HTTPException(status_code=400, detail="raw telemetry folder does not contain any files")
+        paths = [(path, _folder_display_name(folder, path)) for path in files]
+        source_type = "folder"
+    else:
+        paths = [(Path(raw_path), _path_display_name(Path(raw_path), index)) for index, raw_path in enumerate(file_paths, start=1)]
+        source_type = "files" if len(paths) > 1 else "file"
+
+    if len(paths) > RAW_TELEMETRY_IMPORT_MAX_FILES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"raw telemetry import accepts at most {RAW_TELEMETRY_IMPORT_MAX_FILES} files",
+        )
+
+    sources: list[RawTelemetryImportSource] = []
+    total_bytes = 0
+    for path, display_name in paths:
+        source, size_bytes = _raw_import_source_for_existing_file(path, display_name)
+        total_bytes += size_bytes
+        if total_bytes > RAW_TELEMETRY_IMPORT_MAX_TOTAL_BYTES:
+            raise HTTPException(status_code=413, detail=_import_total_size_limit_message())
+        sources.append(source)
+
+    return sources, total_bytes, source_type
 
 
 def _label_for_import_job(label: str | None, source_type: str, files: list[RawTelemetryImportSource]) -> str:
@@ -2961,7 +3055,8 @@ def create_app(
             job.add_error(None, str(exc))
             job.mark_terminal("failed", f"Import job failed: {exc}")
         finally:
-            shutil.rmtree(job.staged_dir, ignore_errors=True)
+            if job.cleanup_staged_dir and job.staged_dir is not None:
+                shutil.rmtree(job.staged_dir, ignore_errors=True)
 
     async def raw_import_job_snapshots() -> list[dict]:
         async with raw_import_jobs_lock:
@@ -2973,6 +3068,41 @@ def create_app(
             job = raw_import_jobs.get(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="unknown import job")
+        return job
+
+    async def enqueue_raw_import_job(
+        *,
+        label: str | None,
+        source_type: str,
+        files: list[RawTelemetryImportSource],
+        staged_dir: Path | None,
+        total_bytes: int,
+        cleanup_staged_dir: bool,
+    ) -> RawTelemetryImportJob:
+        clean_source_type = str(source_type or "").strip().lower()
+        if clean_source_type not in {"file", "files", "folder"}:
+            clean_source_type = "folder" if len(files) > 1 else "file"
+        job = RawTelemetryImportJob(
+            id=str(uuid.uuid4()),
+            label=_label_for_import_job(label, clean_source_type, files),
+            source_type=clean_source_type,
+            files=files,
+            staged_dir=staged_dir,
+            total_bytes=total_bytes,
+            cleanup_staged_dir=cleanup_staged_dir,
+            created_at_ms=int(time.time() * 1000),
+        )
+        async with raw_import_jobs_lock:
+            queued_ahead = sum(
+                1
+                for existing_job in raw_import_jobs.values()
+                if existing_job.status in {"queued", "running", "cancelling"}
+            )
+            if queued_ahead:
+                job_noun = "job" if queued_ahead == 1 else "jobs"
+                job.status_text = f"Queued behind {queued_ahead} active import {job_noun}."
+            raw_import_jobs[job.id] = job
+        job.task = asyncio.create_task(run_raw_import_job(job))
         return job
 
     async def replay_raw_bytes_payload(raw: bytes, label: str, recording_mode: bool) -> dict:
@@ -3183,29 +3313,27 @@ def create_app(
             for file in files:
                 await file.close()
 
-        clean_source_type = str(source_type or "").strip().lower()
-        if clean_source_type not in {"file", "files", "folder"}:
-            clean_source_type = "folder" if len(staged_files) > 1 else "file"
-        job = RawTelemetryImportJob(
-            id=str(uuid.uuid4()),
-            label=_label_for_import_job(label, clean_source_type, staged_files),
-            source_type=clean_source_type,
+        job = await enqueue_raw_import_job(
+            label=label,
+            source_type=str(source_type or ""),
             files=staged_files,
             staged_dir=staged_dir,
             total_bytes=total_bytes,
-            created_at_ms=int(time.time() * 1000),
+            cleanup_staged_dir=True,
         )
-        async with raw_import_jobs_lock:
-            queued_ahead = sum(
-                1
-                for existing_job in raw_import_jobs.values()
-                if existing_job.status in {"queued", "running", "cancelling"}
-            )
-            if queued_ahead:
-                job_noun = "job" if queued_ahead == 1 else "jobs"
-                job.status_text = f"Queued behind {queued_ahead} active import {job_noun}."
-            raw_import_jobs[job.id] = job
-        job.task = asyncio.create_task(run_raw_import_job(job))
+        return {"job": job.snapshot()}
+
+    @app.post("/api/replay/import-jobs/paths")
+    async def replay_import_job_paths(request: RawTelemetryImportPathsRequest) -> dict:
+        files, total_bytes, source_type = _raw_import_sources_for_paths(request)
+        job = await enqueue_raw_import_job(
+            label=request.label,
+            source_type=source_type,
+            files=files,
+            staged_dir=None,
+            total_bytes=total_bytes,
+            cleanup_staged_dir=False,
+        )
         return {"job": job.snapshot()}
 
     @app.post("/api/replay/import-jobs/{job_id}/cancel")

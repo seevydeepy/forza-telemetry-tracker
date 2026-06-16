@@ -17,6 +17,8 @@
   let helpOpen = false;
   let helpLeft = POPOVER_GAP;
   let helpTop = POPOVER_GAP;
+  let helpButton: HTMLButtonElement | null = null;
+  let helpPopover: HTMLDivElement | null = null;
   let folderPickerAvailable = false;
   let choosingFolder = false;
   let folderPickerError = '';
@@ -35,6 +37,14 @@
     helpLeft = clamp(anchorX + POPOVER_GAP, POPOVER_GAP, window.innerWidth - POPOVER_WIDTH - POPOVER_GAP);
     helpTop = clamp(anchorY + POPOVER_GAP, POPOVER_GAP, window.innerHeight - POPOVER_HEIGHT - POPOVER_GAP);
     helpOpen = !helpOpen;
+  }
+
+  function handleDocumentPointerDown(event: PointerEvent) {
+    if (!helpOpen) return;
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+    if (helpButton?.contains(target) || helpPopover?.contains(target)) return;
+    helpOpen = false;
   }
 
   function clamp(value: number, min: number, max: number) {
@@ -62,10 +72,13 @@
   }
 </script>
 
+<svelte:document on:pointerdown={handleDocumentPointerDown} />
+
 <div class="world-map-install-location">
   <div class="world-map-install-location-label-row">
     <label for={inputId}>FH6 Local Install Location</label>
     <button
+      bind:this={helpButton}
       type="button"
       class="world-map-install-location-help"
       aria-label="How to find the FH6 install folder"
@@ -103,6 +116,7 @@
   {/if}
   {#if helpOpen}
     <div
+      bind:this={helpPopover}
       id={helpId}
       class="world-map-install-location-popover"
       role="dialog"

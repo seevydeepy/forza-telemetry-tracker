@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import AppModal from './AppModal.svelte';
+  import { canChooseExportFolder, chooseExportFolder } from './desktopBridge';
   import type { TelemetryExportDefaults, TelemetryExportJob, TelemetryExportKind } from './types';
 
   export let defaults: TelemetryExportDefaults | null = null;
@@ -25,6 +26,9 @@
   let appliedDefaultsKey = '';
   let previousDefaultOutputDir = '';
   let previousDefaultFilenamePrefix = '';
+  let nativeFolderPickerAvailable = false;
+  let choosingNativeFolder = false;
+  let nativeFolderPickerError = '';
 
   $: defaultsKey = defaults ? `${defaults.output_dir}\u0000${defaults.filename_prefix}` : '';
   $: exportDisabled = exporting || defaultsLoading || !outputDir.trim();
@@ -41,9 +45,35 @@
     appliedDefaultsKey = defaultsKey;
   }
 
+  onMount(() => {
+    refreshNativeFolderPickerAvailability();
+    window.addEventListener('pywebviewready', refreshNativeFolderPickerAvailability);
+    return () => window.removeEventListener('pywebviewready', refreshNativeFolderPickerAvailability);
+  });
+
   function useDefaultExportsFolder() {
     if (!defaults) return;
     outputDir = defaults.output_dir;
+  }
+
+  function refreshNativeFolderPickerAvailability() {
+    nativeFolderPickerAvailable = canChooseExportFolder();
+  }
+
+  async function browseForOutputFolder() {
+    if (!nativeFolderPickerAvailable || defaultsLoading || exporting || choosingNativeFolder) return;
+    nativeFolderPickerError = '';
+    choosingNativeFolder = true;
+    try {
+      const selected = await chooseExportFolder(outputDir);
+      if (selected) {
+        outputDir = selected;
+      }
+    } catch {
+      nativeFolderPickerError = 'Unable to open the export folder picker.';
+    } finally {
+      choosingNativeFolder = false;
+    }
   }
 
   function startExport(kind: TelemetryExportKind) {
@@ -146,10 +176,18 @@
       </div>
 
       <div class="modal-actions">
+        {#if nativeFolderPickerAvailable}
+          <button type="button" class="secondary-action" disabled={defaultsLoading || exporting || choosingNativeFolder} on:click={browseForOutputFolder}>
+            {choosingNativeFolder ? 'Browsing…' : 'Browse'}
+          </button>
+        {/if}
         <button type="button" class="secondary-action" disabled={!defaults || defaultsLoading || exporting} on:click={useDefaultExportsFolder}>
           Use default exports folder
         </button>
       </div>
+      {#if nativeFolderPickerError}
+        <p class="settings-hint export-picker-error" role="alert">{nativeFolderPickerError}</p>
+      {/if}
 
       <div class="form-field">
         <label for={filenamePrefixInputId}>File name prefix</label>

@@ -1916,6 +1916,9 @@ describe('App', () => {
     const stage = getVisualisationStage();
     expect(within(stage).getByRole('group', { name: /Floating capture controls/i })).toBeInTheDocument();
 
+    expect(within(stage).queryByRole('complementary', { name: /Section summary/i })).not.toBeInTheDocument();
+    await fireEvent.click(within(stage).getByRole('button', { name: 'Show section summary' }));
+
     const summary = within(stage).getByRole('complementary', { name: /Section summary/i });
     expect(summary).toHaveTextContent(/Full lap summary/i);
 
@@ -2437,6 +2440,7 @@ describe('App', () => {
   it('moves the section summary with keyboard and mouse while clamping extreme drag positions', async () => {
     renderApp();
 
+    await waitFor(() => expect(getSectionSummaryCard()).toHaveTextContent('Full lap summary'));
     const summary = getSectionSummaryCard();
     const dragHandle = getSummaryDragHandle();
     expect(summary).toHaveAttribute('data-summary-x', '0');
@@ -2549,7 +2553,7 @@ describe('App', () => {
     await fireEvent.click(within(dialog).getByRole('button', { name: 'How to find the FH6 install folder' }));
     expect(within(dialog).getByText('Start the game.')).toBeInTheDocument();
     expect(within(dialog).getByText(/The folder that opens is the folder the tracker needs/i)).toBeInTheDocument();
-    await fireEvent.click(within(dialog).getByRole('button', { name: 'How to find the FH6 install folder' }));
+    await fireEvent.pointerDown(within(dialog).getByLabelText('FH6 Local Install Location'));
     expect(within(dialog).queryByText('Start the game.')).toBeNull();
 
     await fireEvent.input(within(dialog).getByLabelText('FH6 Local Install Location'), {
@@ -2864,6 +2868,7 @@ describe('App', () => {
 
     const drawer = await screen.findByRole('complementary', { name: /Loaded session laps/i });
     expect(drawer).toHaveAttribute('data-width', '400');
+    await waitFor(() => expect(getSectionSummaryCard()).toHaveTextContent('Full lap summary'));
     await fireEvent.click(screen.getByRole('button', { name: 'Hide history drawer' }));
     await waitFor(() => expect(screen.queryByRole('complementary', { name: /Loaded session laps/i })).not.toBeInTheDocument());
     await fireEvent.click(within(getSectionSummaryCard()).getByRole('button', { name: 'Hide section summary' }));
@@ -3170,6 +3175,73 @@ describe('App', () => {
     expect(await findToast(/Import job finished: 2 packets/i)).toBeInTheDocument();
   });
 
+  it('starts a raw telemetry import job from native file paths', async () => {
+    const choose_raw_telemetry_files = vi.fn(async () => ['D:\\captures\\native-a.bin', 'D:\\captures\\native-b.bin']);
+    vi.stubGlobal('pywebview', {
+      api: {
+        choose_raw_telemetry_files
+      }
+    });
+    const defaultHandler = createDefaultFetchHandler();
+    let jobStarted = false;
+    const queuedJob = {
+      id: 'native-import-job',
+      label: 'Native sprint',
+      source_type: 'files',
+      status: 'queued',
+      status_text: 'Queued',
+      progress: 0,
+      created_at_ms: 9_000,
+      started_at_ms: null,
+      completed_at_ms: null,
+      total_files: 2,
+      processed_files: 0,
+      failed_files: 0,
+      total_bytes: 2_000,
+      packet_count: 0,
+      session_ids: [] as string[],
+      lap_ids: [] as string[],
+      current_file: null,
+      current_file_index: null,
+      current_file_packets: 0,
+      current_file_packets_processed: 0,
+      errors: [],
+      error_count: 0,
+      can_cancel: true
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = requestUrl(input);
+      const parsed = new URL(url, 'http://localhost');
+      if (parsed.pathname === '/api/replay/import-jobs/paths' && init?.method === 'POST') {
+        expect(init.headers).toEqual({ 'Content-Type': 'application/json' });
+        expect(init.body).toBe(JSON.stringify({
+          file_paths: ['D:\\captures\\native-a.bin', 'D:\\captures\\native-b.bin'],
+          label: 'Native sprint',
+          source_type: 'files'
+        }));
+        jobStarted = true;
+        return jsonResponse({ job: queuedJob });
+      }
+      if (parsed.pathname === '/api/replay/import-jobs') {
+        return jsonResponse({ jobs: jobStarted ? [queuedJob] : [] });
+      }
+      return defaultHandler(url, init);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderApp();
+    await findToast('Tracker ready');
+
+    const dialog = await openImportTelemetryModal();
+    await fireEvent.click(within(dialog).getByRole('button', { name: 'Browse files' }));
+    await waitFor(() => expect(choose_raw_telemetry_files).toHaveBeenCalled());
+    expect(within(dialog).getByText(/Selected 2 native files/i)).toBeInTheDocument();
+    await fireEvent.input(within(dialog).getByLabelText('Import label'), { target: { value: 'Native sprint' } });
+    await fireEvent.click(within(dialog).getByRole('button', { name: 'Start background import' }));
+
+    expect(await findToast(/Started raw telemetry import job for 2 files/i)).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => requestUrl(input as RequestInfo | URL) === '/api/replay/import-jobs/upload')).toBe(false);
+  });
+
   it('renders lap history in a toggleable fixed-width right drawer without capture controls', async () => {
     stubApiFetch({ laps: defaultLoadedSessionLaps });
     renderApp();
@@ -3249,6 +3321,20 @@ describe('App', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/listener/restart', { method: 'POST' });
     const diagnosticsCalls = fetchMock.mock.calls.filter(([input]) => requestUrl(input as RequestInfo | URL) === '/api/diagnostics');
     expect(diagnosticsCalls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('dismisses diagnostics on backdrop click without activating underlying controls', async () => {
+    const { container } = renderApp();
+
+    await fireEvent.click(await screen.findByRole('button', { name: 'Open diagnostics' }));
+    expect(await screen.findByRole('dialog', { name: 'Telemetry diagnostics' })).toBeInTheDocument();
+
+    const backdrop = container.querySelector('.modal-backdrop');
+    expect(backdrop).not.toBeNull();
+    await fireEvent.click(backdrop as HTMLElement);
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Telemetry diagnostics' })).not.toBeInTheDocument());
+    expect(screen.queryByRole('dialog', { name: 'Forza Telemetry Tracker settings' })).not.toBeInTheDocument();
   });
 
   it('asks for confirmation before deleting all telemetry from diagnostics', async () => {
@@ -3366,21 +3452,18 @@ describe('App', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Telemetry diagnostics' });
     const closeButton = within(dialog).getByRole('button', { name: 'Close diagnostics' });
-    await waitFor(() => expect(closeButton).toHaveFocus());
+    await waitFor(() => expect(dialog).toHaveFocus());
 
     const refreshButton = within(dialog).getByRole('button', { name: 'Refresh diagnostics' });
     const restartButton = await within(dialog).findByRole('button', { name: 'Restart Listener' });
     await waitFor(() => expect(refreshButton).toBeEnabled());
     restartButton.focus();
 
-    await fireEvent.keyDown(document, { key: 'Tab' });
-    expect(refreshButton).toHaveFocus();
+    await fireEvent.keyDown(window, { key: 'Tab' });
+    expect(closeButton).toHaveFocus();
 
-    await fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    await fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
     expect(restartButton).toHaveFocus();
-
-    screen.getByRole('button', { name: 'Settings' }).focus();
-    await waitFor(() => expect(closeButton).toHaveFocus());
   });
 
   it('closes diagnostics on Escape and restores focus to the opener', async () => {
@@ -3389,9 +3472,9 @@ describe('App', () => {
     const diagnosticsButton = await screen.findByRole('button', { name: 'Open diagnostics' });
     await fireEvent.click(diagnosticsButton);
     const dialog = await screen.findByRole('dialog', { name: 'Telemetry diagnostics' });
-    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Close diagnostics' })).toHaveFocus());
+    await waitFor(() => expect(dialog).toHaveFocus());
 
-    await fireEvent.keyDown(document, { key: 'Escape' });
+    await fireEvent.keyDown(window, { key: 'Escape' });
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Telemetry diagnostics' })).not.toBeInTheDocument());
     await waitFor(() => expect(diagnosticsButton).toHaveFocus());
@@ -3408,7 +3491,7 @@ describe('App', () => {
 
     await fireEvent.click(screen.getByRole('button', { name: 'Open diagnostics' }));
     const dialog = await screen.findByRole('dialog', { name: 'Telemetry diagnostics' });
-    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Close diagnostics' })).toHaveFocus());
+    await waitFor(() => expect(dialog).toHaveFocus());
 
     const spaceEvent = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
     window.dispatchEvent(spaceEvent);
@@ -3917,6 +4000,22 @@ describe('App', () => {
     expect(within(summary).getAllByText('-1.500s')).toHaveLength(2);
     expect(within(summary).getByText('+9.5')).toBeInTheDocument();
     expect(within(summary).getByText('+0.250s')).toBeInTheDocument();
+  });
+
+  it('does not reopen the section summary after the user hides it', async () => {
+    renderApp();
+
+    await waitFor(() => expect(getSectionSummaryCard()).toHaveTextContent('Full lap summary'));
+    await fireEvent.click(within(getSectionSummaryCard()).getByRole('button', { name: 'Hide section summary' }));
+    await waitFor(() => expect(within(getVisualisationStage()).queryByRole('complementary', { name: /Section summary/i })).not.toBeInTheDocument());
+
+    vi.useFakeTimers();
+    await fireEvent.input(screen.getByRole('slider', { name: 'Section start sequence' }), { target: { value: '11' } });
+    await vi.advanceTimersByTimeAsync(150);
+
+    await waitFor(() => expect(within(getVisualisationStage()).queryByRole('complementary', { name: /Section summary/i })).not.toBeInTheDocument());
+    await fireEvent.click(within(getVisualisationStage()).getByRole('button', { name: 'Show section summary' }));
+    expect(getSectionSummaryCard()).toHaveTextContent('Selected section summary');
   });
 
   it('auto-selects the newest completed lap when lap statuses are replay-complete or lap-boundary', async () => {

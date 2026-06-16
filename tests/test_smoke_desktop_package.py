@@ -14,6 +14,40 @@ def _load_smoke_module():
 
 
 class SmokeDesktopPackageTests(unittest.TestCase):
+    def test_read_windows_pe_subsystem_reads_gui_subsystem(self):
+        smoke = _load_smoke_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            exe = Path(tmp) / "ForzaTelemetryTracker.exe"
+            data = bytearray(512)
+            data[0:2] = b"MZ"
+            data[0x3C:0x40] = (0x80).to_bytes(4, "little")
+            data[0x80:0x84] = b"PE\0\0"
+            data[0x80 + 24:0x80 + 26] = (0x20B).to_bytes(2, "little")
+            data[0x80 + 24 + 68:0x80 + 24 + 70] = smoke.WINDOWS_SUBSYSTEM_WINDOWS_GUI.to_bytes(2, "little")
+            exe.write_bytes(data)
+
+            subsystem = smoke.read_windows_pe_subsystem(exe)
+
+        self.assertEqual(subsystem, smoke.WINDOWS_SUBSYSTEM_WINDOWS_GUI)
+
+    def test_read_windows_pe_subsystem_reads_pe32_gui_subsystem(self):
+        smoke = _load_smoke_module()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            exe = Path(tmp) / "ForzaTelemetryTracker.exe"
+            data = bytearray(512)
+            data[0:2] = b"MZ"
+            data[0x3C:0x40] = (0x80).to_bytes(4, "little")
+            data[0x80:0x84] = b"PE\0\0"
+            data[0x80 + 24:0x80 + 26] = (0x10B).to_bytes(2, "little")
+            data[0x80 + 24 + 68:0x80 + 24 + 70] = smoke.WINDOWS_SUBSYSTEM_WINDOWS_GUI.to_bytes(2, "little")
+            exe.write_bytes(data)
+
+            subsystem = smoke.read_windows_pe_subsystem(exe)
+
+        self.assertEqual(subsystem, smoke.WINDOWS_SUBSYSTEM_WINDOWS_GUI)
+
     def test_prepare_smoke_user_data_sets_non_default_udp_port(self):
         smoke = _load_smoke_module()
 

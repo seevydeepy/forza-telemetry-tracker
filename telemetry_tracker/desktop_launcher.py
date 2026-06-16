@@ -185,28 +185,55 @@ class DesktopBridge:
             return windows[0]
         return None
 
-    def choose_fh6_install_folder(self, current_path: str | None = None) -> str | None:
+    def _dialog_directory(self, current_path: str | None = None) -> str:
+        if not current_path:
+            return ""
+        try:
+            candidate = Path(str(current_path)).expanduser()
+            if candidate.exists() and candidate.is_dir():
+                return str(candidate)
+            if candidate.exists() and candidate.is_file():
+                return str(candidate.parent)
+        except OSError:
+            return ""
+        return ""
+
+    def _choose_folder(self, current_path: str | None = None) -> str | None:
         window = self._dialog_window()
         if window is None:
             return None
 
-        directory = ""
-        if current_path:
-            try:
-                candidate = Path(str(current_path)).expanduser()
-                if candidate.exists() and candidate.is_dir():
-                    directory = str(candidate)
-            except OSError:
-                directory = ""
-
         selected = window.create_file_dialog(
             self._webview_module().FOLDER_DIALOG,
-            directory=directory,
+            directory=self._dialog_directory(current_path),
             allow_multiple=False,
         )
         if not selected:
             return None
         return str(selected[0])
+
+    def choose_fh6_install_folder(self, current_path: str | None = None) -> str | None:
+        return self._choose_folder(current_path)
+
+    def choose_export_folder(self, current_path: str | None = None) -> str | None:
+        return self._choose_folder(current_path)
+
+    def choose_raw_telemetry_folder(self, current_path: str | None = None) -> str | None:
+        return self._choose_folder(current_path)
+
+    def choose_raw_telemetry_files(self, current_path: str | None = None) -> list[str] | None:
+        window = self._dialog_window()
+        if window is None:
+            return None
+
+        selected = window.create_file_dialog(
+            self._webview_module().OPEN_DIALOG,
+            directory=self._dialog_directory(current_path),
+            allow_multiple=True,
+        )
+        if not selected:
+            return None
+        return [str(path) for path in selected]
 
 
 def run_smoke_http_only(paths: DesktopPaths | None = None) -> int:

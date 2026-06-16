@@ -3,6 +3,8 @@
   import IconButton from './IconButton.svelte';
 
   export let title: string;
+  export let ariaLabel: string | null = null;
+  export let closeLabel: string | null = null;
   export let labelledById = `modal-title-${Math.random().toString(36).slice(2)}`;
 
   const dispatch = createEventDispatcher<{ close: void }>();
@@ -91,10 +93,18 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <div class="modal-backdrop" role="presentation" on:click={handleBackdropClick}>
-  <div bind:this={panel} class="modal-panel" role="dialog" aria-modal="true" aria-labelledby={labelledById} tabindex="-1">
+  <div
+    bind:this={panel}
+    class="modal-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-label={ariaLabel ?? undefined}
+    aria-labelledby={ariaLabel ? undefined : labelledById}
+    tabindex="-1"
+  >
     <header class="modal-header">
       <h2 id={labelledById}>{title}</h2>
-      <IconButton icon="close" label={`Close ${title}`} title={`Close ${title}`} onClick={close} />
+      <IconButton icon="close" label={closeLabel ?? `Close ${title}`} title={closeLabel ?? `Close ${title}`} onClick={close} />
     </header>
     <div class="modal-body">
       <slot />

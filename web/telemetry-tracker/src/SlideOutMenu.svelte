@@ -145,7 +145,7 @@
       aria-label="Feedback"
       title="Open feedback on GitHub"
     >
-      <Icon name="help" />
+      <Icon name="feedback" />
       {#if expanded}
         <span class="menu-action-label">Feedback</span>
       {/if}

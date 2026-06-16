@@ -1,6 +1,12 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import AppModal from './AppModal.svelte';
+  import {
+    canChooseRawTelemetryFiles,
+    canChooseRawTelemetryFolder,
+    chooseRawTelemetryFiles,
+    chooseRawTelemetryFolder
+  } from './desktopBridge';
   import type { RawTelemetryImportJob } from './types';
 
   export let importing = false;
@@ -12,19 +18,34 @@
 
   const dispatch = createEventDispatcher<{
     close: void;
-    import: { files: File[]; label: string; sourceType: ImportSourceType };
+    import: { files?: File[]; filePaths?: string[]; folderPath?: string; label: string; sourceType: ImportSourceType };
     refreshjobs: void;
     canceljob: { jobId: string };
   }>();
 
   let selectedFiles: File[] = [];
+  let selectedFilePaths: string[] = [];
+  let selectedFolderPath = '';
   let selectedSourceType: ImportSourceType = 'file';
   let label = '';
   let fileInput: HTMLInputElement | null = null;
   let folderInput: HTMLInputElement | null = null;
+  let nativeFilePickerAvailable = false;
+  let nativeFolderPickerAvailable = false;
+  let choosingNativeFiles = false;
+  let choosingNativeFolder = false;
+  let nativePickerError = '';
   const fileInputId = `raw-telemetry-file-${Math.random().toString(36).slice(2)}`;
   const folderInputId = `raw-telemetry-folder-${Math.random().toString(36).slice(2)}`;
   const labelInputId = `raw-telemetry-label-${Math.random().toString(36).slice(2)}`;
+
+  $: hasSelection = selectedFiles.length > 0 || selectedFilePaths.length > 0 || Boolean(selectedFolderPath);
+
+  onMount(() => {
+    refreshNativePickerAvailability();
+    window.addEventListener('pywebviewready', refreshNativePickerAvailability);
+    return () => window.removeEventListener('pywebviewready', refreshNativePickerAvailability);
+  });
 
   function defaultLabelForSelection(files: File[], sourceType: ImportSourceType): string {
     if (files.length === 0) return 'Imported raw telemetry';
@@ -40,9 +61,25 @@
     return name.replace(/\.[^.]+$/, '') || name;
   }
 
+  function defaultLabelForNativeSelection(): string {
+    if (selectedFolderPath) {
+      const folderName = selectedFolderPath.replace(/\\/g, '/').split('/').filter(Boolean).pop();
+      return folderName || 'Imported raw telemetry folder';
+    }
+    if (selectedFilePaths.length > 1) return `Imported ${selectedFilePaths.length} raw telemetry files`;
+    if (selectedFilePaths.length === 1) {
+      const name = selectedFilePaths[0].replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? '';
+      return name.replace(/\.[^.]+$/, '') || name || 'Imported raw telemetry';
+    }
+    return 'Imported raw telemetry';
+  }
+
   function handleSelectionChange(event: Event, sourceType: ImportSourceType) {
     const input = event.currentTarget as HTMLInputElement;
     selectedFiles = Array.from(input.files ?? []);
+    selectedFilePaths = [];
+    selectedFolderPath = '';
+    nativePickerError = '';
     selectedSourceType = sourceType === 'file' && selectedFiles.length > 1 ? 'files' : sourceType;
     if (sourceType === 'folder' && fileInput) fileInput.value = '';
     if (sourceType !== 'folder' && folderInput) folderInput.value = '';
@@ -51,11 +88,68 @@
     }
   }
 
+  function refreshNativePickerAvailability() {
+    nativeFilePickerAvailable = canChooseRawTelemetryFiles();
+    nativeFolderPickerAvailable = canChooseRawTelemetryFolder();
+  }
+
+  function clearBrowserInputs() {
+    selectedFiles = [];
+    if (fileInput) fileInput.value = '';
+    if (folderInput) folderInput.value = '';
+  }
+
+  async function browseNativeFiles() {
+    if (!nativeFilePickerAvailable || importing || choosingNativeFiles) return;
+    nativePickerError = '';
+    choosingNativeFiles = true;
+    try {
+      const paths = await chooseRawTelemetryFiles(selectedFilePaths[0] ?? selectedFolderPath);
+      if (paths.length > 0) {
+        clearBrowserInputs();
+        selectedFilePaths = paths;
+        selectedFolderPath = '';
+        selectedSourceType = paths.length > 1 ? 'files' : 'file';
+        if (!label.trim()) {
+          label = defaultLabelForNativeSelection();
+        }
+      }
+    } catch {
+      nativePickerError = 'Unable to open the raw telemetry file picker.';
+    } finally {
+      choosingNativeFiles = false;
+    }
+  }
+
+  async function browseNativeFolder() {
+    if (!nativeFolderPickerAvailable || importing || choosingNativeFolder) return;
+    nativePickerError = '';
+    choosingNativeFolder = true;
+    try {
+      const path = await chooseRawTelemetryFolder(selectedFolderPath || selectedFilePaths[0] || '');
+      if (path) {
+        clearBrowserInputs();
+        selectedFilePaths = [];
+        selectedFolderPath = path;
+        selectedSourceType = 'folder';
+        if (!label.trim()) {
+          label = defaultLabelForNativeSelection();
+        }
+      }
+    } catch {
+      nativePickerError = 'Unable to open the raw telemetry folder picker.';
+    } finally {
+      choosingNativeFolder = false;
+    }
+  }
+
   function submitImport() {
-    if (selectedFiles.length === 0 || importing) return;
+    if (!hasSelection || importing) return;
     dispatch('import', {
-      files: selectedFiles,
-      label: label.trim() || defaultLabelForSelection(selectedFiles, selectedSourceType),
+      ...(selectedFiles.length > 0 ? { files: selectedFiles } : {}),
+      ...(selectedFilePaths.length > 0 ? { filePaths: selectedFilePaths } : {}),
+      ...(selectedFolderPath ? { folderPath: selectedFolderPath } : {}),
+      label: label.trim() || (selectedFiles.length > 0 ? defaultLabelForSelection(selectedFiles, selectedSourceType) : defaultLabelForNativeSelection()),
       sourceType: selectedSourceType
     });
   }
@@ -97,6 +191,13 @@
     return `Selected ${selectedFiles.length.toLocaleString()} ${fileNoun} (${totalBytes.toLocaleString()} bytes)`;
   }
 
+  function selectedNativePathSummary(): string {
+    if (selectedFolderPath) return `Selected folder: ${selectedFolderPath}`;
+    if (selectedFilePaths.length === 0) return '';
+    const fileNoun = selectedFilePaths.length === 1 ? 'file' : 'files';
+    return `Selected ${selectedFilePaths.length.toLocaleString()} native ${fileNoun}: ${selectedFilePaths.join(', ')}`;
+  }
+
   function cancelJob(job: RawTelemetryImportJob) {
     if (!job.can_cancel || cancellingJobIds.includes(job.id)) return;
     dispatch('canceljob', { jobId: job.id });
@@ -128,6 +229,11 @@
           disabled={importing}
           on:change={(event) => handleSelectionChange(event, 'file')}
         />
+        {#if nativeFilePickerAvailable}
+          <button type="button" class="secondary-action" disabled={importing || choosingNativeFiles} on:click={browseNativeFiles}>
+            {choosingNativeFiles ? 'Browsing…' : 'Browse files'}
+          </button>
+        {/if}
       </div>
 
       <div class="form-field">
@@ -142,11 +248,22 @@
           disabled={importing}
           on:change={(event) => handleSelectionChange(event, 'folder')}
         />
+        {#if nativeFolderPickerAvailable}
+          <button type="button" class="secondary-action" disabled={importing || choosingNativeFolder} on:click={browseNativeFolder}>
+            {choosingNativeFolder ? 'Browsing…' : 'Browse folder'}
+          </button>
+        {/if}
         <p class="settings-hint">Folder selection imports every selected file; invalid raw telemetry files are listed as job errors.</p>
       </div>
 
       {#if selectedFiles.length > 0}
         <p class="settings-hint">{selectedFilesSummary()}</p>
+      {/if}
+      {#if selectedFilePaths.length > 0 || selectedFolderPath}
+        <p class="settings-hint">{selectedNativePathSummary()}</p>
+      {/if}
+      {#if nativePickerError}
+        <p class="settings-hint import-picker-error" role="alert">{nativePickerError}</p>
       {/if}
 
       <div class="form-field">
@@ -162,7 +279,7 @@
       </div>
 
       <div class="modal-actions">
-        <button type="submit" class="primary-action" disabled={selectedFiles.length === 0 || importing}>
+        <button type="submit" class="primary-action" disabled={!hasSelection || importing}>
           {importing ? 'Starting import…' : 'Start background import'}
         </button>
       </div>

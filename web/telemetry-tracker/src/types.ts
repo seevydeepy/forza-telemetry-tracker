@@ -350,6 +350,13 @@ export interface RawTelemetryImportJobsResponse {
   jobs: RawTelemetryImportJob[];
 }
 
+export interface RawTelemetryImportPathJobRequest {
+  file_paths?: string[];
+  folder_path?: string;
+  label?: string;
+  source_type?: 'file' | 'files' | 'folder';
+}
+
 export type TelemetryExportKind = 'raw_binary' | 'raw_csv' | 'curated_csv';
 export type TelemetryExportJobStatus = 'queued' | 'running' | 'cancelling' | 'completed' | 'failed' | 'cancelled';
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 import socket
+import struct
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from telemetry_tracker.storage import TelemetryStore
+
+WINDOWS_SUBSYSTEM_WINDOWS_GUI = 2
 
 
 def parse_args() -> argparse.Namespace:
@@ -51,6 +54,21 @@ def _prepare_smoke_user_data(user_data_root: Path, udp_port: int) -> None:
             """,
             ("127.0.0.1", int(udp_port), int(time.time() * 1000)),
         )
+
+
+def read_windows_pe_subsystem(exe_path: Path) -> int:
+    data = exe_path.read_bytes()
+    if len(data) < 0x40 or data[:2] != b"MZ":
+        raise ValueError(f"{exe_path} is not a valid Windows PE executable")
+    pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
+    optional_header_offset = pe_offset + 24
+    subsystem_offset = optional_header_offset + 68
+    if len(data) < subsystem_offset + 2 or data[pe_offset:pe_offset + 4] != b"PE\0\0":
+        raise ValueError(f"{exe_path} is not a valid Windows PE executable")
+    optional_header_magic = struct.unpack_from("<H", data, optional_header_offset)[0]
+    if optional_header_magic not in {0x10B, 0x20B}:
+        raise ValueError(f"{exe_path} has unsupported PE optional header magic: 0x{optional_header_magic:x}")
+    return int(struct.unpack_from("<H", data, subsystem_offset)[0])
 
 
 def wait_for_status(base_url: str, timeout: float) -> dict:
@@ -106,6 +124,10 @@ def main() -> int:
     exe = app_dir / "ForzaTelemetryTracker.exe"
     if not exe.exists():
         print(f"ERROR: exe not found: {exe}", file=sys.stderr)
+        return 1
+    subsystem = read_windows_pe_subsystem(exe)
+    if subsystem != WINDOWS_SUBSYSTEM_WINDOWS_GUI:
+        print(f"ERROR: exe subsystem is {subsystem}, expected Windows GUI ({WINDOWS_SUBSYSTEM_WINDOWS_GUI})", file=sys.stderr)
         return 1
 
     resource_root = app_dir / "_internal" if (app_dir / "_internal").is_dir() else app_dir

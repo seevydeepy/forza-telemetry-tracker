@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ExportTelemetryModal from './ExportTelemetryModal.svelte';
 import type { TelemetryExportDefaults, TelemetryExportJob } from './types';
 
@@ -81,6 +81,10 @@ function renderExportModal(props: Partial<{ defaults: TelemetryExportDefaults | 
 }
 
 describe('ExportTelemetryModal', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('renders export defaults, estimates, and export actions', () => {
     renderExportModal();
 
@@ -103,6 +107,17 @@ describe('ExportTelemetryModal', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Use default exports folder' }));
 
     expect(outputFolder).toHaveValue(defaultsFixture.output_dir);
+  });
+
+  it('uses the native export folder picker when available', async () => {
+    const choose_export_folder = vi.fn(async () => 'E:\\Telemetry Exports');
+    vi.stubGlobal('pywebview', { api: { choose_export_folder } });
+    renderExportModal();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
+
+    expect(choose_export_folder).toHaveBeenCalledWith(defaultsFixture.output_dir);
+    expect(screen.getByRole('textbox', { name: 'Output folder' })).toHaveValue('E:\\Telemetry Exports');
   });
 
   it('dispatches curated CSV exports with the chosen folder and prefix', async () => {
