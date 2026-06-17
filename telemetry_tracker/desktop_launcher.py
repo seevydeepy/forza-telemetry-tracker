@@ -16,6 +16,7 @@ import uvicorn
 
 from telemetry_tracker.app import _settings_payload, create_app
 from telemetry_tracker.app_paths import DesktopPaths, default_desktop_paths
+from telemetry_tracker.local_file_selection import LocalFileSelectionRegistry
 from telemetry_tracker.port_conflicts import (
     PortBinding,
     find_port_conflicts,
@@ -111,6 +112,7 @@ class DesktopBackend:
     paths: DesktopPaths
     http_port: int
     http_host: str = DEFAULT_HTTP_HOST
+    local_file_selection_registry: LocalFileSelectionRegistry = field(default_factory=LocalFileSelectionRegistry)
     _server: uvicorn.Server | None = field(default=None, init=False, repr=False)
     _thread: threading.Thread | None = field(default=None, init=False, repr=False)
 
@@ -120,6 +122,7 @@ class DesktopBackend:
             start_udp_listener=True,
             refresh_car_catalog=True,
             refresh_track_catalog=True,
+            local_file_selection_registry=self.local_file_selection_registry,
         )
 
     def start(self) -> None:
@@ -165,8 +168,13 @@ class DesktopBackend:
 
 
 class DesktopBridge:
-    def __init__(self, webview_module=None) -> None:
+    def __init__(
+        self,
+        webview_module=None,
+        local_file_selection_registry: LocalFileSelectionRegistry | None = None,
+    ) -> None:
         self._webview = webview_module
+        self._local_file_selection_registry = local_file_selection_registry or LocalFileSelectionRegistry()
         self._window = None
 
     def bind_window(self, window) -> None:
@@ -218,10 +226,13 @@ class DesktopBridge:
     def choose_export_folder(self, current_path: str | None = None) -> str | None:
         return self._choose_folder(current_path)
 
-    def choose_raw_telemetry_folder(self, current_path: str | None = None) -> str | None:
-        return self._choose_folder(current_path)
+    def choose_raw_telemetry_folder(self, current_path: str | None = None) -> dict | None:
+        selected = self._choose_folder(current_path)
+        if selected is None:
+            return None
+        return self._local_file_selection_registry.register_folder(selected)
 
-    def choose_raw_telemetry_files(self, current_path: str | None = None) -> list[str] | None:
+    def choose_raw_telemetry_files(self, current_path: str | None = None) -> dict | None:
         window = self._dialog_window()
         if window is None:
             return None
@@ -233,7 +244,7 @@ class DesktopBridge:
         )
         if not selected:
             return None
-        return [str(path) for path in selected]
+        return self._local_file_selection_registry.register_files([str(path) for path in selected])
 
 
 def run_smoke_http_only(paths: DesktopPaths | None = None) -> int:
@@ -259,7 +270,7 @@ def run_desktop_app(paths: DesktopPaths | None = None) -> int:
     backend.start()
     try:
         webview = load_webview()
-        bridge = DesktopBridge(webview)
+        bridge = DesktopBridge(webview, backend.local_file_selection_registry)
         window = webview.create_window(
             "Forza Telemetry Tracker",
             desktop_url(port),

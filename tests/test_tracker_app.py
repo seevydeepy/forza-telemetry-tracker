@@ -14,6 +14,7 @@ from telemetry_tracker.app_metadata import ReleaseMetadata
 from telemetry_tracker.app_updates import UpdateCheckResult
 from telemetry_tracker.app_paths import default_desktop_paths
 from telemetry_tracker.events import EventBus
+from telemetry_tracker.local_file_selection import LocalFileSelectionRegistry
 from telemetry_tracker.packet_bridge import decode_packet, encode_packet_for_test, packet_to_live_fields
 from telemetry_tracker.track_matcher import MATCHER_VERSION
 
@@ -958,51 +959,84 @@ class TrackerAppTests(unittest.TestCase):
                     for index in range(8)
                 )
             )
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([raw_path])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
             with TestClient(app) as client:
-                response = client.post("/api/replay", json={"raw_path": str(raw_path), "label": "API replay"})
+                response = client.post(
+                    "/api/replay",
+                    json={"selection_id": selection["selection_id"], "label": "API replay"},
+                )
 
             self.assertEqual(response.status_code, 200)
             payload = response.json()
             self.assertEqual(payload["packet_count"], 8)
             self.assertTrue(payload["session_id"])
 
-    def test_replay_endpoint_returns_400_for_bad_raw_path(self):
+    def test_replay_endpoint_returns_400_for_unknown_selection_id(self):
         with tempfile.TemporaryDirectory() as tmp:
             app = create_app(db_path=Path(tmp) / "telemetry_tracker.sqlite3")
             with TestClient(app) as client:
-                response = client.post("/api/replay", json={"raw_path": str(Path(tmp) / "missing.bin")})
+                response = client.post("/api/replay", json={"selection_id": "unknownselectionid"})
 
             self.assertEqual(response.status_code, 400)
-            self.assertIn("raw_path does not exist", response.json()["detail"])
+            self.assertIn("unknown or expired local file selection", response.json()["detail"])
 
-    def test_replay_endpoint_returns_400_for_directory_raw_path(self):
+    def test_replay_endpoint_rejects_legacy_raw_path_request(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            raw_path = root / "raw.bin"
+            raw_path.write_bytes(encode_packet_for_test({"TimestampMS": 16, "PositionX": 1.0}))
             app = create_app(db_path=root / "telemetry_tracker.sqlite3")
+
             with TestClient(app) as client:
-                response = client.post("/api/replay", json={"raw_path": str(root)})
+                response = client.post("/api/replay", json={"raw_path": str(raw_path), "label": "Legacy replay"})
 
             self.assertEqual(response.status_code, 400)
-            self.assertIn("raw_path must be a file", response.json()["detail"])
+            self.assertIn("selection_id is required", response.json()["detail"])
 
-    def test_replay_endpoint_returns_400_for_empty_raw_path(self):
+    def test_replay_endpoint_returns_400_for_folder_selection(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            selected_file = root / "capture.bin"
+            selected_file.write_bytes(encode_packet_for_test({"TimestampMS": 16, "PositionX": 1.0}))
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_folder(root)
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
+            with TestClient(app) as client:
+                response = client.post("/api/replay", json={"selection_id": selection["selection_id"]})
+
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("replay requires a single-file local selection", response.json()["detail"])
+
+    def test_replay_endpoint_returns_400_for_empty_selection_id(self):
         with tempfile.TemporaryDirectory() as tmp:
             app = create_app(db_path=Path(tmp) / "telemetry_tracker.sqlite3")
             with TestClient(app) as client:
-                response = client.post("/api/replay", json={"raw_path": ""})
+                response = client.post("/api/replay", json={"selection_id": ""})
 
             self.assertEqual(response.status_code, 400)
-            self.assertIn("raw_path must not be empty", response.json()["detail"])
+            self.assertIn("selection_id is required", response.json()["detail"])
 
     def test_replay_endpoint_returns_400_for_empty_raw_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             raw_path = root / "empty.bin"
             raw_path.write_bytes(b"")
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([raw_path])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
             with TestClient(app) as client:
-                response = client.post("/api/replay", json={"raw_path": str(raw_path)})
+                response = client.post("/api/replay", json={"selection_id": selection["selection_id"]})
 
             self.assertEqual(response.status_code, 400)
             self.assertIn("raw file contains no packets", response.json()["detail"])
@@ -1012,9 +1046,14 @@ class TrackerAppTests(unittest.TestCase):
             root = Path(tmp)
             raw_path = root / "partial.bin"
             raw_path.write_bytes(b"partial")
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([raw_path])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
             with TestClient(app) as client:
-                response = client.post("/api/replay", json={"raw_path": str(raw_path)})
+                response = client.post("/api/replay", json={"selection_id": selection["selection_id"]})
 
             self.assertEqual(response.status_code, 400)
             self.assertIn("multiple of", response.json()["detail"])
@@ -1024,17 +1063,22 @@ class TrackerAppTests(unittest.TestCase):
             root = Path(tmp)
             raw_path = root / "raw.bin"
             raw_path.write_bytes(encode_packet_for_test({"TimestampMS": 16, "PositionX": 1.0}))
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([raw_path])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
             with patch(
                 "telemetry_tracker.app.replay_raw_file",
                 new=AsyncMock(side_effect=OSError("permission denied")),
             ):
                 with TestClient(app) as client:
-                    response = client.post("/api/replay", json={"raw_path": str(raw_path)})
+                    response = client.post("/api/replay", json={"selection_id": selection["selection_id"]})
 
             self.assertEqual(response.status_code, 400)
-            self.assertIn("failed to read raw_path", response.json()["detail"])
-            self.assertIn("permission denied", response.json()["detail"])
+            self.assertIn("failed to read selected raw telemetry file", response.json()["detail"])
+            self.assertNotIn("permission denied", response.json()["detail"])
 
     def test_events_endpoint_returns_streaming_response(self):
         async def scenario():

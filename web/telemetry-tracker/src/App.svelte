@@ -7,7 +7,7 @@
     cancelTelemetryExportJob,
     createTelemetryExportJob,
     createRawTelemetryImportJob,
-    createRawTelemetryImportPathJob,
+    createRawTelemetryImportSelectionJob,
     deleteAllTelemetry,
     deleteLap,
     deleteSession,
@@ -1719,20 +1719,17 @@
 
   async function handleImportRawTelemetry(event: CustomEvent<{
     files?: File[];
-    filePaths?: string[];
-    folderPath?: string;
+    selectionId?: string;
     label: string;
     sourceType: 'file' | 'files' | 'folder';
   }>) {
     importBusy = true;
     try {
       const files = event.detail.files ?? [];
-      const filePaths = event.detail.filePaths ?? [];
-      const folderPath = event.detail.folderPath?.trim();
-      const job = filePaths.length > 0 || folderPath
-        ? await createRawTelemetryImportPathJob({
-            ...(filePaths.length > 0 ? { file_paths: filePaths } : {}),
-            ...(folderPath ? { folder_path: folderPath } : {}),
+      const selectionId = event.detail.selectionId?.trim();
+      const job = selectionId
+        ? await createRawTelemetryImportSelectionJob({
+            selection_id: selectionId,
             label: event.detail.label,
             source_type: event.detail.sourceType
           })

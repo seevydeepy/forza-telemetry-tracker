@@ -1,12 +1,35 @@
 type Fh6InstallFolderPicker = (currentPath?: string | null) => Promise<string | null> | string | null;
 type FolderPicker = (currentPath?: string | null) => Promise<string | null> | string | null;
-type FilePicker = (currentPath?: string | null) => Promise<string[] | string | null> | string[] | string | null;
+export type RawTelemetryNativeSelection = {
+  selectionId: string;
+  sourceType: 'file' | 'files' | 'folder';
+  fileCount: number;
+  displayName: string;
+  summary: string;
+  expiresAtMs: number;
+};
+type RawTelemetrySelectionPayload = RawTelemetryNativeSelection | {
+  selection_id?: unknown;
+  selectionId?: unknown;
+  source_type?: unknown;
+  sourceType?: unknown;
+  file_count?: unknown;
+  fileCount?: unknown;
+  display_name?: unknown;
+  displayName?: unknown;
+  summary?: unknown;
+  expires_at_ms?: unknown;
+  expiresAtMs?: unknown;
+};
+type RawTelemetrySelectionPicker = (
+  currentPath?: string | null
+) => Promise<RawTelemetrySelectionPayload | null> | RawTelemetrySelectionPayload | null;
 
 type PywebviewApi = {
   choose_fh6_install_folder?: Fh6InstallFolderPicker;
   choose_export_folder?: FolderPicker;
-  choose_raw_telemetry_files?: FilePicker;
-  choose_raw_telemetry_folder?: FolderPicker;
+  choose_raw_telemetry_files?: RawTelemetrySelectionPicker;
+  choose_raw_telemetry_folder?: RawTelemetrySelectionPicker;
 };
 
 declare global {
@@ -31,11 +54,11 @@ function exportFolderPicker(): FolderPicker | null {
   return picker('choose_export_folder');
 }
 
-function rawTelemetryFilesPicker(): FilePicker | null {
+function rawTelemetryFilesPicker(): RawTelemetrySelectionPicker | null {
   return picker('choose_raw_telemetry_files');
 }
 
-function rawTelemetryFolderPicker(): FolderPicker | null {
+function rawTelemetryFolderPicker(): RawTelemetrySelectionPicker | null {
   return picker('choose_raw_telemetry_folder');
 }
 
@@ -45,13 +68,21 @@ function cleanSelectedPath(selected: unknown): string | null {
   return trimmed || null;
 }
 
-function cleanSelectedPaths(selected: unknown): string[] {
-  const candidates = Array.isArray(selected) ? selected : typeof selected === 'string' ? [selected] : [];
-  const cleaned = candidates
-    .filter((item): item is string => typeof item === 'string')
-    .map((item) => item.trim())
-    .filter(Boolean);
-  return Array.from(new Set(cleaned));
+function cleanNativeSelection(selected: RawTelemetrySelectionPayload | null): RawTelemetryNativeSelection | null {
+  if (!selected || typeof selected !== 'object') return null;
+  const record = selected as Record<string, unknown>;
+  const selectionId = String(record.selectionId ?? record.selection_id ?? '').trim();
+  const sourceType = String(record.sourceType ?? record.source_type ?? '').trim();
+  if (!selectionId || !['file', 'files', 'folder'].includes(sourceType)) return null;
+  const fileCount = Number(record.fileCount ?? record.file_count ?? 0);
+  return {
+    selectionId,
+    sourceType: sourceType as RawTelemetryNativeSelection['sourceType'],
+    fileCount: Number.isFinite(fileCount) && fileCount > 0 ? fileCount : 0,
+    displayName: String(record.displayName ?? record.display_name ?? '').trim(),
+    summary: String(record.summary ?? '').trim(),
+    expiresAtMs: Number(record.expiresAtMs ?? record.expires_at_ms ?? 0)
+  };
 }
 
 export function canChooseFh6InstallFolder(): boolean {
@@ -86,18 +117,18 @@ export async function chooseExportFolder(currentPath: string): Promise<string | 
   return cleanSelectedPath(selected);
 }
 
-export async function chooseRawTelemetryFiles(currentPath = ''): Promise<string[]> {
+export async function chooseRawTelemetryFiles(currentPath = ''): Promise<RawTelemetryNativeSelection | null> {
   const picker = rawTelemetryFilesPicker();
-  if (!picker) return [];
+  if (!picker) return null;
 
   const selected = await picker(currentPath.trim() || null);
-  return cleanSelectedPaths(selected);
+  return cleanNativeSelection(selected);
 }
 
-export async function chooseRawTelemetryFolder(currentPath = ''): Promise<string | null> {
+export async function chooseRawTelemetryFolder(currentPath = ''): Promise<RawTelemetryNativeSelection | null> {
   const picker = rawTelemetryFolderPicker();
   if (!picker) return null;
 
   const selected = await picker(currentPath.trim() || null);
-  return cleanSelectedPath(selected);
+  return cleanNativeSelection(selected);
 }

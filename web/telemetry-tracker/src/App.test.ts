@@ -1382,20 +1382,21 @@ function createDefaultFetchHandler(options?: StubOptions) {
     const trackAssetsForProfileMatch = pathname.match(/^\/api\/tracks\/profiles\/([^/]+)\/assets$/);
     if (trackAssetsForProfileMatch && init?.method === 'POST') {
       const profileId = trackAssetsForProfileMatch[1];
-      const body = JSON.parse(String(init.body ?? '{}')) as {
-        filename: string;
-        sourcePath: string;
-        mimeType: string;
-        sizeBytes: number;
-        transform?: TrackAsset['transform'];
-      };
+      expect(init.body).toBeInstanceOf(FormData);
+      const body = init.body as FormData;
+      const file = body.get('file') as File | null;
+      expect(file).toBeTruthy();
+      const transformValue = body.get('transform');
+      const transform = typeof transformValue === 'string'
+        ? JSON.parse(transformValue) as TrackAsset['transform']
+        : undefined;
       const asset: TrackAsset = {
         id: `asset-created-${(trackAssetsByProfile[profileId] ?? []).length + 1}`,
         track_profile_id: profileId,
-        filename: body.filename,
-        mime_type: body.mimeType,
-        size_bytes: body.sizeBytes,
-        transform: body.transform ?? {
+        filename: file?.name ?? 'track.png',
+        mime_type: file?.type ?? 'image/png',
+        size_bytes: file?.size ?? 0,
+        transform: transform ?? {
           scale: 1,
           rotate_deg: 0,
           translate_x: 0,
@@ -3189,9 +3190,23 @@ describe('App', () => {
     expect(await findToast(/Import job finished: 2 packets/i)).toBeInTheDocument();
   });
 
-  it('starts a raw telemetry import job from native file paths', async () => {
-    const choose_raw_telemetry_files = vi.fn(async () => ['D:\\captures\\native-a.bin', 'D:\\captures\\native-b.bin']);
-    const choose_raw_telemetry_folder = vi.fn(async () => 'D:\\captures');
+  it('starts a raw telemetry import job from a native file selection id', async () => {
+    const nativeSelection = {
+      selection_id: 'native-selection-token',
+      source_type: 'files',
+      file_count: 2,
+      display_name: 'Imported 2 raw telemetry files',
+      summary: 'Selected 2 native files',
+      expires_at_ms: 123_000
+    };
+    const choose_raw_telemetry_files = vi.fn(async () => nativeSelection);
+    const choose_raw_telemetry_folder = vi.fn(async () => ({
+      ...nativeSelection,
+      selection_id: 'native-folder-selection-token',
+      source_type: 'folder',
+      display_name: 'captures',
+      summary: 'Selected native folder: captures'
+    }));
     vi.stubGlobal('pywebview', {
       api: {
         choose_raw_telemetry_files,
@@ -3228,10 +3243,10 @@ describe('App', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = requestUrl(input);
       const parsed = new URL(url, 'http://localhost');
-      if (parsed.pathname === '/api/replay/import-jobs/paths' && init?.method === 'POST') {
+      if (parsed.pathname === '/api/replay/import-jobs/selections' && init?.method === 'POST') {
         expect(init.headers).toEqual({ 'Content-Type': 'application/json' });
         expect(init.body).toBe(JSON.stringify({
-          file_paths: ['D:\\captures\\native-a.bin', 'D:\\captures\\native-b.bin'],
+          selection_id: 'native-selection-token',
           label: 'Native sprint',
           source_type: 'files'
         }));

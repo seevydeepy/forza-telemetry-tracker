@@ -8,6 +8,7 @@
     chooseRawTelemetryFiles,
     chooseRawTelemetryFolder
   } from './desktopBridge';
+  import type { RawTelemetryNativeSelection } from './desktopBridge';
   import type { RawTelemetryImportJob } from './types';
 
   export let importing = false;
@@ -23,14 +24,13 @@
 
   const dispatch = createEventDispatcher<{
     close: void;
-    import: { files?: File[]; filePaths?: string[]; folderPath?: string; label: string; sourceType: ImportSourceType };
+    import: { files?: File[]; selectionId?: string; label: string; sourceType: ImportSourceType };
     refreshjobs: void;
     canceljob: { jobId: string };
   }>();
 
   let selectedFiles: File[] = [];
-  let selectedFilePaths: string[] = [];
-  let selectedFolderPath = '';
+  let selectedNativeSelection: RawTelemetryNativeSelection | null = null;
   let selectedSourceType: ImportSourceType = 'file';
   let label = '';
   let fileInput: HTMLInputElement | null = null;
@@ -44,7 +44,7 @@
   const folderInputId = `raw-telemetry-folder-${Math.random().toString(36).slice(2)}`;
   const labelInputId = `raw-telemetry-label-${Math.random().toString(36).slice(2)}`;
 
-  $: hasSelection = selectedFiles.length > 0 || selectedFilePaths.length > 0 || Boolean(selectedFolderPath);
+  $: hasSelection = selectedFiles.length > 0 || selectedNativeSelection !== null;
 
   onMount(() => {
     refreshNativePickerAvailability();
@@ -67,23 +67,16 @@
   }
 
   function defaultLabelForNativeSelection(): string {
-    if (selectedFolderPath) {
-      const folderName = selectedFolderPath.replace(/\\/g, '/').split('/').filter(Boolean).pop();
-      return folderName || 'Imported raw telemetry folder';
-    }
-    if (selectedFilePaths.length > 1) return `Imported ${selectedFilePaths.length} raw telemetry files`;
-    if (selectedFilePaths.length === 1) {
-      const name = selectedFilePaths[0].replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? '';
-      return name.replace(/\.[^.]+$/, '') || name || 'Imported raw telemetry';
-    }
+    if (selectedNativeSelection?.displayName) return selectedNativeSelection.displayName;
+    if (selectedNativeSelection?.sourceType === 'folder') return 'Imported raw telemetry folder';
+    if ((selectedNativeSelection?.fileCount ?? 0) > 1) return `Imported ${selectedNativeSelection?.fileCount} raw telemetry files`;
     return 'Imported raw telemetry';
   }
 
   function handleSelectionChange(event: Event, sourceType: ImportSourceType) {
     const input = event.currentTarget as HTMLInputElement;
     selectedFiles = Array.from(input.files ?? []);
-    selectedFilePaths = [];
-    selectedFolderPath = '';
+    selectedNativeSelection = null;
     nativePickerError = '';
     selectedSourceType = sourceType === 'file' && selectedFiles.length > 1 ? 'files' : sourceType;
     if (sourceType === 'folder' && fileInput) fileInput.value = '';
@@ -109,12 +102,11 @@
     nativePickerError = '';
     choosingNativeFiles = true;
     try {
-      const paths = await chooseRawTelemetryFiles(selectedFilePaths[0] ?? selectedFolderPath);
-      if (paths.length > 0) {
+      const selection = await chooseRawTelemetryFiles();
+      if (selection) {
         clearBrowserInputs();
-        selectedFilePaths = paths;
-        selectedFolderPath = '';
-        selectedSourceType = paths.length > 1 ? 'files' : 'file';
+        selectedNativeSelection = selection;
+        selectedSourceType = selection.sourceType === 'folder' ? 'folder' : selection.fileCount > 1 ? 'files' : 'file';
         if (!label.trim()) {
           label = defaultLabelForNativeSelection();
         }
@@ -131,11 +123,10 @@
     nativePickerError = '';
     choosingNativeFolder = true;
     try {
-      const path = await chooseRawTelemetryFolder(selectedFolderPath || selectedFilePaths[0] || '');
-      if (path) {
+      const selection = await chooseRawTelemetryFolder();
+      if (selection) {
         clearBrowserInputs();
-        selectedFilePaths = [];
-        selectedFolderPath = path;
+        selectedNativeSelection = selection;
         selectedSourceType = 'folder';
         if (!label.trim()) {
           label = defaultLabelForNativeSelection();
@@ -152,8 +143,7 @@
     if (!hasSelection || importing) return;
     dispatch('import', {
       ...(selectedFiles.length > 0 ? { files: selectedFiles } : {}),
-      ...(selectedFilePaths.length > 0 ? { filePaths: selectedFilePaths } : {}),
-      ...(selectedFolderPath ? { folderPath: selectedFolderPath } : {}),
+      ...(selectedNativeSelection ? { selectionId: selectedNativeSelection.selectionId } : {}),
       label: label.trim() || (selectedFiles.length > 0 ? defaultLabelForSelection(selectedFiles, selectedSourceType) : defaultLabelForNativeSelection()),
       sourceType: selectedSourceType
     });
@@ -197,10 +187,10 @@
   }
 
   function selectedNativePathSummary(): string {
-    if (selectedFolderPath) return `Selected folder: ${selectedFolderPath}`;
-    if (selectedFilePaths.length === 0) return '';
-    const fileNoun = selectedFilePaths.length === 1 ? 'file' : 'files';
-    return `Selected ${selectedFilePaths.length.toLocaleString()} native ${fileNoun}: ${selectedFilePaths.join(', ')}`;
+    if (!selectedNativeSelection) return '';
+    if (selectedNativeSelection.summary) return selectedNativeSelection.summary;
+    const fileNoun = selectedNativeSelection.fileCount === 1 ? 'file' : 'files';
+    return `Selected ${selectedNativeSelection.fileCount.toLocaleString()} native ${fileNoun}`;
   }
 
   function cancelJob(job: RawTelemetryImportJob) {
@@ -262,7 +252,7 @@
       {#if selectedFiles.length > 0}
         <p class="settings-hint">{selectedFilesSummary()}</p>
       {/if}
-      {#if selectedFilePaths.length > 0 || selectedFolderPath}
+      {#if selectedNativeSelection}
         <p class="settings-hint">{selectedNativePathSummary()}</p>
       {/if}
       {#if nativePickerError}
