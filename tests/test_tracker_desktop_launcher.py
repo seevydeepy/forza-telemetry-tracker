@@ -21,6 +21,8 @@ class DesktopLauncherTests(unittest.TestCase):
     def test_allocate_local_port_returns_bindable_loopback_port(self):
         port = allocate_local_port()
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            # The probe deliberately binds loopback only to confirm the listener released its test port.
+            # codeql[py/bind-socket-all-network-interfaces]
             probe.bind(("127.0.0.1", port))
 
     def test_desktop_url_uses_loopback_port(self):
