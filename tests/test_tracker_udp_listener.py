@@ -295,6 +295,8 @@ class UdpTelemetryListenerTests(unittest.TestCase):
             self.assertFalse(listener.status()["running"])
 
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+                # The probe deliberately binds loopback only to confirm the listener released its test port.
+                # codeql[py/bind-socket-all-network-interfaces]
                 probe.bind(("127.0.0.1", bound_port))
 
         asyncio.run(scenario())
