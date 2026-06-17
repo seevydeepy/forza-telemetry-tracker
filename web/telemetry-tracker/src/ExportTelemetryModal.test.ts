@@ -235,6 +235,25 @@ describe('ExportTelemetryModal', () => {
     expect(within(jobCard).getByText('C:\\Users\\driver\\Documents\\Forza exports\\forza-telemetry-curated.csv')).toBeInTheDocument();
   });
 
+  it('renders sanitized failed job errors', () => {
+    const failedJob: TelemetryExportJob = {
+      ...completedJob,
+      id: 'export-failed-1',
+      status: 'failed',
+      status_text: 'Telemetry export failed.',
+      output_files: [],
+      total_size_bytes: 0,
+      row_count: 0,
+      completed_at_ms: 1710000002000,
+      duration_ms: 1000,
+      error: 'Telemetry export failed. Check the application logs for details.'
+    };
+    renderExportModal({ jobs: [failedJob] });
+
+    expect(screen.getByText('Error: Telemetry export failed. Check the application logs for details.')).toBeInTheDocument();
+    expect(screen.queryByText(/No recorded telemetry is available to export/i)).not.toBeInTheDocument();
+  });
+
   it('dispatches cancellation for a running job', async () => {
     const { canceljob } = renderExportModal({ jobs: [runningJob] });
 

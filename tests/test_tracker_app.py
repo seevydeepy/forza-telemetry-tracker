@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
-from telemetry_tracker.app import create_app, stream_sse_events
+from telemetry_tracker.app import EXPORT_JOB_FAILURE_MESSAGE, create_app, stream_sse_events
 from telemetry_tracker.app_metadata import ReleaseMetadata
 from telemetry_tracker.app_updates import UpdateCheckResult
 from telemetry_tracker.app_paths import default_desktop_paths
@@ -284,22 +284,34 @@ class TrackerAppTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             runtime_paths = _test_runtime_paths(tmp)
             app = create_app(db_path=Path(tmp) / "telemetry_tracker.sqlite3", runtime_paths=runtime_paths)
-            with TestClient(app) as client:
-                response = client.post(
-                    "/api/telemetry/export-jobs",
-                    headers={"X-Forza-Telemetry-Export": "1"},
-                    json={"kind": "curated_csv"},
-                )
-                self.assertEqual(response.status_code, 200)
-                job_id = response.json()["job"]["id"]
-                job = _wait_for_export_job(
-                    client,
-                    job_id,
-                    lambda candidate: candidate["status"] == "failed",
-                )
+            with self.assertLogs("telemetry_tracker.app", level="ERROR") as logs:
+                with TestClient(app) as client:
+                    response = client.post(
+                        "/api/telemetry/export-jobs",
+                        headers={"X-Forza-Telemetry-Export": "1"},
+                        json={"kind": "curated_csv"},
+                    )
+                    self.assertEqual(response.status_code, 200)
+                    job_id = response.json()["job"]["id"]
+                    job = _wait_for_export_job(
+                        client,
+                        job_id,
+                        lambda candidate: candidate["status"] == "failed",
+                    )
+
+            joined_logs = "\n".join(logs.output)
+            self.assertIn("Telemetry export job", joined_logs)
+            self.assertIn("No recorded telemetry is available to export", joined_logs)
+            self.assertNotIn(
+                "No recorded telemetry is available to export",
+                job["error"],
+            )
+            self.assertEqual(
+                job["error"],
+                EXPORT_JOB_FAILURE_MESSAGE,
+            )
 
             self.assertEqual(job["status"], "failed")
-            self.assertIn("No recorded telemetry", job["error"])
             self.assertEqual(job["output_files"], [])
             self.assertEqual(job["total_size_bytes"], 0)
 

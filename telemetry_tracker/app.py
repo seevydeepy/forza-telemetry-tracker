@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 import math
 import os
 import shutil
@@ -89,6 +90,8 @@ FH6_MEDIA_ROOT_ENV = "FH6_MEDIA_ROOT"
 FH6_REFRESH_CAR_CATALOG_ENV = "FH6_REFRESH_CAR_CATALOG"
 FH6_REFRESH_TRACK_CATALOG_ENV = "FH6_REFRESH_TRACK_CATALOG"
 DEFAULT_FH6_MEDIA_ROOT = Path(r"G:\SteamLibrary\steamapps\common\ForzaHorizon6\media")
+EXPORT_JOB_FAILURE_MESSAGE = "Telemetry export failed. Check the application logs for details."
+logger = logging.getLogger(__name__)
 
 ANALYSIS_SUMMARY_KEYS = frozenset(
     {
@@ -3191,8 +3194,9 @@ def create_app(
             )
             job.status = "failed"
             job.status_text = "Telemetry export failed."
-            job.error = str(exc)
+            job.error = EXPORT_JOB_FAILURE_MESSAGE
             job.progress = 1.0
+            logger.exception("Telemetry export job %s failed", job.id)
 
     async def export_job_snapshots() -> list[dict]:
         async with export_jobs_lock:
