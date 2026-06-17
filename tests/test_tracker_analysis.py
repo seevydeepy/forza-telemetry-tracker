@@ -1,3 +1,4 @@
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -390,9 +391,28 @@ class TrackerAnalysisTests(unittest.TestCase):
             self.assertTrue(result["markers"])
             self.assertTrue(all(marker["session_id"] == session_id for marker in result["markers"]))
             self.assertTrue(all(marker["lap_id"] == lap_id for marker in result["markers"]))
+            marker = result["markers"][0]
+            expected_marker_id = hashlib.sha256(
+                "|".join(
+                    [
+                        session_id,
+                        lap_id,
+                        marker["metric"],
+                        str(marker["start_sequence"]),
+                        str(marker["end_sequence"]),
+                        str(marker["ruleset_version"]),
+                    ]
+                ).encode("utf-8")
+            ).hexdigest()
+            self.assertEqual(marker["id"], expected_marker_id)
+            self.assertEqual(len(marker["id"]), 64)
+            int(marker["id"], 16)
             self.assertEqual(store.lap_summary(lap_id)["packet_count"], 3)
             stored_markers = store.issue_markers_for_lap(lap_id=lap_id)
             self.assertEqual(len(stored_markers), len(result["markers"]))
+            stored_marker = next(item for item in stored_markers if item["id"] == marker["id"])
+            self.assertEqual(stored_marker["metric"], marker["metric"])
+            self.assertEqual(len(stored_marker["id"]), 64)
 
     def test_analyze_lap_replaces_stale_markers_for_same_scope(self):
         with tempfile.TemporaryDirectory() as tmp:
