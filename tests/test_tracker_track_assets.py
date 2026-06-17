@@ -3,6 +3,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -228,24 +229,22 @@ class TrackAssetApiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             client, store = _client_and_store(tmp)
             profile_id = store.create_track_profile("Emerald Circuit", "Full", "manual", "user")
-            source_path = Path(tmp) / "source.svg"
-            source_path.write_text("<svg />", encoding="utf-8")
+            raw_asset = b"<svg />"
 
             with client:
                 create_response = client.post(
                     f"/api/tracks/profiles/{profile_id}/assets",
-                    json={
-                        "filename": "track.svg",
-                        "sourcePath": str(source_path),
-                        "mimeType": "image/svg+xml",
-                        "sizeBytes": source_path.stat().st_size,
-                        "transform": {
-                            "scale": 1.1,
-                            "rotate_deg": 2,
-                            "translate_x": 3,
-                            "translate_y": 4,
-                        },
+                    data={
+                        "transform": json.dumps(
+                            {
+                                "scale": 1.1,
+                                "rotate_deg": 2,
+                                "translate_x": 3,
+                                "translate_y": 4,
+                            },
+                        ),
                     },
+                    files={"file": ("track.svg", raw_asset, "image/svg+xml")},
                 )
                 list_response = client.get(f"/api/tracks/profiles/{profile_id}/assets")
 
@@ -254,7 +253,7 @@ class TrackAssetApiTests(unittest.TestCase):
             self.assertEqual(asset["track_profile_id"], profile_id)
             self.assertEqual(asset["filename"], "track.svg")
             self.assertEqual(asset["mime_type"], "image/svg+xml")
-            self.assertEqual(asset["size_bytes"], source_path.stat().st_size)
+            self.assertEqual(asset["size_bytes"], len(raw_asset))
             self.assertEqual(
                 asset["transform"],
                 {"scale": 1.1, "rotate_deg": 2.0, "translate_x": 3.0, "translate_y": 4.0},
@@ -264,7 +263,6 @@ class TrackAssetApiTests(unittest.TestCase):
             stored_asset = store.track_asset(asset["id"])
             self.assertIsNotNone(stored_asset)
             self.assertTrue(Path(stored_asset["stored_path"]).is_file())
-            self.assertNotEqual(Path(stored_asset["stored_path"]).resolve(), source_path.resolve())
 
             self.assertEqual(list_response.status_code, 200)
             self.assertEqual(list_response.json()["assets"][0]["id"], asset["id"])
@@ -285,7 +283,7 @@ class TrackAssetApiTests(unittest.TestCase):
                 after_delete_response = client.get(f"/api/tracks/profiles/{profile_id}/assets")
 
             self.assertEqual(file_response.status_code, 200)
-            self.assertEqual(file_response.content, source_path.read_bytes())
+            self.assertEqual(file_response.content, raw_asset)
             self.assertEqual(patch_response.status_code, 200)
             self.assertNotIn("stored_path", patch_response.json()["asset"])
             self.assertEqual(
@@ -342,18 +340,11 @@ class TrackAssetApiTests(unittest.TestCase):
             client, store = _client_and_store(tmp)
             keep_profile_id = store.create_track_profile("Keep Circuit", "Full", "manual", "user")
             merge_profile_id = store.create_track_profile("Merge Circuit", "Full", "manual", "user")
-            source_path = Path(tmp) / "merge-source.png"
-            source_path.write_bytes(b"merged-map")
 
             with client:
                 create_response = client.post(
                     f"/api/tracks/profiles/{merge_profile_id}/assets",
-                    json={
-                        "filename": "merge-map.png",
-                        "sourcePath": str(source_path),
-                        "mimeType": "image/png",
-                        "sizeBytes": source_path.stat().st_size,
-                    },
+                    files={"file": ("merge-map.png", b"merged-map", "image/png")},
                 )
 
             self.assertEqual(create_response.status_code, 200)
@@ -411,8 +402,6 @@ class TrackAssetApiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             client, store = _client_and_store(tmp)
             profile_id = store.create_track_profile("Emerald Circuit", "Full", "manual", "user")
-            source_path = Path(tmp) / "source.png"
-            source_path.write_bytes(b"png")
             asset_dir = Path(tmp) / "track_assets" / profile_id
             original_create = store.create_track_asset
 
@@ -424,46 +413,33 @@ class TrackAssetApiTests(unittest.TestCase):
                 with client:
                     response = client.post(
                         f"/api/tracks/profiles/{profile_id}/assets",
-                        json={
-                            "filename": "track.png",
-                            "source_path": str(source_path),
-                            "mime_type": "image/png",
-                            "size_bytes": source_path.stat().st_size,
-                        },
+                        files={"file": ("track.png", b"png", "image/png")},
                     )
             finally:
                 store.create_track_asset = original_create  # type: ignore[method-assign]
 
             self.assertEqual(response.status_code, 400)
-            self.assertTrue(source_path.exists())
             self.assertEqual(list(asset_dir.glob("*")) if asset_dir.exists() else [], [])
 
     def test_asset_routes_map_unknown_ids_to_404_and_validation_to_400(self):
         with tempfile.TemporaryDirectory() as tmp:
             client, store = _client_and_store(tmp)
             profile_id = store.create_track_profile("Emerald Circuit", "Full", "manual", "user")
-            source_path = Path(tmp) / "source.png"
-            source_path.write_bytes(b"png")
 
             with client:
                 unknown_profile = client.get("/api/tracks/profiles/missing-profile/assets")
                 bad_mime = client.post(
                     f"/api/tracks/profiles/{profile_id}/assets",
-                    json={
-                        "filename": "track.gif",
-                        "source_path": str(source_path),
-                        "mime_type": "image/gif",
-                        "size_bytes": source_path.stat().st_size,
-                    },
+                    files={"file": ("track.gif", b"gif", "image/gif")},
                 )
-                size_mismatch = client.post(
+                path_component_filename = client.post(
                     f"/api/tracks/profiles/{profile_id}/assets",
-                    json={
-                        "filename": "track.png",
-                        "source_path": str(source_path),
-                        "mime_type": "image/png",
-                        "size_bytes": source_path.stat().st_size + 1,
-                    },
+                    files={"file": ("folder/track.png", b"png", "image/png")},
+                )
+                malformed_transform = client.post(
+                    f"/api/tracks/profiles/{profile_id}/assets",
+                    data={"transform": "{not-json"},
+                    files={"file": ("track.png", b"png", "image/png")},
                 )
                 missing_asset = client.patch(
                     "/api/tracks/assets/missing-asset/transform",
@@ -472,8 +448,26 @@ class TrackAssetApiTests(unittest.TestCase):
 
             self.assertEqual(unknown_profile.status_code, 404)
             self.assertEqual(bad_mime.status_code, 400)
-            self.assertEqual(size_mismatch.status_code, 400)
+            self.assertEqual(path_component_filename.status_code, 400)
+            self.assertIn("path components", path_component_filename.json()["detail"])
+            self.assertEqual(malformed_transform.status_code, 400)
+            self.assertIn("valid JSON", malformed_transform.json()["detail"])
             self.assertEqual(missing_asset.status_code, 404)
+
+    def test_asset_upload_enforces_size_limit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client, store = _client_and_store(tmp)
+            profile_id = store.create_track_profile("Emerald Circuit", "Full", "manual", "user")
+
+            with patch("telemetry_tracker.app.MAX_ASSET_BYTES", 2):
+                with client:
+                    response = client.post(
+                        f"/api/tracks/profiles/{profile_id}/assets",
+                        files={"file": ("track.png", b"png", "image/png")},
+                    )
+
+            self.assertEqual(response.status_code, 413)
+            self.assertIn("track asset upload exceeds maximum allowed size", response.json()["detail"])
 
 
 if __name__ == "__main__":

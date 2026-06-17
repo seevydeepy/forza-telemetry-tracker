@@ -52,13 +52,14 @@ from telemetry_tracker.lap_detection import LapDetector
 from telemetry_tracker.lap_quality import evaluate_auto_lap
 from telemetry_tracker.analysis import analyze_lap, summarize_samples, summarize_section
 from telemetry_tracker.lap_summaries import compute_lap_summary
+from telemetry_tracker.local_file_selection import LocalFileSelection, LocalFileSelectionRegistry
 from telemetry_tracker.packet_bridge import PACKET_SIZE, decode_packet, iter_packet_bytes
 from telemetry_tracker.replay import replay_raw_bytes, replay_raw_file
 from telemetry_tracker.rules import load_default_ruleset
 from telemetry_tracker.storage import LOCAL_USER_ID, TelemetryStore
 from telemetry_tracker.track_catalog import load_local_fh6_track_catalog
 from telemetry_tracker.track_matcher import MATCHER_VERSION, match_lap_track
-from telemetry_tracker.track_assets import validate_asset, validate_transform
+from telemetry_tracker.track_assets import MAX_ASSET_BYTES, validate_asset, validate_transform
 from telemetry_tracker.udp_listener import UdpTelemetryListener
 from telemetry_tracker.world_map import (
     build_world_map_cache,
@@ -127,25 +128,30 @@ class TelemetryExportJobRequest(BaseModel):
 
 
 class ReplayRequest(BaseModel):
-    raw_path: str
+    selection_id: str | None = None
+    selectionId: str | None = None
     label: str = "API replay"
     recording_mode: bool = False
 
+    def selected_selection_id(self) -> str:
+        return _required_text_value(
+            self.selection_id if self.selection_id is not None else self.selectionId,
+            "selection_id",
+        )
 
-class RawTelemetryImportPathsRequest(BaseModel):
-    file_paths: list[str] | None = None
-    filePaths: list[str] | None = None
-    folder_path: str | None = None
-    folderPath: str | None = None
+
+class RawTelemetryImportSelectionRequest(BaseModel):
+    selection_id: str | None = None
+    selectionId: str | None = None
     label: str | None = None
     source_type: str | None = None
     sourceType: str | None = None
 
-    def selected_file_paths(self) -> list[str]:
-        return list(self.file_paths if self.file_paths is not None else self.filePaths or [])
-
-    def selected_folder_path(self) -> str | None:
-        return self.folder_path if self.folder_path is not None else self.folderPath
+    def selected_selection_id(self) -> str:
+        return _required_text_value(
+            self.selection_id if self.selection_id is not None else self.selectionId,
+            "selection_id",
+        )
 
     def selected_source_type(self) -> str | None:
         return self.source_type if self.source_type is not None else self.sourceType
@@ -284,35 +290,6 @@ class TrackProfileMergeRequest(BaseModel):
 
 class AppUpdateCheckRequest(BaseModel):
     force: bool = False
-
-
-class TrackAssetCreateRequest(BaseModel):
-    filename: str | None = None
-    source_path: str | None = None
-    sourcePath: str | None = None
-    mime_type: str | None = None
-    mimeType: str | None = None
-    size_bytes: int | None = None
-    sizeBytes: int | None = None
-    transform: dict | None = None
-
-    def selected_source_path(self) -> str:
-        return _required_text_value(
-            self.source_path if self.source_path is not None else self.sourcePath,
-            "source_path",
-        )
-
-    def selected_mime_type(self) -> str:
-        return _required_text_value(
-            self.mime_type if self.mime_type is not None else self.mimeType,
-            "mime_type",
-        )
-
-    def selected_size_bytes(self) -> int:
-        value = self.size_bytes if self.size_bytes is not None else self.sizeBytes
-        if value is None:
-            raise ValueError("size_bytes is required")
-        return int(value)
 
 
 class TrackAssetTransformRequest(BaseModel):
@@ -1519,19 +1496,6 @@ def _persist_visualiser_settings(
         )
 
 
-def _raw_path_for_replay(raw_path: str) -> Path:
-    if not raw_path:
-        raise HTTPException(status_code=400, detail="raw_path must not be empty")
-    path = Path(raw_path)
-    try:
-        resolved = path.resolve(strict=True)
-    except OSError as exc:
-        raise HTTPException(status_code=400, detail="raw_path does not exist") from exc
-    if not resolved.is_file():
-        raise HTTPException(status_code=400, detail="raw_path must be a file")
-    return resolved
-
-
 def _label_for_uploaded_replay(label: str | None, filename: str | None) -> str:
     cleaned_label = str(label or "").strip()
     if cleaned_label:
@@ -1602,6 +1566,10 @@ def _refresh_track_catalog_from_local_files(store: TelemetryStore) -> dict[str, 
 
 def _upload_size_limit_message() -> str:
     return f"raw telemetry upload exceeds maximum allowed size of {RAW_TELEMETRY_UPLOAD_MAX_BYTES} bytes"
+
+
+def _asset_size_limit_message() -> str:
+    return f"track asset upload exceeds maximum allowed size of {MAX_ASSET_BYTES} bytes"
 
 
 def _import_total_size_limit_message() -> str:
@@ -1688,13 +1656,13 @@ def _raw_import_source_for_existing_file(path: Path, display_name: str) -> tuple
     try:
         resolved = path.expanduser().resolve(strict=True)
     except OSError as exc:
-        raise HTTPException(status_code=400, detail=f"raw telemetry path does not exist: {path}") from exc
+        raise HTTPException(status_code=400, detail="selected raw telemetry file does not exist") from exc
     if not resolved.is_file():
-        raise HTTPException(status_code=400, detail=f"raw telemetry path must be a file: {path}")
+        raise HTTPException(status_code=400, detail="selected raw telemetry path must be a file")
     try:
         size_bytes = resolved.stat().st_size
     except OSError as exc:
-        raise HTTPException(status_code=400, detail=f"failed to inspect raw telemetry path: {path}") from exc
+        raise HTTPException(status_code=400, detail="failed to inspect selected raw telemetry file") from exc
     if size_bytes > RAW_TELEMETRY_UPLOAD_MAX_BYTES:
         raise HTTPException(status_code=413, detail=_upload_size_limit_message())
     return RawTelemetryImportSource(display_name=display_name, staged_path=resolved, size_bytes=size_bytes), size_bytes
@@ -1714,30 +1682,20 @@ def _folder_display_name(folder: Path, path: Path) -> str:
     return display or path.name
 
 
-def _raw_import_sources_for_paths(request: RawTelemetryImportPathsRequest) -> tuple[list[RawTelemetryImportSource], int, str]:
-    file_paths = [str(item or "").strip() for item in request.selected_file_paths() if str(item or "").strip()]
-    folder_path = str(request.selected_folder_path() or "").strip()
-    if file_paths and folder_path:
-        raise HTTPException(status_code=400, detail="choose either raw telemetry files or a raw telemetry folder")
-    if not file_paths and not folder_path:
-        raise HTTPException(status_code=400, detail="at least one raw telemetry file or folder is required")
-
+def _raw_import_sources_for_selection(selection: LocalFileSelection) -> tuple[list[RawTelemetryImportSource], int, str]:
     paths: list[tuple[Path, str]] = []
-    source_type = "file"
-    if folder_path:
-        try:
-            folder = Path(folder_path).expanduser().resolve(strict=True)
-        except OSError as exc:
-            raise HTTPException(status_code=400, detail="raw telemetry folder does not exist") from exc
-        if not folder.is_dir():
-            raise HTTPException(status_code=400, detail="raw telemetry folder path must be a folder")
-        files = sorted((path for path in folder.rglob("*") if path.is_file()), key=lambda item: str(item).lower())
-        if not files:
+    if selection.source_type == "folder":
+        folder = selection.folder_path
+        if folder is None:
+            raise HTTPException(status_code=400, detail="local file selection is not a folder")
+        if not selection.paths:
             raise HTTPException(status_code=400, detail="raw telemetry folder does not contain any files")
-        paths = [(path, _folder_display_name(folder, path)) for path in files]
+        paths = [(path, _folder_display_name(folder, path)) for path in selection.paths]
         source_type = "folder"
     else:
-        paths = [(Path(raw_path), _path_display_name(Path(raw_path), index)) for index, raw_path in enumerate(file_paths, start=1)]
+        if not selection.paths:
+            raise HTTPException(status_code=400, detail="at least one raw telemetry file is required")
+        paths = [(path, _path_display_name(path, index)) for index, path in enumerate(selection.paths, start=1)]
         source_type = "files" if len(paths) > 1 else "file"
 
     if len(paths) > RAW_TELEMETRY_IMPORT_MAX_FILES:
@@ -1872,24 +1830,40 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
     return True
 
 
-def _asset_source_path(raw_path: str) -> Path:
-    if not raw_path:
-        raise HTTPException(status_code=400, detail="source_path must not be empty")
+def _track_asset_transform_from_form(raw_transform: str | None) -> dict:
+    if raw_transform is None or not str(raw_transform).strip():
+        return validate_transform(None)
     try:
-        resolved = Path(raw_path).expanduser().resolve(strict=True)
-    except OSError as exc:
-        raise HTTPException(status_code=400, detail="source_path does not exist") from exc
-    if not resolved.is_file():
-        raise HTTPException(status_code=400, detail="source_path must be a file")
-    return resolved
+        parsed = json.loads(raw_transform)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail="transform must be valid JSON") from exc
+    try:
+        return validate_transform(parsed)
+    except ValueError as exc:
+        raise _track_profile_error(exc) from exc
 
 
-def _copy_track_asset_source(
+async def _read_uploaded_track_asset(file: UploadFile) -> bytes:
+    if file.size is not None and file.size > MAX_ASSET_BYTES:
+        raise HTTPException(status_code=413, detail=_asset_size_limit_message())
+
+    raw = bytearray()
+    while True:
+        chunk = await file.read(RAW_TELEMETRY_UPLOAD_READ_CHUNK_BYTES)
+        if not chunk:
+            break
+        if len(raw) + len(chunk) > MAX_ASSET_BYTES:
+            raise HTTPException(status_code=413, detail=_asset_size_limit_message())
+        raw.extend(chunk)
+    return bytes(raw)
+
+
+def _copy_uploaded_track_asset(
     store: TelemetryStore,
     *,
     profile_id: str,
-    source_path: Path,
     filename: str,
+    raw: bytes,
 ) -> Path:
     safe_filename = Path(filename).name
     if safe_filename != filename:
@@ -1901,9 +1875,9 @@ def _copy_track_asset_source(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="invalid asset destination") from exc
     try:
-        shutil.copy2(source_path, destination)
+        destination.write_bytes(raw)
     except OSError as exc:
-        raise HTTPException(status_code=400, detail=f"failed to copy asset: {exc}") from exc
+        raise HTTPException(status_code=400, detail=f"failed to store asset: {exc}") from exc
     return destination
 
 
@@ -2204,6 +2178,7 @@ def create_app(
     map_cache_dir: Path | None = None,
     fh6_media_root: Path | None = None,
     update_service: UpdateService | None = None,
+    local_file_selection_registry: LocalFileSelectionRegistry | None = None,
 ) -> FastAPI:
     if runtime_paths is not None:
         runtime_paths.ensure_user_directories()
@@ -2229,6 +2204,7 @@ def create_app(
     capture = CaptureStateMachine(mode=settings["capture_mode"])
     lap_detector = LapDetector()
     pipeline = CapturePipeline(store, bus, ingest, capture, lap_detector)
+    local_file_selection_registry = local_file_selection_registry or LocalFileSelectionRegistry()
     listener = UdpTelemetryListener(
         settings["udp_host"],
         int(settings["udp_port"]),
@@ -2248,6 +2224,7 @@ def create_app(
     app.state.runtime_paths = runtime_paths
     app.state.map_converter_path = Path(map_converter_path) if map_converter_path is not None else None
     app.state.map_cache_dir = Path(map_cache_dir) if map_cache_dir is not None else None
+    app.state.local_file_selection_registry = local_file_selection_registry
     release_metadata = load_release_metadata(runtime_paths.release_metadata if runtime_paths is not None else None)
     if update_service is not None and hasattr(update_service, "metadata"):
         release_metadata = update_service.metadata
@@ -2846,23 +2823,24 @@ def create_app(
             raise _track_profile_error(exc) from exc
 
     @app.post("/api/tracks/profiles/{profile_id}/assets")
-    async def create_track_asset(profile_id: str, request: TrackAssetCreateRequest) -> dict:
+    async def create_track_asset(
+        profile_id: str,
+        file: UploadFile = File(...),
+        transform: str | None = Form(None),
+    ) -> dict:
         try:
             _track_profile_or_404(store, profile_id)
-            filename = _required_text_value(request.filename, "filename")
-            mime_type = request.selected_mime_type()
-            requested_size = request.selected_size_bytes()
-            source_path = _asset_source_path(request.selected_source_path())
-            actual_size = source_path.stat().st_size
-            if int(requested_size) != int(actual_size):
-                raise HTTPException(status_code=400, detail="size_bytes does not match source_path size")
+            filename = _required_text_value(file.filename, "filename")
+            mime_type = _required_text_value(file.content_type, "mime_type")
+            raw = await _read_uploaded_track_asset(file)
+            actual_size = len(raw)
             validate_asset(filename, mime_type, actual_size)
-            transform = validate_transform(request.transform)
-            stored_path = _copy_track_asset_source(
+            asset_transform = _track_asset_transform_from_form(transform)
+            stored_path = _copy_uploaded_track_asset(
                 store,
                 profile_id=profile_id,
-                source_path=source_path,
                 filename=filename,
+                raw=raw,
             )
             try:
                 asset_id = store.create_track_asset(
@@ -2871,7 +2849,7 @@ def create_app(
                     stored_path=str(stored_path),
                     mime_type=mime_type,
                     size_bytes=actual_size,
-                    transform=transform,
+                    transform=asset_transform,
                 )
             except Exception:
                 _remove_copied_track_asset(stored_path)
@@ -2880,6 +2858,8 @@ def create_app(
             raise
         except ValueError as exc:
             raise _track_profile_error(exc) from exc
+        finally:
+            await file.close()
         asset = store.track_asset(asset_id)
         if asset is None:
             raise HTTPException(status_code=404, detail="unknown track_asset_id")
@@ -3323,9 +3303,16 @@ def create_app(
         )
         return {"job": job.snapshot()}
 
-    @app.post("/api/replay/import-jobs/paths")
-    async def replay_import_job_paths(request: RawTelemetryImportPathsRequest) -> dict:
-        files, total_bytes, source_type = _raw_import_sources_for_paths(request)
+    @app.post("/api/replay/import-jobs/selections")
+    async def replay_import_job_selection(request: RawTelemetryImportSelectionRequest) -> dict:
+        try:
+            selection = local_file_selection_registry.consume(request.selected_selection_id())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        requested_source_type = request.selected_source_type()
+        if requested_source_type is not None and requested_source_type != selection.source_type:
+            raise HTTPException(status_code=400, detail="selection source_type does not match request")
+        files, total_bytes, source_type = _raw_import_sources_for_selection(selection)
         job = await enqueue_raw_import_job(
             label=request.label,
             source_type=source_type,
@@ -3335,6 +3322,10 @@ def create_app(
             cleanup_staged_dir=False,
         )
         return {"job": job.snapshot()}
+
+    @app.post("/api/replay/import-jobs/paths")
+    async def replay_import_job_paths_removed() -> dict:
+        raise HTTPException(status_code=410, detail="raw telemetry path imports must use a desktop selection_id or file upload")
 
     @app.post("/api/replay/import-jobs/{job_id}/cancel")
     async def cancel_replay_import_job(job_id: str) -> dict:
@@ -3367,12 +3358,18 @@ def create_app(
 
     @app.post("/api/replay")
     async def replay(request: ReplayRequest) -> dict:
-        raw_path = _raw_path_for_replay(request.raw_path)
+        try:
+            selection = local_file_selection_registry.consume(request.selected_selection_id())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if selection.source_type != "file" or len(selection.paths) != 1:
+            raise HTTPException(status_code=400, detail="replay requires a single-file local selection")
+        raw_path = selection.paths[0]
         if request.recording_mode:
             try:
                 raw = raw_path.read_bytes()
             except OSError as exc:
-                raise HTTPException(status_code=400, detail=f"failed to read raw_path: {exc}") from exc
+                raise HTTPException(status_code=400, detail="failed to read selected raw telemetry file") from exc
             return await replay_raw_bytes_payload(raw, request.label, True)
 
         try:
@@ -3380,7 +3377,7 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except OSError as exc:
-            raise HTTPException(status_code=400, detail=f"failed to read raw_path: {exc}") from exc
+            raise HTTPException(status_code=400, detail="failed to read selected raw telemetry file") from exc
         return {
             "session_id": session_id,
             "session_ids": [session_id],

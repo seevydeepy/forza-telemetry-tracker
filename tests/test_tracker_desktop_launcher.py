@@ -39,6 +39,7 @@ class DesktopLauncherTests(unittest.TestCase):
             start_udp_listener=True,
             refresh_car_catalog=True,
             refresh_track_catalog=True,
+            local_file_selection_registry=backend.local_file_selection_registry,
         )
 
     def test_backend_start_and_stop_delegate_to_uvicorn_server(self):
@@ -156,12 +157,22 @@ class DesktopLauncherTests(unittest.TestCase):
         fake_window.create_file_dialog.return_value = [r"D:\captures\one.bin", r"D:\captures\two.raw"]
         fake_webview = MagicMock()
         fake_webview.OPEN_DIALOG = 10
-        bridge = DesktopBridge(fake_webview)
+        registry = MagicMock()
+        registry.register_files.return_value = {
+            "selection_id": "selected-native-files",
+            "source_type": "files",
+            "file_count": 2,
+            "display_name": "Imported 2 raw telemetry files",
+            "summary": "Selected 2 native files",
+            "expires_at_ms": 123_000,
+        }
+        bridge = DesktopBridge(fake_webview, registry)
         bridge.bind_window(fake_window)
 
         selected = bridge.choose_raw_telemetry_files()
 
-        self.assertEqual(selected, [r"D:\captures\one.bin", r"D:\captures\two.raw"])
+        self.assertEqual(selected["selection_id"], "selected-native-files")
+        registry.register_files.assert_called_once_with([r"D:\captures\one.bin", r"D:\captures\two.raw"])
         fake_window.create_file_dialog.assert_called_once_with(
             10,
             directory="",
@@ -176,12 +187,22 @@ class DesktopLauncherTests(unittest.TestCase):
             fake_window.create_file_dialog.return_value = [str(current_file)]
             fake_webview = MagicMock()
             fake_webview.OPEN_DIALOG = 10
-            bridge = DesktopBridge(fake_webview)
+            registry = MagicMock()
+            registry.register_files.return_value = {
+                "selection_id": "selected-current-file",
+                "source_type": "file",
+                "file_count": 1,
+                "display_name": "capture",
+                "summary": "Selected native file: capture.bin",
+                "expires_at_ms": 123_000,
+            }
+            bridge = DesktopBridge(fake_webview, registry)
             bridge.bind_window(fake_window)
 
             selected = bridge.choose_raw_telemetry_files(str(current_file))
 
-        self.assertEqual(selected, [str(current_file)])
+        self.assertEqual(selected["selection_id"], "selected-current-file")
+        registry.register_files.assert_called_once_with([str(current_file)])
         fake_window.create_file_dialog.assert_called_once_with(
             10,
             directory=str(current_file.parent),

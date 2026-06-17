@@ -12,7 +12,7 @@ import type {
   LapSummaryResponse,
   RawPointResponse,
   RawTelemetryImportJob,
-  RawTelemetryImportPathJobRequest,
+  RawTelemetryImportSelectionJobRequest,
   RawTelemetryImportJobResponse,
   RawTelemetryImportJobsResponse,
   RawTelemetryImportResponse,
@@ -206,13 +206,13 @@ export async function createRawTelemetryImportJob(input: {
   return payload.job;
 }
 
-export async function createRawTelemetryImportPathJob(input: RawTelemetryImportPathJobRequest): Promise<RawTelemetryImportJob> {
-  const response = await fetch('/api/replay/import-jobs/paths', {
+export async function createRawTelemetryImportSelectionJob(input: RawTelemetryImportSelectionJobRequest): Promise<RawTelemetryImportJob> {
+  const response = await fetch('/api/replay/import-jobs/selections', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input)
   });
-  const payload = await expectJson<RawTelemetryImportJobResponse>(response, 'Raw telemetry import path job request failed');
+  const payload = await expectJson<RawTelemetryImportJobResponse>(response, 'Raw telemetry import selection job request failed');
   return payload.job;
 }
 
@@ -408,10 +408,14 @@ export async function fetchTrackAssets(profileId: string): Promise<TrackAsset[]>
 }
 
 export async function createTrackAsset(profileId: string, input: TrackAssetCreateInput): Promise<TrackAssetResponse> {
+  const body = new FormData();
+  body.append('file', input.file, input.file.name);
+  if (input.transform) {
+    body.append('transform', JSON.stringify(input.transform));
+  }
   const response = await fetch(`/api/tracks/profiles/${encodeURIComponent(profileId)}/assets`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input)
+    body
   });
   return expectJson<TrackAssetResponse>(response, 'Track asset create request failed');
 }

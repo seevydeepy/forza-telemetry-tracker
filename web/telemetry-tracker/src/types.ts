@@ -350,9 +350,8 @@ export interface RawTelemetryImportJobsResponse {
   jobs: RawTelemetryImportJob[];
 }
 
-export interface RawTelemetryImportPathJobRequest {
-  file_paths?: string[];
-  folder_path?: string;
+export interface RawTelemetryImportSelectionJobRequest {
+  selection_id: string;
   label?: string;
   source_type?: 'file' | 'files' | 'folder';
 }
@@ -641,10 +640,7 @@ export interface TrackAsset {
 }
 
 export interface TrackAssetCreateInput {
-  filename: string;
-  sourcePath: string;
-  mimeType: string;
-  sizeBytes: number;
+  file: File;
   transform?: TrackAssetTransform;
 }
 

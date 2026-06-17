@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from telemetry_tracker.app import CapturePipeline, create_app
 from telemetry_tracker.capture import CaptureStateMachine
 from telemetry_tracker.lap_detection import LapDetector
+from telemetry_tracker.local_file_selection import LocalFileSelectionRegistry
 from telemetry_tracker.packet_bridge import decode_packet, encode_packet_for_test, packet_to_live_fields
 from telemetry_tracker.udp_listener import UdpTelemetryListener
 
@@ -863,13 +864,18 @@ class TrackerHistoryApiTests(unittest.TestCase):
                     ]
                 )
             )
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([raw_path])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
 
             with TestClient(app) as client:
                 replay = client.post(
                     "/api/replay",
                     json={
-                        "raw_path": str(raw_path),
+                        "selection_id": selection["selection_id"],
                         "label": "Recorded replay",
                         "recording_mode": True,
                     },
@@ -988,10 +994,9 @@ class TrackerHistoryApiTests(unittest.TestCase):
             self.assertEqual(job["error_count"], 1)
             self.assertIn("multiple of", job["errors"][0]["message"])
 
-    def test_replay_import_path_job_imports_selected_files_without_deleting_sources(self):
+    def test_replay_import_selection_job_imports_selected_files_without_deleting_sources(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
             first = root / "native-first.bin"
             second = root / "native-second.bin"
             first.write_bytes(
@@ -1012,12 +1017,18 @@ class TrackerHistoryApiTests(unittest.TestCase):
                     ]
                 )
             )
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([first, second])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
 
             with TestClient(app) as client:
                 response = client.post(
-                    "/api/replay/import-jobs/paths",
+                    "/api/replay/import-jobs/selections",
                     json={
-                        "file_paths": [str(first), str(second)],
+                        "selection_id": selection["selection_id"],
                         "label": "Native batch",
                         "source_type": "files",
                     },
@@ -1037,10 +1048,9 @@ class TrackerHistoryApiTests(unittest.TestCase):
             self.assertTrue(any(lap["session_label"] == "Native batch - native-first" for lap in laps))
             self.assertTrue(any(lap["session_label"] == "Native batch - native-second" for lap in laps))
 
-    def test_replay_import_path_job_imports_folder_contents(self):
+    def test_replay_import_selection_job_imports_folder_contents(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
             folder = root / "captures"
             folder.mkdir()
             raw_path = folder / "foldered.bin"
@@ -1053,11 +1063,17 @@ class TrackerHistoryApiTests(unittest.TestCase):
                     ]
                 )
             )
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_folder(folder)
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
 
             with TestClient(app) as client:
                 response = client.post(
-                    "/api/replay/import-jobs/paths",
-                    json={"folder_path": str(folder), "label": "Native folder"},
+                    "/api/replay/import-jobs/selections",
+                    json={"selection_id": selection["selection_id"], "label": "Native folder"},
                 )
                 self.assertEqual(response.status_code, 200)
                 job = self._wait_for_import_job(client, response.json()["job"]["id"])
@@ -1068,85 +1084,178 @@ class TrackerHistoryApiTests(unittest.TestCase):
             self.assertEqual(job["total_files"], 1)
             self.assertEqual(job["packet_count"], 3)
 
-    def test_replay_import_path_job_derives_source_type_from_selected_paths(self):
+    def test_replay_import_selection_job_derives_source_type_from_selected_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
             raw_path = root / "single.bin"
             raw_path.write_bytes(b"".join(_race_packet(index, lap_number=1) for index in range(1, 4)))
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([raw_path])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
 
             with TestClient(app) as client:
                 response = client.post(
-                    "/api/replay/import-jobs/paths",
-                    json={"file_paths": [str(raw_path)], "source_type": "folder"},
+                    "/api/replay/import-jobs/selections",
+                    json={"selection_id": selection["selection_id"]},
                 )
                 self.assertEqual(response.status_code, 200)
                 job = self._wait_for_import_job(client, response.json()["job"]["id"])
 
             self.assertEqual(job["source_type"], "file")
 
-    def test_replay_import_path_job_rejects_empty_selection(self):
+    def test_replay_import_selection_job_rejects_missing_selection_id(self):
         with tempfile.TemporaryDirectory() as tmp:
             app = create_app(db_path=Path(tmp) / "telemetry_tracker.sqlite3")
 
             with TestClient(app) as client:
-                response = client.post("/api/replay/import-jobs/paths", json={})
+                response = client.post("/api/replay/import-jobs/selections", json={})
 
             self.assertEqual(response.status_code, 400)
-            self.assertIn("at least one raw telemetry file or folder", response.json()["detail"])
+            self.assertIn("selection_id is required", response.json()["detail"])
 
-    def test_replay_import_path_job_rejects_mixed_file_and_folder_selection(self):
+    def test_replay_import_selection_job_rejects_wrong_source_type(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
             raw_path = root / "capture.bin"
             raw_path.write_bytes(_race_packet(1))
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([raw_path])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
 
             with TestClient(app) as client:
                 response = client.post(
-                    "/api/replay/import-jobs/paths",
-                    json={"file_paths": [str(raw_path)], "folder_path": str(root)},
+                    "/api/replay/import-jobs/selections",
+                    json={"selection_id": selection["selection_id"], "source_type": "folder"},
                 )
 
             self.assertEqual(response.status_code, 400)
-            self.assertIn("choose either raw telemetry files or a raw telemetry folder", response.json()["detail"])
+            self.assertIn("selection source_type does not match request", response.json()["detail"])
 
-    def test_replay_import_path_job_enforces_file_count_limit(self):
+    def test_replay_import_selection_job_rejects_unknown_expired_reused_and_malformed_ids(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
+            raw_path = root / "capture.bin"
+            raw_path.write_bytes(_race_packet(1))
+            now = [1_000.0]
+            registry = LocalFileSelectionRegistry(clock=lambda: now[0], ttl_seconds=1.0)
+            expired = registry.register_files([raw_path])
+            now[0] = 1_002.0
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
+
+            with TestClient(app) as client:
+                malformed = client.post("/api/replay/import-jobs/selections", json={"selection_id": "../bad"})
+                unknown = client.post(
+                    "/api/replay/import-jobs/selections",
+                    json={"selection_id": "unknownselectionid"},
+                )
+                expired_response = client.post(
+                    "/api/replay/import-jobs/selections",
+                    json={"selection_id": expired["selection_id"]},
+                )
+                now[0] = 1_003.0
+                valid = registry.register_files([raw_path])
+                first_use = client.post(
+                    "/api/replay/import-jobs/selections",
+                    json={"selection_id": valid["selection_id"]},
+                )
+                second_use = client.post(
+                    "/api/replay/import-jobs/selections",
+                    json={"selection_id": valid["selection_id"]},
+                )
+
+            self.assertEqual(malformed.status_code, 400)
+            self.assertIn("invalid local file selection id", malformed.json()["detail"])
+            self.assertEqual(unknown.status_code, 400)
+            self.assertIn("unknown or expired local file selection", unknown.json()["detail"])
+            self.assertEqual(expired_response.status_code, 400)
+            self.assertIn("unknown or expired local file selection", expired_response.json()["detail"])
+            self.assertEqual(first_use.status_code, 200)
+            self.assertEqual(second_use.status_code, 400)
+            self.assertIn("unknown or expired local file selection", second_use.json()["detail"])
+
+    def test_replay_import_selection_job_enforces_file_count_limit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
             first = root / "first.bin"
             second = root / "second.bin"
             first.write_bytes(_race_packet(1))
             second.write_bytes(_race_packet(2))
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([first, second])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
 
             with patch("telemetry_tracker.app.RAW_TELEMETRY_IMPORT_MAX_FILES", 1):
                 with TestClient(app) as client:
                     response = client.post(
-                        "/api/replay/import-jobs/paths",
-                        json={"file_paths": [str(first), str(second)]},
+                        "/api/replay/import-jobs/selections",
+                        json={"selection_id": selection["selection_id"]},
                     )
 
             self.assertEqual(response.status_code, 413)
             self.assertIn("accepts at most 1 files", response.json()["detail"])
 
-    def test_replay_import_path_job_enforces_total_size_limit(self):
+    def test_local_file_selection_registry_rejects_too_many_files_before_token_creation(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
+            first = root / "first.bin"
+            second = root / "second.bin"
+            first.write_bytes(_race_packet(1))
+            second.write_bytes(_race_packet(2))
+            registry = LocalFileSelectionRegistry(max_files=1)
+
+            with self.assertRaisesRegex(ValueError, "accepts at most 1 files"):
+                registry.register_files([first, second])
+
+    def test_replay_import_selection_job_enforces_total_size_limit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
             raw_path = root / "oversized-total.bin"
             raw = _race_packet(1)
             raw_path.write_bytes(raw)
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([raw_path])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
 
             with patch("telemetry_tracker.app.RAW_TELEMETRY_IMPORT_MAX_TOTAL_BYTES", len(raw) - 1):
                 with TestClient(app) as client:
                     response = client.post(
-                        "/api/replay/import-jobs/paths",
-                        json={"file_paths": [str(raw_path)]},
+                        "/api/replay/import-jobs/selections",
+                        json={"selection_id": selection["selection_id"]},
                     )
 
             self.assertEqual(response.status_code, 413)
             self.assertIn("raw telemetry import exceeds maximum allowed total size", response.json()["detail"])
+
+    def test_replay_import_path_job_endpoint_is_gone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw_path = root / "capture.bin"
+            raw_path.write_bytes(_race_packet(1))
+            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
+
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/replay/import-jobs/paths",
+                    json={"file_paths": [str(raw_path)]},
+                )
+
+            self.assertEqual(response.status_code, 410)
+            self.assertIn("selection_id", response.json()["detail"])
 
     def test_replay_import_job_can_be_cancelled(self):
         async def stall_replay(self, *args, **kwargs):
@@ -1230,14 +1339,19 @@ class TrackerHistoryApiTests(unittest.TestCase):
                     ]
                 )
             )
-            app = create_app(db_path=root / "telemetry_tracker.sqlite3")
+            registry = LocalFileSelectionRegistry()
+            selection = registry.register_files([raw_path])
+            app = create_app(
+                db_path=root / "telemetry_tracker.sqlite3",
+                local_file_selection_registry=registry,
+            )
 
             with TestClient(app) as client:
                 mode = client.post("/api/capture/mode", json={"mode": "manual"})
                 replay = client.post(
                     "/api/replay",
                     json={
-                        "raw_path": str(raw_path),
+                        "selection_id": selection["selection_id"],
                         "label": "Manual mode recorded replay",
                         "recording_mode": True,
                     },
