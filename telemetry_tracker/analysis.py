@@ -464,7 +464,7 @@ def _marker_id(session_id: str, lap_id: str | None, marker: dict) -> str:
             str(marker["ruleset_version"]),
         ]
     )
-    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def analyze_lap(store: TelemetryStore, session_id: str, lap_id: str | None) -> dict:
