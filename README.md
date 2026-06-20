@@ -1,7 +1,5 @@
 # Forza Telemetry Tracker
 
-[Support development on Ko-fi](https://ko-fi.com/Z4I021C66X)
-
 Windows desktop telemetry companion for Forza Horizon 6 Data Out. It records local UDP telemetry, stores sessions in SQLite, shows live and review dashboards, supports route and map visualisation from locally owned game files, and can check public GitHub Releases for manual updates.
 
 Forza is a trademark of Microsoft. This project is an unofficial community tool and is not affiliated with, endorsed by, or sponsored by Microsoft, Xbox Game Studios, Turn 10 Studios, Playground Games, or the Forza franchise owners.
@@ -62,3 +60,5 @@ Frontend release and CI installs use `npm ci` against `web/telemetry-tracker/pac
 ## License
 
 MIT License. Third-party notices and bundled licenses are in `THIRD_PARTY_NOTICES.md` and `licenses/`.
+
+[Support development on Ko-fi](https://ko-fi.com/Z4I021C66X)
