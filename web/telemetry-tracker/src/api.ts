@@ -5,6 +5,9 @@ import type {
   CaptureStatus,
   DeltaResponse,
   DiagnosticsPayload,
+  FeedbackConfig,
+  FeedbackReportInput,
+  FeedbackReportResponse,
   GhostResponse,
   LapMarkersResponse,
   LapSamplesResponse,
@@ -85,6 +88,20 @@ export async function fetchCaptureStatus(): Promise<CaptureStatus> {
 export async function fetchDiagnostics(): Promise<DiagnosticsPayload> {
   const response = await fetch('/api/diagnostics');
   return expectJson<DiagnosticsPayload>(response, 'Diagnostics request failed');
+}
+
+export async function fetchFeedbackConfig(): Promise<FeedbackConfig> {
+  const response = await fetch('/api/feedback/config');
+  return expectJson<FeedbackConfig>(response, 'Feedback config request failed');
+}
+
+export async function sendFeedbackReport(input: FeedbackReportInput): Promise<FeedbackReportResponse> {
+  const response = await fetch('/api/feedback/reports', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  });
+  return expectJson<FeedbackReportResponse>(response, 'Feedback request failed');
 }
 
 export async function fetchAppAbout(): Promise<AppAboutPayload> {

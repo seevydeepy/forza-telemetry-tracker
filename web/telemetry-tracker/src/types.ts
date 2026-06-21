@@ -788,6 +788,39 @@ export interface ToastMessage {
   sticky: boolean;
 }
 
+export type FeedbackCategory =
+  | 'Bug'
+  | 'Data Out setup'
+  | 'Telemetry recording'
+  | 'Map or route visualisation'
+  | 'Import or export'
+  | 'Performance'
+  | 'UI or UX'
+  | 'Other';
+
+export interface FeedbackConfig {
+  enabled: boolean;
+  categories: FeedbackCategory[];
+  max_description_length: number;
+  diagnostics_default: boolean;
+  diagnostics_description: string;
+}
+
+export interface FeedbackReportInput {
+  category: FeedbackCategory;
+  description: string;
+  include_diagnostics: boolean;
+  source?: string;
+}
+
+export interface FeedbackReportResponse {
+  status: 'sent' | 'queued' | 'rejected';
+  report_ref: string;
+  issue_number?: number | null;
+  issue_url?: string | null;
+  message?: string;
+}
+
 export interface AppAboutUpdates {
   supported: boolean;
   release_access: 'public';
