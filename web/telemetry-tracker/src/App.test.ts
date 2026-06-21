@@ -8,6 +8,7 @@ import type {
   AppUpdateCheckResponse,
   CarInfo,
   DiagnosticsPayload,
+  FeedbackConfig,
   IssueMarker,
   LapSummary,
   ListenerStatus,
@@ -204,6 +205,24 @@ const defaultAppAboutPayload: AppAboutPayload = {
     supported: true,
     release_access: 'public'
   }
+};
+
+const defaultFeedbackConfig: FeedbackConfig = {
+  enabled: true,
+  categories: [
+    'Bug',
+    'Data Out setup',
+    'Telemetry recording',
+    'Map or route visualisation',
+    'Import or export',
+    'Performance',
+    'UI or UX',
+    'Other'
+  ],
+  max_description_length: 4000,
+  diagnostics_default: false,
+  diagnostics_description:
+    'Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines.'
 };
 
 const defaultUpdateCheckPayload: AppUpdateCheckResponse = {
@@ -937,6 +956,10 @@ type StubOptions = {
   capture?: typeof capturePayload;
   diagnostics?: DiagnosticsPayload;
   appAbout?: AppAboutPayload;
+  feedbackConfig?: FeedbackConfig;
+  feedbackReportResponse?: unknown;
+  feedbackReportResponsePromise?: Promise<Response>;
+  feedbackReportStatus?: number;
   updateCheck?: AppUpdateCheckResponse;
   stats?: StatsSummary;
   listenerRestart?: ListenerStatus;
@@ -1100,6 +1123,21 @@ function createDefaultFetchHandler(options?: StubOptions) {
   let capture = options?.capture ?? capturePayload;
   let diagnostics = options?.diagnostics ?? defaultDiagnosticsPayload;
   let appAbout = options?.appAbout ?? defaultAppAboutPayload;
+  let feedbackConfig = options?.feedbackConfig ?? defaultFeedbackConfig;
+  const feedbackReportResponse = options?.feedbackReportResponse ?? {
+    status: 'sent',
+    report_ref: 'FTT-ABC234DE',
+    issue_number: 101,
+    issue_url: 'https://github.com/seevydeepy/forza-telemetry-feedback/issues/101'
+  };
+  const feedbackReportStatus = options?.feedbackReportStatus ?? (
+    typeof feedbackReportResponse === 'object'
+    && feedbackReportResponse !== null
+    && 'status' in feedbackReportResponse
+    && feedbackReportResponse.status === 'queued'
+      ? 202
+      : 200
+  );
   const updateCheck = options?.updateCheck ?? defaultUpdateCheckPayload;
   const stats = options?.stats ?? defaultStatsSummary;
   const listenerRestart = options?.listenerRestart ?? {
@@ -1276,6 +1314,10 @@ function createDefaultFetchHandler(options?: StubOptions) {
       });
     }
     if (pathname === '/api/diagnostics') return jsonResponse(diagnostics);
+    if (pathname === '/api/feedback/config') return jsonResponse(feedbackConfig);
+    if (pathname === '/api/feedback/reports' && init?.method === 'POST') {
+      return options?.feedbackReportResponsePromise ?? jsonResponse(feedbackReportResponse, feedbackReportStatus);
+    }
     if (pathname === '/api/replay/import-jobs') return jsonResponse({ jobs: [] });
     if (pathname === '/api/telemetry/export-defaults') return jsonResponse(telemetryExportDefaults);
     if (pathname === '/api/telemetry/export-jobs' && init?.method === 'POST') {
@@ -1712,6 +1754,12 @@ async function openExportTelemetryModal() {
   return screen.findByRole('dialog', { name: 'Export telemetry' });
 }
 
+async function openFeedbackModal() {
+  const menu = screen.getByRole('navigation', { name: 'Main menu' });
+  await fireEvent.click(within(menu).getByRole('button', { name: 'Send Feedback' }));
+  return screen.findByRole('dialog', { name: 'Send Feedback' });
+}
+
 function getVisualisationStage() {
   return screen.getByTestId('visualisation-stage');
 }
@@ -1869,15 +1917,15 @@ describe('App', () => {
     expect(screen.getByText('Import raw telemetry')).toBeInTheDocument();
     expect(screen.getByText('Export telemetry')).toBeInTheDocument();
     expect(screen.getByText('About')).toBeInTheDocument();
-    expect(screen.getByText('Feedback')).toBeInTheDocument();
+    expect(screen.getByText('Send Feedback')).toBeInTheDocument();
     const expandedMenuLabels = within(menu).getAllByRole('button').map((button) => button.textContent?.trim());
     expect(expandedMenuLabels.indexOf('Export telemetry')).toBe(expandedMenuLabels.indexOf('Import raw telemetry') + 1);
     expect(expandedMenuLabels.indexOf('Export telemetry')).toBeLessThan(expandedMenuLabels.indexOf('Session browser'));
+    expect(expandedMenuLabels.indexOf('Send Feedback')).toBeGreaterThan(expandedMenuLabels.indexOf('Diagnostics'));
+    expect(expandedMenuLabels.indexOf('Send Feedback')).toBeLessThan(expandedMenuLabels.indexOf('Settings'));
     expect(expandedMenuLabels.indexOf('About')).toBeGreaterThan(expandedMenuLabels.indexOf('Settings'));
-    const feedbackLink = within(menu).getByRole('link', { name: 'Feedback' });
-    expect(feedbackLink).toHaveAttribute('href', 'https://github.com/seevydeepy/forza-telemetry-tracker/issues');
-    expect(feedbackLink).toHaveAttribute('target', '_blank');
-    expect(feedbackLink).toHaveAttribute('rel', 'noreferrer');
+    expect(within(menu).queryByRole('link', { name: /feedback/i })).not.toBeInTheDocument();
+    expect(within(menu).getByRole('button', { name: 'Send Feedback' })).toHaveAttribute('title', 'Send feedback');
     expect(within(menu).queryByRole('button', { name: 'Track tools' })).not.toBeInTheDocument();
     expect(within(menu).queryByRole('button', { name: 'Open keyboard shortcuts' })).not.toBeInTheDocument();
     expect(stage).toHaveAttribute('data-menu-overlay', 'true');
@@ -2241,6 +2289,94 @@ describe('App', () => {
     expect(await within(dialog).findByText('Installed version 1.0.0')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Check for updates' })).toBeInTheDocument();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/app/about'));
+  });
+
+  it('opens the feedback modal from the main menu and requests feedback configuration', async () => {
+    const fetchMock = stubApiFetch();
+    renderApp();
+
+    const dialog = await openFeedbackModal();
+
+    expect(await within(dialog).findByText(defaultFeedbackConfig.diagnostics_description)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Description')).toHaveAttribute(
+      'placeholder',
+      'What went wrong, and what were you doing just before it happened?'
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/feedback/config'));
+  });
+
+  it('sends feedback from the modal and replaces the sending toast with the report reference', async () => {
+    const feedbackResponse = deferredResponse();
+    const fetchMock = stubApiFetch({ feedbackReportResponsePromise: feedbackResponse.promise });
+    renderApp();
+
+    const dialog = await openFeedbackModal();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/feedback/config'));
+    await fireEvent.input(within(dialog).getByLabelText('Description'), { target: { value: 'Detailed feedback text' } });
+    await fireEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
+
+    expect(await findToast('Sending feedback...')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/feedback/reports',
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+    feedbackResponse.resolve(jsonResponse({
+      status: 'sent',
+      report_ref: 'FTT-ABC234DE',
+      issue_number: 101,
+      issue_url: 'https://github.com/seevydeepy/forza-telemetry-feedback/issues/101'
+    }));
+    expect(await findToast('Feedback sent. Ref: FTT-ABC234DE')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Send Feedback' })).not.toBeInTheDocument();
+    expect(within(getToastStack()).queryByText('Sending feedback...')).not.toBeInTheDocument();
+
+    const postCall = fetchMock.mock.calls.find(([input]) => requestUrl(input as RequestInfo | URL) === '/api/feedback/reports');
+    const request = JSON.parse(String(postCall?.[1]?.body ?? '{}')) as Record<string, unknown>;
+    expect(request).toMatchObject({
+      category: 'Bug',
+      description: 'Detailed feedback text',
+      include_diagnostics: false,
+      source: 'desktop-app'
+    });
+  });
+
+  it('keeps a sticky queued feedback toast when the local API saves feedback for retry', async () => {
+    const fetchMock = stubApiFetch({
+      feedbackReportResponse: {
+        status: 'queued',
+        report_ref: 'FTT-ABC234DE',
+        message: "Feedback saved. We'll send it when you're back online."
+      },
+      feedbackReportStatus: 202
+    });
+    renderApp();
+
+    const dialog = await openFeedbackModal();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/feedback/config'));
+    await fireEvent.input(within(dialog).getByLabelText('Description'), { target: { value: 'Please retry this later' } });
+    await fireEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
+
+    expect(await findToast("Feedback saved. We'll send it when you're back online. Ref: FTT-ABC234DE")).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Send Feedback' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the feedback modal open when sending fails', async () => {
+    const fetchMock = stubApiFetch({
+      feedbackReportResponse: { detail: 'Worker unavailable' },
+      feedbackReportStatus: 503
+    });
+    renderApp();
+
+    const dialog = await openFeedbackModal();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/feedback/config'));
+    await fireEvent.input(within(dialog).getByLabelText('Description'), { target: { value: 'This should stay editable' } });
+    await fireEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
+
+    expect(await findToast('Feedback request failed: Worker unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Send Feedback' })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Description')).toHaveValue('This should stay editable');
   });
 
   it('opens the session browser from the main menu and requests the first 100-session page', async () => {

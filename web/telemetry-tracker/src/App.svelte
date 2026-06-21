@@ -15,6 +15,7 @@
     fetchCaptureStatus,
     fetchDelta,
     fetchDiagnostics,
+    fetchFeedbackConfig,
     fetchGhost,
     fetchLapMarkers,
     fetchLapSamples,
@@ -34,6 +35,7 @@
     matchLapTrack,
     renameSession,
     restartListener,
+    sendFeedbackReport,
     setCaptureMode,
     startCapture,
     startSession,
@@ -50,6 +52,7 @@
   import FloatingSectionSummary from './FloatingSectionSummary.svelte';
   import IconButton from './IconButton.svelte';
   import ExportTelemetryModal from './ExportTelemetryModal.svelte';
+  import FeedbackModal from './FeedbackModal.svelte';
   import ImportTelemetryModal from './ImportTelemetryModal.svelte';
   import { actionForKey } from './KeyboardShortcuts';
   import LiveFollowButton from './LiveFollowButton.svelte';
@@ -86,6 +89,8 @@
     DashboardPlaybackSource,
     DashboardWidgetId,
     DiagnosticsPayload,
+    FeedbackConfig,
+    FeedbackReportInput,
     GhostResponse,
     GhostSample,
     IssueMarker,
@@ -138,6 +143,23 @@
   };
   const FALLBACK_LIVE_OVERLAY: OverlayId = 'speed';
   const ISSUES_UNAVAILABLE_DURING_RECORDING_MESSAGE = 'Issues overlay is only available for completed laps.';
+  const FALLBACK_FEEDBACK_CONFIG: FeedbackConfig = {
+    enabled: true,
+    categories: [
+      'Bug',
+      'Data Out setup',
+      'Telemetry recording',
+      'Map or route visualisation',
+      'Import or export',
+      'Performance',
+      'UI or UX',
+      'Other'
+    ],
+    max_description_length: 4000,
+    diagnostics_default: false,
+    diagnostics_description:
+      'Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines.'
+  };
   const VALID_OVERLAYS: OverlayId[] = ['issues', 'speed', 'inputs', 'grip', 'temperature', 'suspension', 'rpm'];
   const SUMMARY_FALLBACK_DRAG_LIMIT_PX = 600;
   const SUMMARY_VISIBLE_EDGE_PX = 80;
@@ -148,7 +170,7 @@
   const LEGACY_MENU_SAMPLE_EPSILON = 0.0001;
   const LAP_CONTEXT_CACHE_LIMIT = 8;
 
-  type UtilityModal = 'settings' | 'import' | 'export' | 'session-browser' | 'stats' | 'about';
+  type UtilityModal = 'settings' | 'import' | 'export' | 'session-browser' | 'stats' | 'feedback' | 'about';
   type ZoomCommand = 'in' | 'out' | 'fit';
   type ComparisonPayloads = {
     referencePayload: ReferenceResponse;
@@ -343,6 +365,9 @@
   let liveFollowPaused = false;
   let menuExpanded = false;
   let activeUtilityModal: UtilityModal | null = null;
+  let feedbackConfig: FeedbackConfig | null = null;
+  let feedbackConfigLoading = false;
+  let feedbackSubmitting = false;
   let historyDrawerOpen = Boolean(initialLoadedSessionId);
   let historyView: LapHistoryView = 'laps';
   let deletingLapIds: string[] = [];
@@ -959,6 +984,16 @@
       }, 4000);
     }
     return toast;
+  }
+
+  function updateToast(id: number, level: ToastMessage['level'], message: string, sticky = false) {
+    lastStatusEvent = message;
+    toasts = toasts.map((toast) => (toast.id === id ? { ...toast, level, message, sticky } : toast));
+    if (!sticky) {
+      window.setTimeout(() => {
+        toasts = toasts.filter((item) => item.id !== id);
+      }, 4000);
+    }
   }
 
   function dismissToast(id: number) {
@@ -2208,6 +2243,21 @@
     } else if (modal === 'export') {
       void loadExportDefaults();
       void refreshExportJobs();
+    } else if (modal === 'feedback') {
+      void loadFeedbackConfig();
+    }
+  }
+
+  async function loadFeedbackConfig() {
+    if (feedbackConfigLoading) return;
+    feedbackConfigLoading = true;
+    try {
+      feedbackConfig = await fetchFeedbackConfig();
+    } catch (error) {
+      feedbackConfig = FALLBACK_FEEDBACK_CONFIG;
+      pushToast('error', 'Unable to load feedback options', false);
+    } finally {
+      feedbackConfigLoading = false;
     }
   }
 
@@ -2396,6 +2446,27 @@
     pushToast('error', event.detail.message, false);
   }
 
+  async function handleSendFeedback(event: CustomEvent<FeedbackReportInput>) {
+    feedbackSubmitting = true;
+    const toast = pushToast('info', 'Sending feedback...', true);
+    try {
+      const response = await sendFeedbackReport(event.detail);
+      if (response.status === 'sent') {
+        updateToast(toast.id, 'success', `Feedback sent. Ref: ${response.report_ref}`);
+        closeUtilityModal();
+      } else if (response.status === 'queued') {
+        updateToast(toast.id, 'warning', `Feedback saved. We'll send it when you're back online. Ref: ${response.report_ref}`, true);
+        closeUtilityModal();
+      } else {
+        updateToast(toast.id, 'error', response.message ?? 'Feedback could not be sent.', true);
+      }
+    } catch (error) {
+      updateToast(toast.id, 'error', error instanceof Error ? error.message : 'Feedback could not be sent.', true);
+    } finally {
+      feedbackSubmitting = false;
+    }
+  }
+
   function handleWorldMapChange(event: CustomEvent<{ status: WorldMapStatus; message: string }>) {
     worldMapStatusVersion += 1;
     worldMapStatus = event.detail.status;
@@ -2521,6 +2592,9 @@
         break;
       case 'diagnostics':
         openDiagnostics(event.detail.opener);
+        break;
+      case 'send-feedback':
+        openUtilityModal('feedback');
         break;
       case 'settings':
         openUtilityModal('settings');
@@ -3291,6 +3365,14 @@
       loading={statsLoading}
       error={statsError}
       on:close={closeUtilityModal}
+    />
+  {/if}
+  {#if activeUtilityModal === 'feedback'}
+    <FeedbackModal
+      config={feedbackConfig ?? FALLBACK_FEEDBACK_CONFIG}
+      submitting={feedbackSubmitting || feedbackConfigLoading}
+      on:close={closeUtilityModal}
+      on:submit={handleSendFeedback}
     />
   {/if}
   {#if activeUtilityModal === 'about'}
