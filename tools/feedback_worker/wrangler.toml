@@ -1,0 +1,17 @@
+name = "forza-telemetry-feedback"
+main = "src/index.ts"
+compatibility_date = "2026-06-17"
+workers_dev = true
+preview_urls = false
+
+[vars]
+GITHUB_OWNER = "seevydeepy"
+GITHUB_REPO = "forza-telemetry-feedback"
+MAX_BODY_BYTES = "65536"
+REPORTER_LIMIT_PER_HOUR = "5"
+IP_LIMIT_PER_HOUR = "20"
+
+[[d1_databases]]
+binding = "FEEDBACK_DB"
+database_name = "forza-telemetry-feedback"
+database_id = "00000000-0000-0000-0000-000000000000"
