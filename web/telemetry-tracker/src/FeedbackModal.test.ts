@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import FeedbackModal from './FeedbackModal.svelte';
 import type { FeedbackConfig, FeedbackReportInput } from './types';
@@ -27,10 +27,11 @@ function renderFeedbackModal() {
 }
 
 describe('FeedbackModal', () => {
-  it('renders the send feedback dialog, categories, diagnostics tooltip, and default-on toggle', () => {
+  it('renders the send feedback dialog, categories, inline diagnostics control, and default-on toggle', () => {
     renderFeedbackModal();
 
     const dialog = screen.getByRole('dialog', { name: 'Send Feedback' });
+    expect(dialog).toHaveClass('feedback-modal-panel');
     const category = within(dialog).getByLabelText('Category');
     expect(category).toBeInTheDocument();
     for (const option of feedbackConfig.categories) {
@@ -38,12 +39,96 @@ describe('FeedbackModal', () => {
     }
     const diagnosticsCheckbox = within(dialog).getByRole('checkbox', { name: 'Include diagnostics' });
     expect(diagnosticsCheckbox).toBeChecked();
-    const tooltip = within(dialog).getByRole('tooltip', { hidden: true });
+    const footer = diagnosticsCheckbox.closest('.feedback-footer');
+    expect(footer).toContainElement(diagnosticsCheckbox);
+    expect(footer).toContainElement(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(footer).toContainElement(within(dialog).getByRole('button', { name: 'Send' }));
+
+    const tooltip = screen.getByRole('tooltip', { hidden: true });
+    expect(dialog).not.toContainElement(tooltip);
     expect(diagnosticsCheckbox).toHaveAttribute('aria-describedby', tooltip.id);
-    expect(diagnosticsCheckbox.closest('.feedback-diagnostics-row')).toContainElement(tooltip);
     expect(tooltip).toHaveClass('feedback-tooltip');
+    expect(tooltip).toHaveAttribute('aria-hidden', 'true');
     expect(tooltip).toHaveTextContent(feedbackConfig.diagnostics_description);
     expect(within(dialog).queryByText(/sending/i)).not.toBeInTheDocument();
+  });
+
+  it('positions the diagnostics tooltip from pointer movement without adding it to modal layout', async () => {
+    renderFeedbackModal();
+
+    const dialog = screen.getByRole('dialog', { name: 'Send Feedback' });
+    const diagnosticsCheckbox = within(dialog).getByRole('checkbox', { name: 'Include diagnostics' });
+    const diagnosticsControl = diagnosticsCheckbox.closest('label');
+    expect(diagnosticsControl).toBeInstanceOf(HTMLLabelElement);
+
+    const tooltip = screen.getByRole('tooltip', { hidden: true });
+    await fireEvent.pointerEnter(diagnosticsControl as HTMLLabelElement, { clientX: 120, clientY: 140 });
+
+    expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+    expect(tooltip).toHaveClass('feedback-tooltip-visible');
+    expect(tooltip).toHaveClass('feedback-tooltip');
+    expect(tooltip).toHaveStyle({ left: '134px', top: '154px' });
+
+    await fireEvent.pointerMove(diagnosticsControl as HTMLLabelElement, { clientX: 150, clientY: 170 });
+    expect(tooltip).toHaveStyle({ left: '164px', top: '184px' });
+
+    await fireEvent.pointerLeave(diagnosticsControl as HTMLLabelElement);
+    expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+    expect(tooltip).not.toHaveClass('feedback-tooltip-visible');
+  });
+
+  it('shows the diagnostics tooltip for keyboard focus', async () => {
+    renderFeedbackModal();
+
+    const dialog = screen.getByRole('dialog', { name: 'Send Feedback' });
+    const diagnosticsCheckbox = within(dialog).getByRole('checkbox', { name: 'Include diagnostics' });
+    const tooltip = screen.getByRole('tooltip', { hidden: true });
+
+    await fireEvent.focusIn(diagnosticsCheckbox);
+
+    expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+    expect(tooltip).toHaveClass('feedback-tooltip-visible');
+    expect(tooltip).toHaveStyle({ left: '14px', top: '14px' });
+
+    await fireEvent.focusOut(diagnosticsCheckbox);
+    expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+    expect(tooltip).not.toHaveClass('feedback-tooltip-visible');
+  });
+
+  it('keeps the diagnostics tooltip inside the viewport near screen edges', async () => {
+    const originalInnerWidth = window.innerWidth;
+    const originalInnerHeight = window.innerHeight;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 220 });
+
+    try {
+      renderFeedbackModal();
+
+      const dialog = screen.getByRole('dialog', { name: 'Send Feedback' });
+      const diagnosticsCheckbox = within(dialog).getByRole('checkbox', { name: 'Include diagnostics' });
+      const diagnosticsControl = diagnosticsCheckbox.closest('label');
+      expect(diagnosticsControl).toBeInstanceOf(HTMLLabelElement);
+
+      const tooltip = screen.getByRole('tooltip', { hidden: true });
+      vi.spyOn(tooltip, 'getBoundingClientRect').mockReturnValue({
+        bottom: 80,
+        height: 80,
+        left: 0,
+        right: 280,
+        top: 0,
+        width: 280,
+        x: 0,
+        y: 0,
+        toJSON: () => ({})
+      });
+
+      await fireEvent.pointerEnter(diagnosticsControl as HTMLLabelElement, { clientX: 300, clientY: 200 });
+
+      await waitFor(() => expect(tooltip).toHaveStyle({ left: '28px', top: '128px' }));
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth });
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight });
+    }
   });
 
   it('changes the description placeholder by category', async () => {

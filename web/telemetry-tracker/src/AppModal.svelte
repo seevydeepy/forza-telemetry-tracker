@@ -6,6 +6,7 @@
   export let ariaLabel: string | null = null;
   export let closeLabel: string | null = null;
   export let labelledById = `modal-title-${Math.random().toString(36).slice(2)}`;
+  export let panelClass = '';
 
   const dispatch = createEventDispatcher<{ close: void }>();
   const FOCUSABLE_SELECTOR = [
@@ -95,7 +96,7 @@
 <div class="modal-backdrop" role="presentation" on:click={handleBackdropClick}>
   <div
     bind:this={panel}
-    class="modal-panel"
+    class={`modal-panel${panelClass ? ` ${panelClass}` : ''}`}
     role="dialog"
     aria-modal="true"
     aria-label={ariaLabel ?? undefined}

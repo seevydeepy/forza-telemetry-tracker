@@ -2297,7 +2297,8 @@ describe('App', () => {
 
     const dialog = await openFeedbackModal();
 
-    const tooltip = await within(dialog).findByRole('tooltip', { hidden: true });
+    const tooltip = await screen.findByRole('tooltip', { hidden: true });
+    expect(dialog).not.toContainElement(tooltip);
     expect(tooltip).toHaveTextContent(defaultFeedbackConfig.diagnostics_description);
     expect(within(dialog).getByRole('checkbox', { name: 'Include diagnostics' })).toBeChecked();
     expect(within(dialog).getByLabelText('Description')).toHaveAttribute(
