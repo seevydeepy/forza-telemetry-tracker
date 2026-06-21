@@ -14,4 +14,4 @@ IP_LIMIT_PER_HOUR = "20"
 [[d1_databases]]
 binding = "FEEDBACK_DB"
 database_name = "forza-telemetry-feedback"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "1e8fa0e2-c29b-410a-bb9c-8b852c9155b3"

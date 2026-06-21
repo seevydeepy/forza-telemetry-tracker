@@ -11,8 +11,9 @@ Do not commit credentials, private keys, access tokens, `.dev.vars`, Wrangler st
 - Private triage repository: `seevydeepy/forza-telemetry-feedback`
 - Cloudflare Worker name: `forza-telemetry-feedback`
 - D1 database name: `forza-telemetry-feedback`
+- D1 database id: `1e8fa0e2-c29b-410a-bb9c-8b852c9155b3`
 - D1 binding: `FEEDBACK_DB`
-- Default Worker route: `https://forza-telemetry-feedback.<cloudflare-subdomain>.workers.dev`
+- Default Worker route: `https://forza-telemetry-feedback.cvdp.workers.dev`
 - Report endpoint: `POST /v1/reports`
 - Health endpoint: `GET /health`
 
@@ -87,7 +88,7 @@ Create the D1 database:
 npx wrangler d1 create forza-telemetry-feedback --binding FEEDBACK_DB
 ```
 
-Copy the returned `database_id` UUID into `tools/feedback_worker/wrangler.toml`, replacing only the sentinel value:
+The production D1 database id is already checked into `tools/feedback_worker/wrangler.toml`. If the database is ever recreated, copy the returned `database_id` UUID into that file:
 
 ```toml
 [[d1_databases]]
@@ -119,10 +120,10 @@ Deploy:
 npx wrangler deploy
 ```
 
-The default deployed URL should be:
+The default deployed URL is:
 
 ```text
-https://forza-telemetry-feedback.<cloudflare-subdomain>.workers.dev
+https://forza-telemetry-feedback.cvdp.workers.dev
 ```
 
 ## Smoke Checks
@@ -130,14 +131,14 @@ https://forza-telemetry-feedback.<cloudflare-subdomain>.workers.dev
 Check health first:
 
 ```powershell
-$workerBaseUrl = "https://forza-telemetry-feedback.<cloudflare-subdomain>.workers.dev"
+$workerBaseUrl = "https://forza-telemetry-feedback.cvdp.workers.dev"
 Invoke-RestMethod -Method Get -Uri "$workerBaseUrl/health"
 ```
 
 Then submit one manual report. Use a unique `report_ref` matching `FTT-[A-Z2-7]{8}` and a GUID `reporter_id`:
 
 ```powershell
-$workerBaseUrl = "https://forza-telemetry-feedback.<cloudflare-subdomain>.workers.dev"
+$workerBaseUrl = "https://forza-telemetry-feedback.cvdp.workers.dev"
 $body = @{
   schema_version = 1
   report_ref = "FTT-ABC234DE"
@@ -185,13 +186,13 @@ For packaged releases, pass the full report endpoint to the release build:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\build-desktop-release.ps1 `
   -Version "0.1.0" `
-  -FeedbackEndpoint "https://forza-telemetry-feedback.<cloudflare-subdomain>.workers.dev/v1/reports"
+  -FeedbackEndpoint "https://forza-telemetry-feedback.cvdp.workers.dev/v1/reports"
 ```
 
 For local developer testing:
 
 ```powershell
-$env:FORZA_TRACKER_FEEDBACK_ENDPOINT = "https://forza-telemetry-feedback.<cloudflare-subdomain>.workers.dev/v1/reports"
+$env:FORZA_TRACKER_FEEDBACK_ENDPOINT = "https://forza-telemetry-feedback.cvdp.workers.dev/v1/reports"
 python tools\run-telemetry-tracker.py
 ```
 
