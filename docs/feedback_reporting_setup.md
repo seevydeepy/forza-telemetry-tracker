@@ -46,9 +46,23 @@ type:feedback
 
 The Worker retries issue creation without labels if a label is missing, so label setup should not block deployment.
 
+To create the suggested labels with `gh`:
+
+```powershell
+$repo = "seevydeepy/forza-telemetry-feedback"
+gh label create "type:bug" --repo $repo --force
+gh label create "area:data-out" --repo $repo --force
+gh label create "area:capture" --repo $repo --force
+gh label create "area:map-route" --repo $repo --force
+gh label create "area:import-export" --repo $repo --force
+gh label create "area:performance" --repo $repo --force
+gh label create "area:ui" --repo $repo --force
+gh label create "type:feedback" --repo $repo --force
+```
+
 ## GitHub App
 
-Create a dedicated GitHub App named `Forza Telemetry Feedback` owned by the target account or organization. Install it only on `seevydeepy/forza-telemetry-feedback`.
+Create a dedicated GitHub App named `Forza Telemetry Feedback` owned by the target account or organization. For the `seevydeepy` deployment, create and install it from the `seevydeepy` account context, then install it only on `seevydeepy/forza-telemetry-feedback`.
 
 Required repository permissions:
 
@@ -61,6 +75,15 @@ The Worker uses the GitHub App installation token to:
 - Create a new issue when no matching issue exists.
 - Attach category labels when they already exist.
 
+After creating the App:
+
+1. Open the GitHub App settings page.
+2. Generate a private key and download the PEM file.
+3. Record the App ID from the same settings page.
+4. Install the App on selected repositories only.
+5. Select `seevydeepy/forza-telemetry-feedback` and no public repositories.
+6. Record the installation ID from the installation URL or API response.
+
 Record these values for Cloudflare Worker secrets:
 
 - `GITHUB_APP_ID`
@@ -72,6 +95,12 @@ Record these values for Cloudflare Worker secrets:
 Before deploying a target repository change, confirm the GitHub App installation includes only the intended private repository. If smoke testing fails because the App cannot create issues, authorize the App for `seevydeepy/forza-telemetry-feedback` and redeploy, or roll back the Worker configuration.
 
 ## Cloudflare Provisioning
+
+Prerequisites:
+
+- A Cloudflare account with Workers and D1 available.
+- Wrangler authenticated to the account that should own `forza-telemetry-feedback`.
+- The repository checked out on a trusted machine, because Worker secrets are entered locally.
 
 Run commands from the Worker scaffold:
 
@@ -112,7 +141,13 @@ npx wrangler secret put GITHUB_PRIVATE_KEY_PEM
 npx wrangler secret put REPORT_HMAC_SECRET
 ```
 
-`REPORT_HMAC_SECRET` is server-only. It is used to hash reporter identifiers and request IP addresses for rate limiting and anti-abuse checks. It is not a client signing key.
+`REPORT_HMAC_SECRET` is server-only. It is used to hash reporter identifiers and request IP addresses for rate limiting and anti-abuse checks. It is not a client signing key. Use at least 32 bytes of random entropy; for example, generate a value with:
+
+```powershell
+$bytes = [byte[]]::new(32)
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+[Convert]::ToBase64String($bytes)
+```
 
 Deploy:
 
@@ -176,6 +211,7 @@ Expected result: a JSON response with `ok = true`, the same `report_ref`, and a 
 - No issue was created in the public `seevydeepy/forza-telemetry-tracker` repository.
 - The issue body does not include raw public IP addresses, access tokens, private keys, local user names, telemetry databases, map cache files, screenshots, exports, or game files.
 - Reposting the same `report_ref` returns the existing issue instead of creating a duplicate.
+- Close the private smoke-test issue after verification.
 
 ## Client Endpoint Activation
 
@@ -197,6 +233,16 @@ python tools\run-telemetry-tracker.py
 ```
 
 Leave the endpoint unset in forks or temporary builds that should not submit live reports. When unset, user-attempted reports are saved to the local retry outbox instead of being sent.
+
+## Rollback
+
+If production smoke checks fail, stop sending new reports before changing the Worker:
+
+1. Remove `FeedbackEndpoint` from release metadata or unset `FORZA_TRACKER_FEEDBACK_ENDPOINT`.
+2. Rebuild or restart the local app so `GET /api/feedback/config` reports `endpoint_configured = false`.
+3. Confirm new feedback attempts are saved to the local retry outbox instead of sent.
+
+If the Worker deployment itself must be rolled back, use Wrangler's deployment history or redeploy the last known-good Worker version. Keep the GitHub App installed only on the private triage repository while investigating.
 
 ## Privacy Checks
 

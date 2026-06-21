@@ -214,7 +214,9 @@ function scrubSensitiveText(value: string | undefined, rawReporterId: string, ra
     .replace(/\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g, "[redacted ip address]")
     .replace(/\b(?:[A-F0-9]{1,4}:){1,7}:[A-F0-9]{0,4}\b/gi, "[redacted ip address]")
     .replace(/\b(?:[A-F0-9]{1,4}:){2,7}[A-F0-9]{0,4}\b/gi, "[redacted ip address]")
-    .replace(/([A-Za-z]:\\Users\\)([^\\\r\n]+)/g, "$1[redacted-user]");
+    .replace(/([A-Za-z]:\\Users\\)([^\\\r\n]+)/g, "$1[redacted-user]")
+    .replace(/(\/Users\/)([^/\r\n]+)/g, "$1[redacted-user]")
+    .replace(/(\/home\/)([^/\r\n]+)/g, "$1[redacted-user]");
 }
 
 function sanitizeStructuredValue(value: unknown, rawReporterId: string, rawIp: string | null): unknown {

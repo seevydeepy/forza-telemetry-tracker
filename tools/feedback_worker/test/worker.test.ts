@@ -687,6 +687,8 @@ describe("feedback worker", () => {
             "email player@example.com",
             "connect 203.0.113.77 and 2001:db8::1",
             "load C:\\Users\\Alice\\AppData\\Local\\Forza Telemetry Tracker\\logs\\app.log",
+            "mac log /Users/Alice/Library/Application Support/Forza Telemetry Tracker/app.log",
+            "linux log /home/alice/.local/share/forza-telemetry-tracker/app.log",
             "env_TOKEN=env_secret_value"
           ].join("\n")
         }
@@ -704,6 +706,8 @@ describe("feedback worker", () => {
     expect(body).not.toContain("203.0.113.77");
     expect(body).not.toContain("2001:db8::1");
     expect(body).not.toContain("C:\\Users\\Alice");
+    expect(body).not.toContain("/Users/Alice");
+    expect(body).not.toContain("/home/alice");
     expect(body).not.toContain("env_secret_value");
     expect(body).toContain("[redacted token]");
     expect(body).toContain("api_key=[redacted secret]");
@@ -712,5 +716,7 @@ describe("feedback worker", () => {
     expect(body).toContain("[redacted email]");
     expect(body).toContain("[redacted ip address]");
     expect(body).toContain("C:\\Users\\[redacted-user]");
+    expect(body).toContain("/Users/[redacted-user]");
+    expect(body).toContain("/home/[redacted-user]");
   });
 });
