@@ -10,6 +10,7 @@ param(
     [string]$Channel = "stable",
     [string]$ReleaseDate = "",
     [string]$GitSha = "",
+    [string]$FeedbackEndpoint = "",
     [string]$WebView2StandaloneInstaller = "",
     [switch]$SkipInstaller,
     [switch]$SkipSmoke
@@ -51,6 +52,9 @@ Invoke-Step "Generate release metadata" {
         git_sha = $GitSha
         repository = $Repository
         channel = $Channel
+    }
+    if ($FeedbackEndpoint) {
+        $metadata.feedback_endpoint = $FeedbackEndpoint
     }
     New-Item -ItemType Directory -Force -Path "build" | Out-Null
     $metadataJson = ($metadata | ConvertTo-Json -Depth 5) + [Environment]::NewLine

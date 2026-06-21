@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -47,6 +47,11 @@ from telemetry_tracker.export import (
     TelemetryExportResult,
     export_estimate,
     export_telemetry,
+)
+from telemetry_tracker.feedback import (
+    FeedbackRequest as FeedbackServiceRequest,
+    FeedbackService,
+    FeedbackValidationError,
 )
 from telemetry_tracker.ingest import IngestService
 from telemetry_tracker.lap_detection import LapDetector
@@ -105,6 +110,25 @@ ANALYSIS_SUMMARY_KEYS = frozenset(
         "end_sequence",
     }
 )
+
+
+class FeedbackReportRequest(BaseModel):
+    category: str
+    description: str
+    include_diagnostics: bool = False
+    source: str | None = None
+
+    def to_feedback_request(self) -> FeedbackServiceRequest:
+        return FeedbackServiceRequest(
+            category=self.category,
+            description=self.description,
+            include_diagnostics=bool(self.include_diagnostics),
+            source=self.source,
+        )
+
+
+class FeedbackRetryRequest(BaseModel):
+    limit: int = 5
 
 
 class TelemetryExportJobRequest(BaseModel):
@@ -2236,6 +2260,14 @@ def create_app(
     app.state.release_metadata = release_metadata
     app.state.update_service = update_service
     app.state.update_check_lock = asyncio.Lock()
+    app.state.feedback_service = FeedbackService(
+        store=store,
+        endpoint=release_metadata.feedback_endpoint,
+        runtime_paths=runtime_paths,
+        release_metadata=release_metadata,
+        listener_status=listener.status,
+        capture_status=capture.status,
+    )
     default_export_dir = (
         Path(runtime_paths.exports_dir)
         if runtime_paths is not None
@@ -2400,6 +2432,27 @@ def create_app(
             listener_status=listener.status(),
             capture_status=capture.status(),
         )
+
+    @app.get("/api/feedback/config")
+    async def feedback_config() -> dict:
+        return await app.state.feedback_service.config()
+
+    @app.post("/api/feedback/reports")
+    async def create_feedback_report(request: FeedbackReportRequest):
+        try:
+            result = await app.state.feedback_service.submit(request.to_feedback_request())
+        except FeedbackValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if result["status"] == "queued":
+            return JSONResponse(result, status_code=202)
+        if result["status"] == "rejected":
+            return JSONResponse(result, status_code=422)
+        return result
+
+    @app.post("/api/feedback/retry-pending")
+    async def retry_pending_feedback(request: FeedbackRetryRequest | None = None) -> dict:
+        limit = request.limit if request is not None else 5
+        return await app.state.feedback_service.retry_pending(limit=limit)
 
     @app.delete("/api/telemetry/delete-all")
     async def delete_all_telemetry() -> dict:

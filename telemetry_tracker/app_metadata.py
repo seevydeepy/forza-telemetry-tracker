@@ -17,6 +17,7 @@ ENV_RELEASE_DATE = "FORZA_TRACKER_RELEASE_DATE"
 ENV_GIT_SHA = "FORZA_TRACKER_GIT_SHA"
 ENV_RELEASE_REPOSITORY = "FORZA_TRACKER_RELEASE_REPOSITORY"
 ENV_UPDATE_CHANNEL = "FORZA_TRACKER_UPDATE_CHANNEL"
+ENV_FEEDBACK_ENDPOINT = "FORZA_TRACKER_FEEDBACK_ENDPOINT"
 
 
 def _clean_text(value: Any) -> str | None:
@@ -35,6 +36,7 @@ class ReleaseMetadata:
     git_sha: str | None = None
     repository: str = DEFAULT_RELEASE_REPOSITORY
     channel: str = DEFAULT_UPDATE_CHANNEL
+    feedback_endpoint: str | None = None
     packaged: bool = field(default_factory=lambda: bool(getattr(sys, "frozen", False)))
 
     @property
@@ -61,6 +63,12 @@ def metadata_from_mapping(data: dict[str, Any], *, packaged: bool | None = None)
         git_sha=_clean_text(data.get("git_sha") or data.get("gitSha")),
         repository=_clean_text(data.get("repository") or data.get("repo")) or DEFAULT_RELEASE_REPOSITORY,
         channel=_clean_text(data.get("channel")) or DEFAULT_UPDATE_CHANNEL,
+        feedback_endpoint=_clean_text(
+            data.get("feedback_endpoint")
+            or data.get("feedbackEndpoint")
+            or data.get("feedback_url")
+            or data.get("feedbackUrl")
+        ),
         packaged=bool(getattr(sys, "frozen", False)) if packaged is None else packaged,
     )
 
@@ -89,6 +97,7 @@ def load_release_metadata(path: Path | None = None) -> ReleaseMetadata:
         "git_sha": os.environ.get(ENV_GIT_SHA),
         "repository": os.environ.get(ENV_RELEASE_REPOSITORY),
         "channel": os.environ.get(ENV_UPDATE_CHANNEL),
+        "feedback_endpoint": os.environ.get(ENV_FEEDBACK_ENDPOINT),
     }
     for key, value in env_overrides.items():
         if _clean_text(value) is not None:
@@ -105,6 +114,7 @@ def write_release_metadata(path: Path, metadata: ReleaseMetadata) -> None:
         "git_sha": metadata.git_sha,
         "repository": metadata.repository,
         "channel": metadata.channel,
+        "feedback_endpoint": metadata.feedback_endpoint,
     }
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

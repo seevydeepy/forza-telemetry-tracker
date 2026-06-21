@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import httpx
 
 from telemetry_tracker.app_metadata import (
+    ENV_FEEDBACK_ENDPOINT,
     ENV_RELEASE_REPOSITORY,
     ENV_UPDATE_CHANNEL,
     ENV_VERSION,
@@ -63,6 +64,7 @@ class AppUpdateSemVerTests(unittest.TestCase):
                     git_sha="abc123",
                     repository="owner/repo",
                     channel="stable",
+                    feedback_endpoint="https://old.example/v1/reports",
                 ),
             )
             with patch.dict(
@@ -71,6 +73,7 @@ class AppUpdateSemVerTests(unittest.TestCase):
                     ENV_VERSION: "1.0.1",
                     ENV_RELEASE_REPOSITORY: "override/repo",
                     ENV_UPDATE_CHANNEL: "stable",
+                    ENV_FEEDBACK_ENDPOINT: "https://feedback.example/v1/reports",
                 },
                 clear=False,
             ):
@@ -79,12 +82,13 @@ class AppUpdateSemVerTests(unittest.TestCase):
         self.assertEqual(metadata.version, "1.0.1")
         self.assertEqual(metadata.release_date, "2026-06-13")
         self.assertEqual(metadata.repository, "override/repo")
+        self.assertEqual(metadata.feedback_endpoint, "https://feedback.example/v1/reports")
 
     def test_release_metadata_loads_file_with_utf8_bom(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "release-metadata.json"
             path.write_bytes(
-                b'\xef\xbb\xbf{"version":"0.1.4","channel":"stable","repository":"owner/repo"}'
+                b'\xef\xbb\xbf{"version":"0.1.4","channel":"stable","repository":"owner/repo","feedback_endpoint":"https://feedback.example/v1/reports"}'
             )
 
             metadata = load_release_metadata(path)
@@ -92,6 +96,7 @@ class AppUpdateSemVerTests(unittest.TestCase):
         self.assertEqual(metadata.version, "0.1.4")
         self.assertEqual(metadata.channel, "stable")
         self.assertEqual(metadata.repository, "owner/repo")
+        self.assertEqual(metadata.feedback_endpoint, "https://feedback.example/v1/reports")
 
     def test_semver_parser_accepts_stable_tags_only(self):
         self.assertEqual(SemVer.parse("v1.2.3"), SemVer(1, 2, 3))

@@ -186,6 +186,102 @@ class TrackerAppTests(unittest.TestCase):
         self.assertEqual(payload["repository"], "owner/repo")
         self.assertEqual(payload["updates"], {"supported": True, "release_access": "public"})
 
+    def test_feedback_config_endpoint_returns_public_form_metadata(self):
+        app = create_app(db_path=Path(tempfile.mkdtemp()) / "telemetry_tracker.sqlite3")
+
+        with TestClient(app) as client:
+            response = client.get("/api/feedback/config")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["enabled"], True)
+        self.assertIn("Bug", payload["categories"])
+        self.assertIn("Other", payload["categories"])
+        self.assertEqual(payload["max_description_length"], 4000)
+        self.assertEqual(payload["diagnostics_default"], False)
+        self.assertIn("recent sanitized app log", payload["diagnostics_description"])
+
+    def test_feedback_report_endpoint_queues_when_endpoint_is_not_configured(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = create_app(db_path=Path(tmp) / "telemetry_tracker.sqlite3")
+
+            with patch("telemetry_tracker.feedback.generate_report_ref", return_value="FTT-ABC234DE"):
+                with TestClient(app) as client:
+                    response = client.post(
+                        "/api/feedback/reports",
+                        json={
+                            "category": "Bug",
+                            "description": "Dashboard failed while loading a session",
+                            "include_diagnostics": False,
+                            "source": "desktop-app",
+                        },
+                    )
+
+            self.assertEqual(response.status_code, 202)
+            self.assertEqual(response.json()["status"], "queued")
+            self.assertEqual(response.json()["report_ref"], "FTT-ABC234DE")
+            with app.state.store.connect() as con:
+                row = con.execute(
+                    "SELECT report_ref, status FROM feedback_outbox WHERE report_ref = ?",
+                    ("FTT-ABC234DE",),
+                ).fetchone()
+            self.assertEqual(tuple(row), ("FTT-ABC234DE", "pending"))
+
+    def test_feedback_report_endpoint_rejects_local_validation_errors(self):
+        app = create_app(db_path=Path(tempfile.mkdtemp()) / "telemetry_tracker.sqlite3")
+
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/feedback/reports",
+                json={"category": "Bug", "description": "no"},
+            )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("description", response.json()["detail"])
+
+    def test_feedback_report_endpoint_returns_sent_result(self):
+        class FakeFeedbackService:
+            async def submit(self, request):
+                self.request = request
+                return {
+                    "status": "sent",
+                    "report_ref": "FTT-ABC234DE",
+                    "issue_number": 101,
+                    "issue_url": "https://github.com/seevydeepy/forza-telemetry-feedback/issues/101",
+                }
+
+        app = create_app(db_path=Path(tempfile.mkdtemp()) / "telemetry_tracker.sqlite3")
+        app.state.feedback_service = FakeFeedbackService()
+
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/feedback/reports",
+                json={
+                    "category": "Other",
+                    "description": "A sent fake report",
+                    "source": "desktop-app",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["status"], "sent")
+        self.assertEqual(payload["issue_number"], 101)
+
+    def test_feedback_retry_endpoint_delegates_limit(self):
+        class FakeFeedbackService:
+            async def retry_pending(self, limit=5):
+                return {"attempted": limit, "sent": 0, "queued": 0, "rejected": 0, "reports": []}
+
+        app = create_app(db_path=Path(tempfile.mkdtemp()) / "telemetry_tracker.sqlite3")
+        app.state.feedback_service = FakeFeedbackService()
+
+        with TestClient(app) as client:
+            response = client.post("/api/feedback/retry-pending", json={"limit": 3})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["attempted"], 3)
+
     def test_update_check_endpoint_delegates_force_flag(self):
         update_service = FakeUpdateService()
         app = create_app(db_path=Path(tempfile.mkdtemp()) / "telemetry_tracker.sqlite3", update_service=update_service)
