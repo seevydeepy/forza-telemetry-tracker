@@ -11,7 +11,7 @@ from typing import Iterable
 
 from telemetry_tracker.track_assets import validate_asset, validate_transform
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 LOCAL_USER_ID = "00000000-0000-0000-0000-000000000001"
 SUPPORTED_REFERENCE_SCOPES = frozenset({"track", "track_car", "track_car_build"})
 SUPPORTED_WORLD_MAP_SEASONS = frozenset({"spring", "summer", "autumn", "winter"})
@@ -762,6 +762,7 @@ class TelemetryStore:
             self._apply_track_catalog_migrations(con)
             self._apply_track_match_migrations(con)
             self._apply_v11_lifetime_stats_migrations(con)
+            self._apply_feedback_migrations(con)
             self._ensure_reference_context_indexes(con)
             now_ms = _now_ms()
             for version in range(1, SCHEMA_VERSION + 1):
@@ -787,6 +788,176 @@ class TelemetryStore:
                 """,
                 (LOCAL_USER_ID, "auto", "127.0.0.1", 5400, "issues", "imperial", now_ms),
             )
+
+    def feedback_state_value(self, key: str) -> str | None:
+        with self.connect() as con:
+            row = con.execute(
+                "SELECT value FROM feedback_state WHERE key = ?",
+                (key,),
+            ).fetchone()
+        return None if row is None else str(row["value"])
+
+    def set_feedback_state_value(self, key: str, value: str) -> None:
+        now_ms = _now_ms()
+        with self.connect() as con:
+            con.execute(
+                """
+                INSERT INTO feedback_state(key, value, updated_at_ms)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                  value = excluded.value,
+                  updated_at_ms = excluded.updated_at_ms
+                """,
+                (key, value, now_ms),
+            )
+
+    def feedback_report_exists(self, report_ref: str) -> bool:
+        with self.connect() as con:
+            row = con.execute(
+                "SELECT 1 FROM feedback_outbox WHERE report_ref = ?",
+                (report_ref,),
+            ).fetchone()
+        return row is not None
+
+    def enqueue_feedback_report(
+        self,
+        report_ref: str,
+        payload_json: str,
+        now_ms: int,
+        next_attempt_at_ms: int,
+    ) -> None:
+        with self.connect() as con:
+            con.execute(
+                """
+                INSERT INTO feedback_outbox(
+                    report_ref, payload_json, status, attempt_count, last_error,
+                    created_at_ms, updated_at_ms, next_attempt_at_ms,
+                    issue_number, issue_url
+                )
+                VALUES (?, ?, 'pending', 0, NULL, ?, ?, ?, NULL, NULL)
+                ON CONFLICT(report_ref) DO UPDATE SET
+                  payload_json = excluded.payload_json,
+                  status = CASE
+                    WHEN feedback_outbox.status = 'sent' THEN feedback_outbox.status
+                    ELSE 'pending'
+                  END,
+                  updated_at_ms = excluded.updated_at_ms,
+                  next_attempt_at_ms = CASE
+                    WHEN feedback_outbox.status = 'sent' THEN feedback_outbox.next_attempt_at_ms
+                    ELSE excluded.next_attempt_at_ms
+                  END
+                """,
+                (report_ref, payload_json, int(now_ms), int(now_ms), int(next_attempt_at_ms)),
+            )
+
+    def mark_feedback_report_sent(
+        self,
+        report_ref: str,
+        issue_number: int | None,
+        issue_url: str | None,
+        now_ms: int,
+    ) -> None:
+        with self.connect() as con:
+            con.execute(
+                """
+                UPDATE feedback_outbox
+                SET status = 'sent',
+                    last_error = NULL,
+                    updated_at_ms = ?,
+                    next_attempt_at_ms = ?,
+                    issue_number = ?,
+                    issue_url = ?
+                WHERE report_ref = ?
+                """,
+                (int(now_ms), int(now_ms), issue_number, issue_url, report_ref),
+            )
+
+    def mark_feedback_report_failed(
+        self,
+        report_ref: str,
+        error: str,
+        now_ms: int,
+        next_attempt_at_ms: int,
+    ) -> None:
+        with self.connect() as con:
+            con.execute(
+                """
+                UPDATE feedback_outbox
+                SET status = 'pending',
+                    attempt_count = attempt_count + 1,
+                    last_error = ?,
+                    updated_at_ms = ?,
+                    next_attempt_at_ms = ?
+                WHERE report_ref = ? AND status <> 'sent'
+                """,
+                (error, int(now_ms), int(next_attempt_at_ms), report_ref),
+            )
+
+    def delete_feedback_report(self, report_ref: str) -> None:
+        with self.connect() as con:
+            con.execute(
+                "DELETE FROM feedback_outbox WHERE report_ref = ?",
+                (report_ref,),
+            )
+
+    def pending_feedback_reports(self, now_ms: int, limit: int = 5) -> list[dict]:
+        with self.connect() as con:
+            rows = con.execute(
+                """
+                SELECT report_ref, payload_json, status, attempt_count, last_error,
+                       created_at_ms, updated_at_ms, next_attempt_at_ms,
+                       issue_number, issue_url
+                FROM feedback_outbox
+                WHERE status = 'pending'
+                  AND next_attempt_at_ms <= ?
+                ORDER BY created_at_ms, report_ref
+                LIMIT ?
+                """,
+                (int(now_ms), max(1, int(limit))),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def prune_feedback_outbox(
+        self,
+        now_ms: int,
+        max_pending: int = 25,
+        ttl_ms: int = 30 * 24 * 60 * 60 * 1000,
+    ) -> None:
+        cutoff_ms = int(now_ms) - int(ttl_ms)
+        max_pending = max(0, int(max_pending))
+        with self.connect() as con:
+            con.execute(
+                """
+                DELETE FROM feedback_outbox
+                WHERE status <> 'sent'
+                  AND created_at_ms < ?
+                """,
+                (cutoff_ms,),
+            )
+            con.execute(
+                """
+                DELETE FROM feedback_outbox
+                WHERE status = 'sent'
+                  AND updated_at_ms < ?
+                """,
+                (cutoff_ms,),
+            )
+            if max_pending == 0:
+                con.execute("DELETE FROM feedback_outbox WHERE status = 'pending'")
+            else:
+                con.execute(
+                    """
+                    DELETE FROM feedback_outbox
+                    WHERE report_ref IN (
+                        SELECT report_ref
+                        FROM feedback_outbox
+                        WHERE status = 'pending'
+                        ORDER BY created_at_ms DESC, report_ref DESC
+                        LIMIT -1 OFFSET ?
+                    )
+                    """,
+                    (max_pending,),
+                )
 
     def database_size_info(self) -> dict:
         with self.connect() as con:
@@ -2025,6 +2196,38 @@ class TelemetryStore:
         )
         if should_backfill:
             self._backfill_lifetime_stat_laps(con)
+
+    def _apply_feedback_migrations(self, con: sqlite3.Connection) -> None:
+        """Create local feedback identity and retry outbox tables."""
+
+        con.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS feedback_state (
+              key TEXT PRIMARY KEY,
+              value TEXT NOT NULL,
+              updated_at_ms INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS feedback_outbox (
+              report_ref TEXT PRIMARY KEY,
+              payload_json TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT 'pending',
+              attempt_count INTEGER NOT NULL DEFAULT 0,
+              last_error TEXT,
+              created_at_ms INTEGER NOT NULL,
+              updated_at_ms INTEGER NOT NULL,
+              next_attempt_at_ms INTEGER NOT NULL,
+              issue_number INTEGER,
+              issue_url TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_feedback_outbox_pending
+            ON feedback_outbox(status, next_attempt_at_ms);
+
+            CREATE INDEX IF NOT EXISTS idx_feedback_outbox_updated
+            ON feedback_outbox(updated_at_ms);
+            """
+        )
 
     def _backfill_lifetime_stat_laps(self, con: sqlite3.Connection) -> None:
         """Backfill lifetime stats from existing completed local laps.

@@ -405,12 +405,117 @@ class TelemetryStoreTests(unittest.TestCase):
             )
             self.assertIn("comparison_refs", tables)
             self.assertTrue(ISSUE_MARKER_DETAIL_COLUMNS.issubset(issue_marker_columns))
-            self.assertEqual(SCHEMA_VERSION, 11)
+            self.assertEqual(SCHEMA_VERSION, 12)
             self.assertEqual(migration_versions, list(range(1, SCHEMA_VERSION + 1)))
             self.assertIsInstance(user, sqlite3.Row)
             self.assertEqual(user[1], "Local User")
             self.assertEqual(tuple(identity), ("local", "local"))
             self.assertEqual(tuple(settings), ("auto", "127.0.0.1", 5400, "imperial"))
+
+    def test_migrate_creates_feedback_tables_and_helpers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = TelemetryStore(Path(tmp) / "telemetry_tracker.sqlite3")
+            store.migrate()
+            store.migrate()
+
+            now_ms = 2_000_000
+            with store.connect() as con:
+                tables = {
+                    row["name"]
+                    for row in con.execute(
+                        "SELECT name FROM sqlite_master WHERE type = 'table'"
+                    ).fetchall()
+                }
+                outbox_columns = {
+                    row["name"]: row
+                    for row in con.execute("PRAGMA table_info(feedback_outbox)").fetchall()
+                }
+                outbox_indexes = {
+                    row["name"]
+                    for row in con.execute("PRAGMA index_list('feedback_outbox')").fetchall()
+                }
+                version_counts = {
+                    row["version"]: row["version_count"]
+                    for row in con.execute(
+                        """
+                        SELECT version, COUNT(*) AS version_count
+                        FROM schema_migrations
+                        GROUP BY version
+                        """
+                    ).fetchall()
+                }
+
+            self.assertEqual(SCHEMA_VERSION, 12)
+            self.assertIn("feedback_state", tables)
+            self.assertIn("feedback_outbox", tables)
+            self.assertEqual(outbox_columns["report_ref"]["pk"], 1)
+            self.assertIn("idx_feedback_outbox_pending", outbox_indexes)
+            self.assertIn("idx_feedback_outbox_updated", outbox_indexes)
+            self.assertEqual(
+                version_counts,
+                {version: 1 for version in range(1, SCHEMA_VERSION + 1)},
+            )
+
+            self.assertIsNone(store.feedback_state_value("feedback_reporter_id"))
+            store.set_feedback_state_value("feedback_reporter_id", "reporter-1")
+            self.assertEqual(
+                store.feedback_state_value("feedback_reporter_id"),
+                "reporter-1",
+            )
+
+            store.enqueue_feedback_report("FTT-AAAA2222", '{"a":1}', now_ms, now_ms)
+            self.assertTrue(store.feedback_report_exists("FTT-AAAA2222"))
+            self.assertEqual(
+                [row["report_ref"] for row in store.pending_feedback_reports(now_ms, limit=5)],
+                ["FTT-AAAA2222"],
+            )
+            store.mark_feedback_report_failed(
+                "FTT-AAAA2222",
+                "network down",
+                now_ms + 100,
+                now_ms + 1_000,
+            )
+            self.assertEqual(store.pending_feedback_reports(now_ms + 500), [])
+            pending = store.pending_feedback_reports(now_ms + 1_000)
+            self.assertEqual(pending[0]["attempt_count"], 1)
+            self.assertEqual(pending[0]["last_error"], "network down")
+            store.mark_feedback_report_sent(
+                "FTT-AAAA2222",
+                101,
+                "https://github.com/seevydeepy/forza-telemetry-feedback/issues/101",
+                now_ms + 2_000,
+            )
+            self.assertEqual(store.pending_feedback_reports(now_ms + 2_000), [])
+
+            old_ms = now_ms - (31 * 24 * 60 * 60 * 1000)
+            store.enqueue_feedback_report("FTT-OLDPEND1", '{"old":1}', old_ms, old_ms)
+            store.enqueue_feedback_report("FTT-OLDSENT1", '{"old":2}', old_ms, old_ms)
+            store.mark_feedback_report_sent("FTT-OLDSENT1", 102, "https://example.invalid/102", old_ms)
+            for index in range(30):
+                store.enqueue_feedback_report(
+                    f"FTT-CAP{index:05d}"[-12:],
+                    '{"cap":true}',
+                    now_ms + index,
+                    now_ms + index,
+                )
+            store.prune_feedback_outbox(now_ms, max_pending=25)
+            with store.connect() as con:
+                old_count = int(
+                    con.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM feedback_outbox
+                        WHERE report_ref IN ('FTT-OLDPEND1', 'FTT-OLDSENT1')
+                        """
+                    ).fetchone()[0]
+                )
+                pending_count = int(
+                    con.execute(
+                        "SELECT COUNT(*) FROM feedback_outbox WHERE status = 'pending'"
+                    ).fetchone()[0]
+                )
+            self.assertEqual(old_count, 0)
+            self.assertEqual(pending_count, 25)
 
     def test_history_queries_use_targeted_lap_sample_indexes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1380,7 +1485,7 @@ class TelemetryStoreTests(unittest.TestCase):
                 legacy["ended_at_ms"] or legacy["started_at_ms"],
             )
             self.assertEqual(versions, list(range(1, SCHEMA_VERSION + 1)))
-            self.assertEqual(SCHEMA_VERSION, 11)
+            self.assertEqual(SCHEMA_VERSION, 12)
 
     def test_start_session_creates_default_labels_and_keeps_one_active(self):
         with tempfile.TemporaryDirectory() as tmp:
