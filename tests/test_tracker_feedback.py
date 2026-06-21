@@ -10,6 +10,7 @@ import httpx
 from telemetry_tracker.app_metadata import ReleaseMetadata
 from telemetry_tracker.app_paths import default_desktop_paths
 from telemetry_tracker.feedback import (
+    DIAGNOSTICS_DESCRIPTION,
     FEEDBACK_CATEGORIES,
     MAX_DESCRIPTION_LENGTH,
     MAX_DIAGNOSTICS_LOG_CHARS,
@@ -166,6 +167,16 @@ class FeedbackBuilderTests(unittest.TestCase):
 
 
 class FeedbackServiceTests(unittest.IsolatedAsyncioTestCase):
+    async def test_config_defaults_diagnostics_on_with_privacy_copy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = _store(tmp)
+            service = FeedbackService(store=store, endpoint=None)
+
+            config = await service.config()
+
+            self.assertEqual(config["diagnostics_default"], True)
+            self.assertEqual(config["diagnostics_description"], DIAGNOSTICS_DESCRIPTION)
+
     async def test_submit_without_endpoint_queues_report(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = _store(tmp)

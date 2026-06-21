@@ -212,9 +212,9 @@ Queue rules:
 
 This repo currently advertises a local-first/no-upload model, so privacy docs must ship **in the same commit/release** as the feature.
 
-Diagnostics toggle should default **off** for this app unless you deliberately decide otherwise later. The modal should make clear:
+Diagnostics toggle should default **on** for this app so diagnostics are opt-out. The modal body should not include the full diagnostics disclosure; show this copy as a tooltip on hover/focus over the Include diagnostics control:
 
-> Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines. It does not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal files.
+> Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines. They do not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal data of any kind.
 
 Allowed diagnostics:
 
@@ -265,7 +265,7 @@ UX:
 - Modal fields:
   - Category dropdown
   - Description text area
-  - Include diagnostics toggle, default off
+  - Include diagnostics toggle, default on
   - Send button
   - Close/back button
 - Description placeholders should vary by category.
@@ -340,8 +340,8 @@ Backend pytest:
 Frontend Vitest:
 
 - menu exposes Send Feedback
-- modal renders fields and diagnostics disclosure
-- diagnostics defaults off
+- modal renders fields and diagnostics tooltip
+- diagnostics defaults on
 - category placeholder changes
 - Send disabled until meaningful description
 - send starts progress toast
@@ -380,7 +380,7 @@ Feature is done when:
 - Worker creates issues in private `seevydeepy/forza-telemetry-feedback`.
 - Public `seevydeepy/forza-telemetry-tracker` remains public and does not receive user feedback issues.
 - Offline/retryable failures queue locally with clear toast messaging.
-- Diagnostics are optional, default off, sanitized, capped, and documented.
+- Diagnostics are optional, default on, sanitized, capped, and documented.
 - README/PRIVACY/SUPPORT disclose the new behavior.
 - Cloudflare/GitHub setup is documented well enough for a future agent/operator to reproduce.
 
@@ -396,7 +396,7 @@ Feature is done when:
 
 MiMo blindspot review was used for this design and the final plan incorporates its main improvements:
 
-- diagnostics default off
+- explicit diagnostics opt-out copy
 - SQLite outbox instead of JSON files
 - explicit retry limits
 - local throttling consideration

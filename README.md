@@ -30,7 +30,7 @@ The app is designed for same-PC Data Out capture. It does not forward telemetry 
 - There is no automatic analytics, crash reporting, or telemetry upload path.
 - The `Send Feedback` window is user-initiated. It can send your written report to a private maintainer triage repository through a Cloudflare Worker without requiring a GitHub account.
 - If feedback cannot be sent immediately, the app may save the report locally and retry later. Reports are capped and expired from the local retry outbox.
-- The optional diagnostics checkbox defaults off. When enabled, diagnostics are sanitized and limited to app metadata, platform details, listener/capture status, local database/log sizes, row counts, and recent app log lines. It does not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal files.
+- The optional diagnostics checkbox defaults on and can be unchecked before sending. Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines. They do not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal data of any kind.
 - The About window performs a user-initiated network request to public GitHub Releases only when you click `Check for updates`.
 - The Ko-fi support link opens a browser only when clicked.
 

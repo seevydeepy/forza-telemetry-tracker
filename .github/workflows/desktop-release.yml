@@ -83,6 +83,7 @@ jobs:
             -Channel stable `
             -ReleaseDate "${{ steps.version.outputs.release_date }}" `
             -GitSha "${{ github.sha }}" `
+            -FeedbackEndpoint "https://forza-telemetry-feedback.cvdp.workers.dev/v1/reports" `
             -WebView2StandaloneInstaller "$((Resolve-Path build\MicrosoftEdgeWebView2RuntimeInstallerX64.exe).Path)"
 
       - name: Create installer checksum

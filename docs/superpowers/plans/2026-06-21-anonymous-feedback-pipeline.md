@@ -17,7 +17,7 @@
 - Create and use the private `seevydeepy/forza-telemetry-feedback` repository for feedback issues.
 - The user's raw public IP may exist only as transient Worker request input for rate limiting and redaction checks. Do not write raw IPs to GitHub issue titles, bodies, comments, D1 rows, durable logs, or API responses.
 - Do not add client-side GitHub credentials, Worker secrets, Cloudflare credentials, `.dev.vars`, private keys, tokens, or generated Wrangler state to the repo.
-- Keep diagnostics default off in the UI and backend.
+- Keep diagnostics default on in the UI and backend, with an explicit opt-out checkbox.
 - Configure the shipped Worker endpoint only after the Worker, D1 database, GitHub App, and private issue smoke check are complete.
 - Treat the Worker endpoint as public internet input. Do not add a shared request-signing secret to the packaged desktop app; a client-shipped secret is extractable and would create false confidence. v1 abuse controls are request-size limits, schema validation, IP-derived rate limiting, advisory reporter-derived rate limiting, D1 idempotency, GitHub search-before-create, and private triage.
 - `REPORT_HMAC_SECRET` is server-side Worker configuration used to HMAC `reporter_id` and request IP into durable rate-limit/idempotency keys and short reporter fingerprints. It is not a request signing key.
@@ -476,8 +476,8 @@ In `tests/test_tracker_app.py`, add tests that:
   "enabled": true,
   "categories": ["Bug", "Data Out setup", "Telemetry recording", "Map or route visualisation", "Import or export", "Performance", "UI or UX", "Other"],
   "max_description_length": 4000,
-  "diagnostics_default": false,
-  "diagnostics_description": "Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines. It does not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal files."
+  "diagnostics_default": true,
+  "diagnostics_description": "Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines. They do not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal data of any kind."
 }
 ```
 
@@ -496,7 +496,7 @@ In `telemetry_tracker/app.py`, add Pydantic models near other request models:
 class FeedbackReportRequest(BaseModel):
     category: str
     description: str
-    include_diagnostics: bool = False
+    include_diagnostics: bool = True
     source: str | None = None
 
 class FeedbackRetryRequest(BaseModel):
@@ -661,8 +661,8 @@ In `FeedbackModal.test.ts`, assert:
 
 - dialog name is `Send Feedback`
 - categories are rendered from config
-- diagnostics toggle defaults off
-- diagnostics disclosure text is visible
+- diagnostics toggle defaults on
+- diagnostics disclosure text is exposed through a tooltip on the diagnostics control
 - description placeholder changes for at least `Bug`, `Data Out setup`, and `Other`
 - Send is disabled until the trimmed description has at least 3 characters
 - dispatches `submit` with `{ category, description, include_diagnostics, source: 'desktop-app' }`
@@ -674,7 +674,7 @@ Use `AppModal` as the shell. Fields:
 
 - category `<select>`
 - description `<textarea>`
-- diagnostics checkbox/toggle, default from `config.diagnostics_default` but expected false
+- diagnostics checkbox/toggle, default from `config.diagnostics_default` but expected true
 - Send button
 - close handled by `AppModal`
 
@@ -856,7 +856,7 @@ Replace the old absolute "no upload path" wording with:
 ```md
 - There is no analytics or automatic telemetry upload path.
 - The app sends feedback only when you choose `Send Feedback`.
-- Feedback reports include your description, category, and optional diagnostics. Diagnostics default off.
+- Feedback reports include your description, category, and optional diagnostics. Diagnostics default on and can be unchecked before sending.
 - Feedback reports are sent to the Forza feedback Worker, which creates private triage issues for maintainers.
 ```
 
@@ -869,9 +869,9 @@ Add a `User-initiated feedback` section:
 ```md
 ## User-initiated feedback
 
-The `Send Feedback` action sends a report only after you submit the in-app form. The report includes the category and description you entered. Diagnostics are optional and default off.
+The `Send Feedback` action sends a report only after you submit the in-app form. The report includes the category and description you entered. Diagnostics are optional and default on.
 
-Optional diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines. They do not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, personal files, GitHub credentials, or Cloudflare credentials.
+Optional diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines. They do not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal data of any kind.
 
 The feedback service receives your network request through Cloudflare. The Worker uses request IP only transiently for rate limiting and anti-abuse. The raw IP is not written to GitHub issues, D1 rows, durable logs, or API responses.
 
@@ -1177,7 +1177,7 @@ Do not push unless explicitly asked.
   - Raw IP only transient for rate limits: Task 1, Task 7, Task 8.
   - Local FastAPI only from frontend: Task 3, Task 4, Task 5.
   - SQLite outbox, retry limits, TTL: Task 2.
-  - Diagnostics default off, allowlisted, redacted, capped: Task 2, Task 4, Task 8.
+  - Diagnostics default on, allowlisted, redacted, capped: Task 2, Task 4, Task 8.
   - Toast progress/update UX: Task 5.
   - README/PRIVACY/SUPPORT/runbook: Task 6.
   - Validation commands: Task 8.

@@ -44,7 +44,7 @@ DIAGNOSTICS_DESCRIPTION = (
     "Diagnostics may include app version, platform, listener/capture status, "
     "local database/log sizes, row counts, and recent sanitized app log lines. "
     "They do not include raw telemetry packets, session databases, map cache files, "
-    "game files, screenshots, exports, personal files, GitHub credentials, or Cloudflare credentials."
+    "game files, screenshots, exports, or personal data of any kind."
 )
 
 _RETRYABLE_STATUS_CODES = {408, 425, 429}
@@ -68,7 +68,7 @@ class RejectedFeedbackError(RuntimeError):
 class FeedbackRequest:
     category: str
     description: str
-    include_diagnostics: bool = False
+    include_diagnostics: bool = True
     source: str | None = None
     scene: str | None = None
 
@@ -233,7 +233,7 @@ class FeedbackService:
             "enabled": True,
             "categories": list(FEEDBACK_CATEGORIES),
             "max_description_length": MAX_DESCRIPTION_LENGTH,
-            "diagnostics_default": False,
+            "diagnostics_default": True,
             "diagnostics_description": DIAGNOSTICS_DESCRIPTION,
         }
 

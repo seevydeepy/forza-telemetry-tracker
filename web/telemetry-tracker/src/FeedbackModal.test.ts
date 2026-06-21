@@ -17,9 +17,9 @@ const feedbackConfig: FeedbackConfig = {
     'Other'
   ],
   max_description_length: 4000,
-  diagnostics_default: false,
+  diagnostics_default: true,
   diagnostics_description:
-    'Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines.'
+    'Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines. They do not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal data of any kind.'
 };
 
 function renderFeedbackModal() {
@@ -27,7 +27,7 @@ function renderFeedbackModal() {
 }
 
 describe('FeedbackModal', () => {
-  it('renders the send feedback dialog, categories, diagnostics disclosure, and default-off toggle', () => {
+  it('renders the send feedback dialog, categories, diagnostics tooltip, and default-on toggle', () => {
     renderFeedbackModal();
 
     const dialog = screen.getByRole('dialog', { name: 'Send Feedback' });
@@ -36,8 +36,13 @@ describe('FeedbackModal', () => {
     for (const option of feedbackConfig.categories) {
       expect(within(category).getByRole('option', { name: option })).toBeInTheDocument();
     }
-    expect(within(dialog).getByRole('checkbox', { name: 'Include diagnostics' })).not.toBeChecked();
-    expect(within(dialog).getByText(feedbackConfig.diagnostics_description)).toBeInTheDocument();
+    const diagnosticsCheckbox = within(dialog).getByRole('checkbox', { name: 'Include diagnostics' });
+    expect(diagnosticsCheckbox).toBeChecked();
+    const tooltip = within(dialog).getByRole('tooltip', { hidden: true });
+    expect(diagnosticsCheckbox).toHaveAttribute('aria-describedby', tooltip.id);
+    expect(diagnosticsCheckbox.closest('.feedback-diagnostics-row')).toContainElement(tooltip);
+    expect(tooltip).toHaveClass('feedback-tooltip');
+    expect(tooltip).toHaveTextContent(feedbackConfig.diagnostics_description);
     expect(within(dialog).queryByText(/sending/i)).not.toBeInTheDocument();
   });
 
@@ -97,7 +102,7 @@ describe('FeedbackModal', () => {
     expect(submit).toHaveBeenCalledWith({
       category: 'Other',
       description: 'I want to share a note.',
-      include_diagnostics: true,
+      include_diagnostics: false,
       source: 'desktop-app'
     });
   });

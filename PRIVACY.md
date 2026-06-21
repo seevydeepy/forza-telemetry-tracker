@@ -22,7 +22,7 @@ If the feedback endpoint is unavailable, the app may save the report in the loca
 
 Cloudflare may expose your public IP address to the Worker request context. The Worker uses it only to derive an HMAC rate-limit key for anti-abuse checks. The raw public IP must not be written to GitHub issues, D1 rows, durable logs, or API responses.
 
-The optional feedback diagnostics checkbox defaults off. When enabled, diagnostics are sanitized and limited to app version/channel/git SHA, platform details, listener/capture status, local database and log sizes, row counts, and recent sanitized app log lines. Feedback diagnostics do not include raw Data Out packets, `telemetry_tracker.sqlite3`, exported telemetry files, raw/imported telemetry uploads, world-map cache image files, local game files, screenshots, user documents, personal files, GitHub credentials, or Cloudflare credentials.
+The optional feedback diagnostics checkbox defaults on and can be unchecked before sending. Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines. They do not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal data of any kind.
 
 The Ko-fi support link opens your browser only when clicked.
 

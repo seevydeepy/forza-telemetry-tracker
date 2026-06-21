@@ -115,7 +115,7 @@ ANALYSIS_SUMMARY_KEYS = frozenset(
 class FeedbackReportRequest(BaseModel):
     category: str
     description: str
-    include_diagnostics: bool = False
+    include_diagnostics: bool = True
     source: str | None = None
 
     def to_feedback_request(self) -> FeedbackServiceRequest:

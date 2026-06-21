@@ -19,6 +19,13 @@ from telemetry_tracker.packet_bridge import decode_packet, encode_packet_for_tes
 from telemetry_tracker.track_matcher import MATCHER_VERSION
 
 
+DIAGNOSTICS_DESCRIPTION = (
+    "Diagnostics may include app version, platform, listener/capture status, "
+    "local database/log sizes, row counts, and recent sanitized app log lines. "
+    "They do not include raw telemetry packets, session databases, map cache files, "
+    "game files, screenshots, exports, or personal data of any kind."
+)
+
 
 def _wait_for_export_job(client: TestClient, job_id: str, predicate, timeout: float = 5.0) -> dict:
     deadline = time.monotonic() + timeout
@@ -198,8 +205,8 @@ class TrackerAppTests(unittest.TestCase):
         self.assertIn("Bug", payload["categories"])
         self.assertIn("Other", payload["categories"])
         self.assertEqual(payload["max_description_length"], 4000)
-        self.assertEqual(payload["diagnostics_default"], False)
-        self.assertIn("recent sanitized app log", payload["diagnostics_description"])
+        self.assertEqual(payload["diagnostics_default"], True)
+        self.assertEqual(payload["diagnostics_description"], DIAGNOSTICS_DESCRIPTION)
 
     def test_feedback_report_endpoint_queues_when_endpoint_is_not_configured(self):
         with tempfile.TemporaryDirectory() as tmp:

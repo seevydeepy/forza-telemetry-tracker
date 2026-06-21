@@ -217,7 +217,7 @@ Expected result: a JSON response with `ok = true`, the same `report_ref`, and a 
 
 The local Python backend reads the feedback endpoint from release metadata or the `FORZA_TRACKER_FEEDBACK_ENDPOINT` environment variable. The Svelte UI never talks to Cloudflare directly.
 
-For packaged releases, pass the full report endpoint to the release build:
+For packaged releases, pass the full report endpoint to the release build. The `Desktop Release` GitHub Actions workflow already passes the production endpoint for stable tags:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\build-desktop-release.ps1 `
@@ -248,7 +248,7 @@ If the Worker deployment itself must be rolled back, use Wrangler's deployment h
 
 Before activating the endpoint in a release, verify:
 
-- Diagnostics are default off in `GET /api/feedback/config`.
+- Diagnostics are default on in `GET /api/feedback/config` and can be unchecked before sending.
 - Recent log text is capped at 16 KB and redacts Windows user profile paths, emails, IPv4/IPv6 addresses, bearer tokens, and secret-looking key/value pairs.
 - Diagnostics do not include raw Data Out packets, `telemetry_tracker.sqlite3`, exported telemetry files, raw/imported telemetry uploads, world-map cache image files, local game files, screenshots, user documents, GitHub credentials, or Cloudflare credentials.
 - The Worker uses raw request IP only to derive an HMAC rate-limit key and does not include raw IPs in GitHub issues, D1 rows, durable logs, or responses.

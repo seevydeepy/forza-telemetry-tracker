@@ -24,7 +24,7 @@
 
   let category: FeedbackCategory = 'Bug';
   let description = '';
-  let includeDiagnostics = false;
+  let includeDiagnostics = true;
   let diagnosticsInitialized = false;
 
   $: categories = config?.categories?.length ? config.categories : (['Bug', 'Other'] as FeedbackCategory[]);
@@ -73,11 +73,20 @@
       ></textarea>
     </label>
 
-    <label class="feedback-diagnostics">
-      <input type="checkbox" bind:checked={includeDiagnostics} disabled={submitting} />
-      <span>Include diagnostics</span>
-    </label>
-    <p class="feedback-disclosure">{config.diagnostics_description}</p>
+    <div class="feedback-diagnostics-row">
+      <label class="feedback-diagnostics">
+        <input
+          type="checkbox"
+          bind:checked={includeDiagnostics}
+          disabled={submitting}
+          aria-describedby="feedback-diagnostics-tooltip"
+        />
+        <span>Include diagnostics</span>
+      </label>
+      <span id="feedback-diagnostics-tooltip" class="feedback-tooltip" role="tooltip">
+        {config.diagnostics_description}
+      </span>
+    </div>
 
     <div class="modal-actions">
       <button type="button" class="secondary-action" disabled={submitting} on:click={() => dispatch('close')}>Cancel</button>
@@ -99,8 +108,7 @@
     gap: 0.35rem;
   }
 
-  .feedback-field span,
-  .feedback-disclosure {
+  .feedback-field span {
     color: var(--text-secondary);
   }
 
@@ -119,6 +127,12 @@
     resize: vertical;
   }
 
+  .feedback-diagnostics-row {
+    max-width: 100%;
+    position: relative;
+    width: fit-content;
+  }
+
   .feedback-diagnostics {
     align-items: center;
     color: var(--text-primary);
@@ -126,9 +140,31 @@
     gap: 0.55rem;
   }
 
-  .feedback-disclosure {
+  .feedback-tooltip {
+    background: #18181b;
+    border: 1px solid var(--panel-border);
+    border-radius: 0.5rem;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    left: 0;
     line-height: 1.45;
-    margin: 0;
+    max-width: min(34rem, calc(100vw - 64px));
+    opacity: 0;
+    padding: 0.65rem 0.75rem;
+    pointer-events: none;
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    transition: opacity 120ms ease;
+    visibility: hidden;
+    width: max-content;
+    z-index: 5;
+  }
+
+  .feedback-diagnostics-row:hover .feedback-tooltip,
+  .feedback-diagnostics-row:focus-within .feedback-tooltip {
+    opacity: 1;
+    visibility: visible;
   }
 
   @media (max-width: 680px) {

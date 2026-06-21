@@ -220,9 +220,9 @@ const defaultFeedbackConfig: FeedbackConfig = {
     'Other'
   ],
   max_description_length: 4000,
-  diagnostics_default: false,
+  diagnostics_default: true,
   diagnostics_description:
-    'Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines.'
+    'Diagnostics may include app version, platform, listener/capture status, local database/log sizes, row counts, and recent sanitized app log lines. They do not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal data of any kind.'
 };
 
 const defaultUpdateCheckPayload: AppUpdateCheckResponse = {
@@ -2297,7 +2297,9 @@ describe('App', () => {
 
     const dialog = await openFeedbackModal();
 
-    expect(await within(dialog).findByText(defaultFeedbackConfig.diagnostics_description)).toBeInTheDocument();
+    const tooltip = await within(dialog).findByRole('tooltip', { hidden: true });
+    expect(tooltip).toHaveTextContent(defaultFeedbackConfig.diagnostics_description);
+    expect(within(dialog).getByRole('checkbox', { name: 'Include diagnostics' })).toBeChecked();
     expect(within(dialog).getByLabelText('Description')).toHaveAttribute(
       'placeholder',
       'What went wrong, and what were you doing just before it happened?'
@@ -2337,7 +2339,7 @@ describe('App', () => {
     expect(request).toMatchObject({
       category: 'Bug',
       description: 'Detailed feedback text',
-      include_diagnostics: false,
+      include_diagnostics: true,
       source: 'desktop-app'
     });
   });
