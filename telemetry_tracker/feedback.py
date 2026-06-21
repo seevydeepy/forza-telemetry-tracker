@@ -488,4 +488,3 @@ def _queued_response(report_ref: str, error: str | None = None) -> dict[str, Any
 def _worker_error_message(payload: dict[str, Any], fallback: str) -> str:
     error = payload.get("error") or payload.get("message") or payload.get("detail")
     return str(error) if error else fallback
-
