@@ -401,7 +401,7 @@ class TrackerComparisonStorageTests(unittest.TestCase):
                     ).fetchall()
                 ]
 
-            self.assertEqual(SCHEMA_VERSION, 11)
+            self.assertEqual(SCHEMA_VERSION, 12)
             self.assertIn("comparison_refs", tables)
             self.assertIn("user_id", columns)
             self.assertIn("scope", columns)
