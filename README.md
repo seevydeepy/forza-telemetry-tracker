@@ -21,7 +21,7 @@ The intended user experience is a single Windows setup executable downloaded fro
 3. In Forza Horizon 6, enable Data Out and set the destination to IP `127.0.0.1` and port `5400`.
 4. Launch Forza Telemetry Tracker from the Start Menu or desktop shortcut.
 
-The app is designed for same-PC Data Out capture. It does not forward telemetry to a cloud service.
+The app is designed for same-PC Data Out capture. It does not forward telemetry to a cloud service unless you explicitly choose to send an in-app feedback report.
 
 ## Data and privacy
 
@@ -29,7 +29,10 @@ The app is designed for same-PC Data Out capture. It does not forward telemetry 
 - The main session database is `telemetry_tracker.sqlite3`.
 - Optional world-map cache files are generated locally under `%LOCALAPPDATA%\Forza Telemetry Tracker\map-cache` from a valid local game install folder that you choose.
 - No game files or generated map cache files are committed to this repository or bundled in releases.
-- There is no analytics or telemetry upload path.
+- There is no automatic analytics, crash reporting, or telemetry upload path.
+- The `Send Feedback` window is user-initiated. It can send your written report to a private maintainer triage repository through a Cloudflare Worker without requiring a GitHub account.
+- If feedback cannot be sent immediately, the app may save the report locally and retry later. Reports are capped and expired from the local retry outbox.
+- The optional diagnostics checkbox defaults off. When enabled, diagnostics are sanitized and limited to app metadata, platform details, listener/capture status, local database/log sizes, row counts, and recent app log lines. It does not include raw telemetry packets, session databases, map cache files, game files, screenshots, exports, or personal files.
 - The About window performs a user-initiated network request to public GitHub Releases only when you click `Check for updates`.
 - The Ko-fi support link opens a browser only when clicked.
 

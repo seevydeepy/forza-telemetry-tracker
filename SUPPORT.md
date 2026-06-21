@@ -2,9 +2,13 @@
 
 ## Getting help
 
-Use GitHub Issues for reproducible bugs and feature requests. Include the app version from the About window, whether you installed a release or are running a developer checkout, and the smallest set of steps needed to reproduce the problem.
+Use `Send Feedback` in the app for reproducible bugs, setup problems, feature requests, and rough feedback. It does not require a GitHub account and sends the report to a private maintainer triage repository.
 
-Do not attach telemetry databases, local game files, generated map-cache files, credentials, or private keys unless a maintainer explicitly asks for a redacted sample.
+Include the app version from the About window, whether you installed a release or are running a developer checkout, and the smallest set of steps needed to reproduce the problem.
+
+Do not include telemetry databases, local game files, generated map-cache files, credentials, or private keys unless a maintainer explicitly asks for a redacted sample.
+
+Public GitHub Issues remain suitable for development discussion, pull requests, and problems that are safe to discuss in public. Do not put private diagnostics or sensitive local paths in public issues.
 
 ## Troubleshooting checklist
 
@@ -13,6 +17,7 @@ Do not attach telemetry databases, local game files, generated map-cache files, 
 - Close other telemetry tools that may already be listening on the same UDP port.
 - For map setup, choose the top-level local game install folder, not a generated cache folder.
 - Use the About window to check whether a newer public GitHub Release is available.
+- If `Send Feedback` reports that feedback was saved for retry, leave the app installed so the local outbox can retry later.
 
 ## Security reports
 
