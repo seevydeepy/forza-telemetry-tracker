@@ -1,0 +1,30 @@
+# Release, CI, and Packaging Routing Card
+
+id: release-ci-packaging
+owned_paths:
+- .github/workflows/
+- .github/dependabot.yml
+- packaging/
+- tools/build-desktop-release.ps1
+- tools/smoke-desktop-package.py
+- ForzaTelemetryTrackerUpdater.spec
+- requirements-telemetry-release-lock.txt
+- THIRD_PARTY_NOTICES.md
+- licenses/
+- docs/desktop-release.md
+read_first:
+- docs/okf/release-ci-packaging/routing_guidance.card
+- docs/okf/release-ci-packaging/solution.md
+keywords:
+- installer
+- pyinstaller
+- inno setup
+- github actions
+- ci
+- release
+- attestation
+- checksum
+- dependency audit
+- licence notice
+handoffs:
+- Unknown until deep backfill.

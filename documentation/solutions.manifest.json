@@ -1,0 +1,223 @@
+{
+  "okf_version": "1.0",
+  "wiki": {
+    "root": "docs/okf",
+    "index": "docs/okf/index.md",
+    "umbrella": "documentation/wiki.html",
+    "generated_files": [
+      "docs/okf/index.md",
+      "documentation/wiki.html"
+    ]
+  },
+  "routing": {
+    "primary_doc": "routing_guidance.card",
+    "bundle_docs": [
+      "solution.md",
+      "routing.md",
+      "log.md"
+    ]
+  },
+  "excluded_paths": [
+    "docs/okf/",
+    "documentation/wiki.html",
+    "documentation/solutions.manifest.json",
+    "tools/docs/"
+  ],
+  "solutions": [
+    {
+      "id": "desktop-backend",
+      "name": "Desktop Backend",
+      "summary": "Python FastAPI desktop backend for local UDP telemetry capture, SQLite storage, lap/session analysis, export, replay, update checks, feedback submission, and FH6 world-map integration.",
+      "owned_paths": [
+        "telemetry_tracker/",
+        "tests/",
+        "tools/run-telemetry-tracker.py",
+        "tools/capture-data-out.py",
+        "tools/capture-session.py",
+        "tools/parse-data-out.py",
+        "tools/maintain-telemetry-db.py",
+        "requirements-telemetry-tracker.txt",
+        "requirements-telemetry-desktop.txt",
+        "requirements-telemetry-test.txt"
+      ],
+      "routing_keywords": [
+        "fastapi",
+        "udp",
+        "data out",
+        "sqlite",
+        "capture",
+        "lap",
+        "session",
+        "export",
+        "replay",
+        "world map",
+        "update check",
+        "feedback client"
+      ],
+      "docs": {
+        "root": "docs/okf/desktop-backend",
+        "routing_guidance_card": "docs/okf/desktop-backend/routing_guidance.card",
+        "solution": "docs/okf/desktop-backend/solution.md",
+        "routing": "docs/okf/desktop-backend/routing.md",
+        "log": "docs/okf/desktop-backend/log.md",
+        "wiki": "docs/okf/desktop-backend/wiki.html"
+      }
+    },
+    {
+      "id": "web-dashboard",
+      "name": "Web Dashboard",
+      "summary": "Svelte and Vite frontend embedded by the desktop app for live telemetry, replay, route review, settings, feedback, import, export, and dashboard visualisation.",
+      "owned_paths": [
+        "web/telemetry-tracker/"
+      ],
+      "routing_keywords": [
+        "svelte",
+        "vite",
+        "dashboard",
+        "canvas",
+        "overlay",
+        "settings modal",
+        "feedback modal",
+        "import modal",
+        "export modal",
+        "route review"
+      ],
+      "docs": {
+        "root": "docs/okf/web-dashboard",
+        "routing_guidance_card": "docs/okf/web-dashboard/routing_guidance.card",
+        "solution": "docs/okf/web-dashboard/solution.md",
+        "routing": "docs/okf/web-dashboard/routing.md",
+        "log": "docs/okf/web-dashboard/log.md",
+        "wiki": "docs/okf/web-dashboard/wiki.html"
+      }
+    },
+    {
+      "id": "feedback-worker",
+      "name": "Feedback Worker",
+      "summary": "Cloudflare Worker, D1 schema, and public feedback-reporting documentation for user-initiated anonymous reports into maintainer GitHub issue triage.",
+      "owned_paths": [
+        "tools/feedback_worker/",
+        "docs/feedback_reporting_setup.md",
+        "docs/feedback_reporting_design_handoff.md"
+      ],
+      "routing_keywords": [
+        "cloudflare",
+        "worker",
+        "d1",
+        "github app",
+        "feedback report",
+        "rate limit",
+        "hmac",
+        "anonymous feedback"
+      ],
+      "docs": {
+        "root": "docs/okf/feedback-worker",
+        "routing_guidance_card": "docs/okf/feedback-worker/routing_guidance.card",
+        "solution": "docs/okf/feedback-worker/solution.md",
+        "routing": "docs/okf/feedback-worker/routing.md",
+        "log": "docs/okf/feedback-worker/log.md",
+        "wiki": "docs/okf/feedback-worker/wiki.html"
+      }
+    },
+    {
+      "id": "release-ci-packaging",
+      "name": "Release, CI, and Packaging",
+      "summary": "Windows installer packaging, release workflow, dependency locks, CI workflow, release documentation, licences, notices, and packaged-app smoke tooling.",
+      "owned_paths": [
+        ".github/workflows/",
+        ".github/dependabot.yml",
+        "packaging/",
+        "tools/build-desktop-release.ps1",
+        "tools/smoke-desktop-package.py",
+        "ForzaTelemetryTrackerUpdater.spec",
+        "requirements-telemetry-release-lock.txt",
+        "THIRD_PARTY_NOTICES.md",
+        "licenses/",
+        "docs/desktop-release.md"
+      ],
+      "routing_keywords": [
+        "installer",
+        "pyinstaller",
+        "inno setup",
+        "github actions",
+        "ci",
+        "release",
+        "attestation",
+        "checksum",
+        "dependency audit",
+        "licence notice"
+      ],
+      "docs": {
+        "root": "docs/okf/release-ci-packaging",
+        "routing_guidance_card": "docs/okf/release-ci-packaging/routing_guidance.card",
+        "solution": "docs/okf/release-ci-packaging/solution.md",
+        "routing": "docs/okf/release-ci-packaging/routing.md",
+        "log": "docs/okf/release-ci-packaging/log.md",
+        "wiki": "docs/okf/release-ci-packaging/wiki.html"
+      }
+    },
+    {
+      "id": "fh6-map-tile-converter",
+      "name": "FH6 Map Tile Converter",
+      "summary": ".NET map tile conversion utility and vendored ForzaTechStudio readers used to generate local map cache assets from a user-selected FH6 install.",
+      "owned_paths": [
+        "tools/fh6-map-tile-converter/"
+      ],
+      "routing_keywords": [
+        "map tile",
+        "swatchbin",
+        "forzatechstudio",
+        "dotnet",
+        "world map cache",
+        "texture",
+        "converter"
+      ],
+      "docs": {
+        "root": "docs/okf/fh6-map-tile-converter",
+        "routing_guidance_card": "docs/okf/fh6-map-tile-converter/routing_guidance.card",
+        "solution": "docs/okf/fh6-map-tile-converter/solution.md",
+        "routing": "docs/okf/fh6-map-tile-converter/routing.md",
+        "log": "docs/okf/fh6-map-tile-converter/log.md",
+        "wiki": "docs/okf/fh6-map-tile-converter/wiki.html"
+      }
+    },
+    {
+      "id": "project-docs",
+      "name": "Project Docs and Community Metadata",
+      "summary": "Root project documentation, community metadata, support, privacy, security, funding, issue templates, design plans, and preview assets not owned by a narrower runtime or release bundle.",
+      "owned_paths": [
+        "README.md",
+        "CONTRIBUTING.md",
+        "SUPPORT.md",
+        "PRIVACY.md",
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        "LICENSE",
+        ".github/FUNDING.yml",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".github/ISSUE_TEMPLATE/",
+        "docs/assets/",
+        "docs/superpowers/"
+      ],
+      "routing_keywords": [
+        "readme",
+        "contributing",
+        "support",
+        "privacy",
+        "security",
+        "community",
+        "issue template",
+        "design plan",
+        "preview asset"
+      ],
+      "docs": {
+        "root": "docs/okf/project-docs",
+        "routing_guidance_card": "docs/okf/project-docs/routing_guidance.card",
+        "solution": "docs/okf/project-docs/solution.md",
+        "routing": "docs/okf/project-docs/routing.md",
+        "log": "docs/okf/project-docs/log.md",
+        "wiki": "docs/okf/project-docs/wiki.html"
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+# FH6 Map Tile Converter Routing Card
+
+id: fh6-map-tile-converter
+owned_paths:
+- tools/fh6-map-tile-converter/
+read_first:
+- docs/okf/fh6-map-tile-converter/routing_guidance.card
+- docs/okf/fh6-map-tile-converter/solution.md
+keywords:
+- map tile
+- swatchbin
+- forzatechstudio
+- dotnet
+- world map cache
+- texture
+- converter
+handoffs:
+- Unknown until deep backfill.

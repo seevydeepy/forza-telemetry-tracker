@@ -1,0 +1,21 @@
+# Web Dashboard Routing Card
+
+id: web-dashboard
+owned_paths:
+- web/telemetry-tracker/
+read_first:
+- docs/okf/web-dashboard/routing_guidance.card
+- docs/okf/web-dashboard/solution.md
+keywords:
+- svelte
+- vite
+- dashboard
+- canvas
+- overlay
+- settings modal
+- feedback modal
+- import modal
+- export modal
+- route review
+handoffs:
+- Unknown until deep backfill.
