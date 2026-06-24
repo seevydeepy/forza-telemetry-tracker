@@ -4,18 +4,33 @@ id: web-dashboard
 owned_paths:
 - web/telemetry-tracker/
 read_first:
-- docs/okf/web-dashboard/routing_guidance.card
-- docs/okf/web-dashboard/solution.md
+- web/telemetry-tracker/src/App.svelte
+- web/telemetry-tracker/src/api.ts
+- web/telemetry-tracker/src/desktopBridge.ts
+- web/telemetry-tracker/src/TelemetryCanvas.svelte
+- web/telemetry-tracker/src/TelemetryDashboard.svelte
 keywords:
 - svelte
 - vite
-- dashboard
-- canvas
-- overlay
-- settings modal
+- telemetry dashboard
+- route visualisation
+- telemetry canvas
+- eventsource
+- /events
+- /api/status
+- /api/capture
+- /api/live/recent
+- /api/sessions
+- /api/laps
+- /api/replay/import-jobs
+- /api/telemetry/export-jobs
+- /api/map
+- pywebview
+- choose_fh6_install_folder
+- choose_raw_telemetry_files
 - feedback modal
-- import modal
-- export modal
-- route review
+- diagnostics panel
 handoffs:
-- Unknown until deep backfill.
+- Backend API and SSE provider for `/api/*` and `/events`.
+- Desktop pywebview host for native folder/file pickers.
+- Track/map/analysis data providers surfaced through API payloads.

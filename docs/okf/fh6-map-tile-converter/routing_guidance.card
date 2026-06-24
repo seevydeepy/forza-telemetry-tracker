@@ -6,13 +6,28 @@ owned_paths:
 read_first:
 - docs/okf/fh6-map-tile-converter/routing_guidance.card
 - docs/okf/fh6-map-tile-converter/solution.md
+- tools/fh6-map-tile-converter/Program.cs
+- tools/fh6-map-tile-converter/Swatchbin/SwatchbinReader.cs
+- tools/fh6-map-tile-converter/Swatchbin/BcnPngWriter.cs
+- tools/fh6-map-tile-converter/ForzaTelemetryTracker.FH6MapTileConverter.csproj
 keywords:
 - map tile
 - swatchbin
 - forzatechstudio
-- dotnet
+- forza-map-tile-converter
+- inspect-zip
+- convert-zip
+- Map_Brio_Season.zip
+- tileCoordinateSystem
+- fh6-row-column-v1
+- DXGI
+- BCn
+- Durango
 - world map cache
 - texture
 - converter
 handoffs:
-- Unknown until deep backfill.
+- desktop-backend world-map cache path resolution and tile serving
+- release-ci-packaging converter publish and package smoke checks
+- web-dashboard world-map overlay manifest and PNG tile consumption
+- third-party notices for vendored ForzaTechStudio parser code

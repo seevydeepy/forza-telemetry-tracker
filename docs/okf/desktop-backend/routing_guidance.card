@@ -15,6 +15,10 @@ owned_paths:
 read_first:
 - docs/okf/desktop-backend/routing_guidance.card
 - docs/okf/desktop-backend/solution.md
+- telemetry_tracker/app.py
+- telemetry_tracker/storage.py
+- telemetry_tracker/desktop_launcher.py
+- tools/run-telemetry-tracker.py
 keywords:
 - fastapi
 - udp
@@ -28,5 +32,13 @@ keywords:
 - world map
 - update check
 - feedback client
+- pywebview
+- port conflict
+- raw import
+- export job
+- sse
 handoffs:
-- Unknown until deep backfill.
+- web-dashboard: consumes REST, SSE, static assets, and pywebview bridge selections.
+- feedback-worker: receives reports submitted by FeedbackService.
+- fh6-map-tile-converter: invoked by world-map cache building.
+- release-ci-packaging: packages launcher, runtime requirements, metadata, and smoke checks.

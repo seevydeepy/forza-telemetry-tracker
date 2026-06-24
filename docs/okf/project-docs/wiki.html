@@ -38,12 +38,20 @@
 <li>security</li>
 <li>community</li>
 <li>issue template</li>
+<li>pull request template</li>
 <li>design plan</li>
 <li>preview asset</li>
+<li>ko-fi</li>
+<li>funding</li>
+<li>code of conduct</li>
 </ul>
 <p>handoffs:</p>
 <ul>
-<li>Unknown until deep backfill.</li>
+<li>Runtime behaviour, local storage, update checks, feedback client, and map-cache claims hand off to desktop-backend.</li>
+<li>Dashboard, modal, replay, route review, import/export, and visible UI claims hand off to web-dashboard.</li>
+<li>Anonymous feedback Worker, D1, GitHub App, rate-limit, and private triage behaviour hand off to feedback-worker.</li>
+<li>Installer, release workflow, attestation, dependency lock, third-party notice, and release-guide claims hand off to release-ci-packaging.</li>
+<li>FH6 map asset conversion internals hand off to fh6-map-tile-converter.</li>
 </ul>
 <h1>Project Docs and Community Metadata</h1>
 <h2>Purpose</h2>
@@ -65,11 +73,26 @@
 </ul>
 <h2>Entrypoints</h2>
 <ul>
-<li>Unknown until deep backfill.</li>
+<li>`README.md` is the public project landing page. It states the local-first Windows desktop purpose, preview GIFs, install flow, Data Out setup, privacy summary, developer commands, support routes, licence, and Ko-fi link.</li>
+<li>`CONTRIBUTING.md` is the maintainer/contributor entrypoint for local setup, validation commands, pull request expectations, release-lock regeneration, and forbidden artefacts.</li>
+<li>`SUPPORT.md`, `PRIVACY.md`, and `SECURITY.md` are the public support, data-handling, and vulnerability-reporting entrypoints.</li>
+<li>`.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/` are the GitHub intake surfaces for validation evidence, public-release impact checks, bug reports, feature requests, support links, and security routing.</li>
+<li>`docs/assets/` holds README preview media. `docs/superpowers/` holds historical plans and specs for agentic implementation work.</li>
 </ul>
 <h2>Neighbouring Systems</h2>
 <ul>
-<li>Unknown until deep backfill.</li>
+<li>`desktop-backend`: owns the FastAPI/Python runtime, local SQLite storage, Data Out capture, local feedback client/outbox, update-check implementation, and world-map status described by the public docs.</li>
+<li>`web-dashboard`: owns the Svelte UI surfaces referenced by docs, including feedback, settings, import/export, replay, route review, and dashboard behaviour.</li>
+<li>`feedback-worker`: owns Cloudflare Worker, D1, GitHub App, private triage repository, HMAC/rate-limit, and feedback-reporting runbook details; project-docs only summarises public user-facing behaviour.</li>
+<li>`release-ci-packaging`: owns installer packaging, release workflow, dependency locks, third-party notices, licences folder, release attestations, and `docs/desktop-release.md`.</li>
+<li>`fh6-map-tile-converter`: owns map tile conversion internals; project-docs only documents the user-facing install-folder and map-cache privacy expectations.</li>
+</ul>
+<h2>Contracts</h2>
+<ul>
+<li>Public docs must keep the project framed as an unofficial community tool unaffiliated with Microsoft, Xbox Game Studios, Turn 10 Studios, Playground Games, or the Forza franchise owners.</li>
+<li>Public docs must preserve the local-first privacy contract: no automatic analytics, crash reporting, tracking pixels, advertising SDKs, user accounts, or background telemetry upload behaviour.</li>
+<li>Support and issue intake must steer private diagnostics, security reports, telemetry databases, local game files, generated map caches, credentials, and private keys away from public issues unless a maintainer explicitly asks for a redacted sample.</li>
+<li>README release/install wording should stay aligned with the Windows installer path, unsigned SmartScreen warning, GitHub Releases update check, and release/packaging ownership.</li>
 </ul>
 <h2>Maintenance Notes</h2>
 <ul>
@@ -86,6 +109,14 @@
 <ul>
 <li>`docs/okf/project-docs/routing_guidance.card`</li>
 <li>`docs/okf/project-docs/solution.md`</li>
+<li>For landing-page, install, preview, privacy summary, support-link, update-check, or Ko-fi wording: `README.md`</li>
+<li>For contributor setup, validation, release-lock, forbidden artefact, or PR expectation changes: `CONTRIBUTING.md`</li>
+<li>For user help, troubleshooting, public issue routing, SmartScreen support wording, or feedback intake: `SUPPORT.md`</li>
+<li>For local data, network behaviour, feedback diagnostics, outbox, GitHub Releases, Ko-fi, or localhost health-check claims: `PRIVACY.md`</li>
+<li>For vulnerability handling and supported-version wording: `SECURITY.md`</li>
+<li>For GitHub intake fields or public-release-impact checklist changes: `.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/`</li>
+<li>For README preview media: `docs/assets/`</li>
+<li>For historical implementation plans/specs: `docs/superpowers/`</li>
 </ul>
 <h2>Owned Paths</h2>
 <ul>
@@ -111,22 +142,52 @@
 <li>security</li>
 <li>community</li>
 <li>issue template</li>
+<li>pull request template</li>
 <li>design plan</li>
 <li>preview asset</li>
+<li>funding</li>
+<li>ko-fi</li>
+<li>smart screen</li>
+<li>unaffiliated</li>
+<li>unofficial</li>
+<li>data out setup</li>
+<li>public issue</li>
+<li>private vulnerability</li>
+<li>local-first</li>
+<li>privacy policy</li>
+<li>telemetry database</li>
+<li>generated map cache</li>
+<li>support route</li>
 </ul>
 <h2>Handoffs</h2>
 <ul>
-<li>Unknown until deep backfill.</li>
+<li>Route runtime implementation questions to `desktop-backend` when the doc claim depends on Python/FastAPI, UDP Data Out capture, SQLite, local outbox, update checks, desktop launcher health checks, or world-map status.</li>
+<li>Route dashboard or visible UI behaviour questions to `web-dashboard` when the doc claim depends on Svelte components, modals, replay, route review, settings, import/export, or feedback UI.</li>
+<li>Route anonymous feedback infrastructure questions to `feedback-worker` when the doc claim depends on Worker/D1/GitHub App/private triage/rate-limit/HMAC behaviour. Do not use this bundle for `docs/feedback_reporting_*.md`.</li>
+<li>Route installer, release, attestation, dependency-lock, third-party notice, licence-bundle, and `docs/desktop-release.md` questions to `release-ci-packaging`.</li>
+<li>Route map tile conversion internals to `fh6-map-tile-converter`; keep this bundle limited to public-facing install-folder and map-cache documentation.</li>
 </ul>
 <h1>Project Docs and Community Metadata OKF Log</h1>
 <h2>Bootstrap</h2>
 <ul>
 <li>Shallow OKF bundle created from repository structure.</li>
-<li>Deep backfill has not run yet.</li>
+</ul>
+<h2>Deep Backfill</h2>
+<ul>
+<li>`README.md` establishes the public landing page: local-first Windows desktop tool, FH6 Data Out setup at `127.0.0.1:5400`, GitHub Releases installer flow, preview GIFs in `docs/assets/`, privacy summary, developer commands, support routes, MIT licence, unaffiliated Forza wording, and Ko-fi link.</li>
+<li>`CONTRIBUTING.md` establishes contributor setup and validation commands, PR expectations, release-lock regeneration, and forbidden artefacts such as generated map caches, local SQLite databases, local game files, private keys, and credentials.</li>
+<li>`SUPPORT.md`, `PRIVACY.md`, and `SECURITY.md` establish support routing, local data and network behaviour, feedback privacy, public issue safety, SmartScreen status, and private vulnerability reporting.</li>
+<li>`.github/PULL_REQUEST_TEMPLATE.md` mirrors validation and public-release-impact checks; `.github/ISSUE_TEMPLATE/` provides bug, feature, support, and security intake routing.</li>
+<li>`.github/FUNDING.yml` contains only the Ko-fi funding link used by README/support surfaces.</li>
+<li>`docs/assets/` currently contains `route-review-demo.gif` and `dashboard-replay-demo.gif`, both referenced by README preview sections.</li>
+<li>`docs/superpowers/` contains historical implementation plans/specs for world-map install-folder behaviour, release artifact attestations, v0.1.5/v0.1.6 fixes, and anonymous feedback pipeline work. Those plans route into the owning implementation bundles when active code/docs change.</li>
+<li>Neighbouring OKF routing cards confirm bundle handoffs for desktop backend, web dashboard, feedback worker, release/CI/packaging, and FH6 map tile converter.</li>
 </ul>
 <h2>Known Gaps</h2>
 <ul>
-<li>Entrypoints, neighbouring systems, and cross-solution handoffs need evidence-backed backfill.</li>
+<li>Code of conduct content is intentionally minimal in source (`Be chill`); do not infer a fuller moderation policy without a source change.</li>
+<li>`docs/superpowers/` contains historical plans, not guaranteed-current implementation truth. Verify current owner files before using a plan as evidence for behaviour.</li>
+<li>This backfill deliberately did not inspect or change `docs/feedback_reporting_*.md` or `docs/desktop-release.md`; those are owned by neighbouring bundles.</li>
 </ul>
 </body>
 </html>

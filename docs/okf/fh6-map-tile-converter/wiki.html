@@ -17,40 +17,62 @@
 <ul>
 <li>docs/okf/fh6-map-tile-converter/routing_guidance.card</li>
 <li>docs/okf/fh6-map-tile-converter/solution.md</li>
+<li>tools/fh6-map-tile-converter/Program.cs</li>
+<li>tools/fh6-map-tile-converter/Swatchbin/SwatchbinReader.cs</li>
+<li>tools/fh6-map-tile-converter/Swatchbin/BcnPngWriter.cs</li>
+<li>tools/fh6-map-tile-converter/ForzaTelemetryTracker.FH6MapTileConverter.csproj</li>
 </ul>
 <p>keywords:</p>
 <ul>
 <li>map tile</li>
 <li>swatchbin</li>
 <li>forzatechstudio</li>
-<li>dotnet</li>
+<li>forza-map-tile-converter</li>
+<li>inspect-zip</li>
+<li>convert-zip</li>
+<li>Map_Brio_Season.zip</li>
+<li>tileCoordinateSystem</li>
+<li>fh6-row-column-v1</li>
+<li>DXGI</li>
+<li>BCn</li>
+<li>Durango</li>
 <li>world map cache</li>
 <li>texture</li>
 <li>converter</li>
 </ul>
 <p>handoffs:</p>
 <ul>
-<li>Unknown until deep backfill.</li>
+<li>desktop-backend world-map cache path resolution and tile serving</li>
+<li>release-ci-packaging converter publish and package smoke checks</li>
+<li>web-dashboard world-map overlay manifest and PNG tile consumption</li>
+<li>third-party notices for vendored ForzaTechStudio parser code</li>
 </ul>
 <h1>FH6 Map Tile Converter</h1>
 <h2>Purpose</h2>
-<p>.NET map tile conversion utility and vendored ForzaTechStudio readers used to generate local map cache assets from a user-selected FH6 install.</p>
+<p>Windows-only .NET CLI that inspects and converts FH6 `.swatchbin` map tile archives into PNG tile folders plus a JSON manifest for the local world-map cache.</p>
 <h2>Owned Paths</h2>
 <ul>
 <li>tools/fh6-map-tile-converter/</li>
 </ul>
 <h2>Entrypoints</h2>
 <ul>
-<li>Unknown until deep backfill.</li>
+<li>`tools/fh6-map-tile-converter/Program.cs` exposes `forza-map-tile-converter inspect-zip --input &lt;Map_Brio_Season.zip&gt;` for archive inspection.</li>
+<li>`tools/fh6-map-tile-converter/Program.cs` exposes `forza-map-tile-converter convert-zip --input &lt;Map_Brio_Season.zip&gt; --output &lt;dir&gt; --format png --manifest &lt;manifest.json&gt;` for cache generation.</li>
+<li>`tools/fh6-map-tile-converter/ForzaTelemetryTracker.FH6MapTileConverter.csproj` builds the `forza-map-tile-converter` executable for `net9.0-windows`.</li>
 </ul>
 <h2>Neighbouring Systems</h2>
 <ul>
-<li>Unknown until deep backfill.</li>
+<li>Desktop backend world-map cache code locates the converter executable and serves generated tile sets.</li>
+<li>Desktop release packaging publishes the converter into `bin/map-converter/` and smoke tests assert it is present.</li>
+<li>Web dashboard world-map overlay consumes the tile-set manifest and PNG tile URLs; it should not parse `.swatchbin` files directly.</li>
+<li>Third-party notices cover the vendored ForzaTechStudio parsing code under this solution.</li>
 </ul>
 <h2>Maintenance Notes</h2>
 <ul>
-<li>Keep this page focused on stable ownership, entrypoints, and contracts.</li>
-<li>Use `routing.md` for symptom/search routing details.</li>
+<li>Tile archive entries must be named `&lt;z&gt;-&lt;row&gt;-&lt;column&gt;.swatchbin`; the converter emits manifest paths as `&lt;z&gt;/&lt;x&gt;/&lt;y&gt;.png` using `fh6-row-column-v1`.</li>
+<li>The PNG path supports PC swatchbins and rejects Durango/Xbox tiled swatchbins.</li>
+<li>BCn formats are decoded through `BCnEncoder.Net`; uncompressed RGBA/BGRA paths are handled locally.</li>
+<li>Keep changes inside `tools/fh6-map-tile-converter/` unless the backend, packaging, or web manifest contract also changes.</li>
 </ul>
 <h1>FH6 Map Tile Converter Routing</h1>
 <h2>Read This When</h2>
@@ -62,6 +84,10 @@
 <ul>
 <li>`docs/okf/fh6-map-tile-converter/routing_guidance.card`</li>
 <li>`docs/okf/fh6-map-tile-converter/solution.md`</li>
+<li>`tools/fh6-map-tile-converter/Program.cs`</li>
+<li>`tools/fh6-map-tile-converter/Swatchbin/SwatchbinReader.cs`</li>
+<li>`tools/fh6-map-tile-converter/Swatchbin/BcnPngWriter.cs`</li>
+<li>`tools/fh6-map-tile-converter/ForzaTelemetryTracker.FH6MapTileConverter.csproj`</li>
 </ul>
 <h2>Owned Paths</h2>
 <ul>
@@ -72,24 +98,51 @@
 <li>map tile</li>
 <li>swatchbin</li>
 <li>forzatechstudio</li>
-<li>dotnet</li>
+<li>forza-map-tile-converter</li>
+<li>inspect-zip</li>
+<li>convert-zip</li>
+<li>Map_Brio_Season.zip</li>
+<li>tileCoordinateSystem</li>
+<li>fh6-row-column-v1</li>
+<li>DXGI</li>
+<li>BCn</li>
+<li>Durango</li>
 <li>world map cache</li>
 <li>texture</li>
 <li>converter</li>
 </ul>
 <h2>Handoffs</h2>
 <ul>
-<li>Unknown until deep backfill.</li>
+<li>If the converter executable is missing, search desktop path resolution and packaging for `forza-map-tile-converter.exe` or `bin/map-converter`.</li>
+<li>If archive inspection or conversion fails, start in `Program.cs`, then `SwatchbinReader.cs` for bundle/TXCB/TXCH parsing or `BcnPngWriter.cs` for format support.</li>
+<li>If generated tiles exist but the overlay is wrong, hand off to the desktop backend and web-dashboard world-map paths after checking the manifest fields and coordinate system here.</li>
+<li>If release packaging fails, hand off to `tools/build-desktop-release.ps1` and desktop package smoke tests after confirming this project publishes successfully.</li>
+<li>If vendored parser code changes, update third-party notice evidence alongside the converter change.</li>
+</ul>
+<h2>Known Gaps</h2>
+<ul>
+<li>No fixture archive is documented in this bundle, so behaviour claims should be backed by a real FH6 map ZIP or existing backend/web tests.</li>
+<li>Durango/Xbox tiled swatchbins are explicitly unsupported by the PNG writer.</li>
 </ul>
 <h1>FH6 Map Tile Converter OKF Log</h1>
 <h2>Bootstrap</h2>
 <ul>
 <li>Shallow OKF bundle created from repository structure.</li>
-<li>Deep backfill has not run yet.</li>
+</ul>
+<h2>Deep Backfill</h2>
+<ul>
+<li>`Program.cs` exposes two commands: `inspect-zip` serialises `.swatchbin` archive metadata, and `convert-zip` writes PNG tiles plus a manifest.</li>
+<li>`Program.cs` parses tile entry names as `&lt;z&gt;-&lt;row&gt;-&lt;column&gt;.swatchbin`, converts row/column into manifest `x`/`y`, and labels manifests with `fh6-row-column-v1`.</li>
+<li>`SwatchbinReader.cs` loads Forza bundle texture content blobs through the vendored ForzaTechStudio projects and records PC or Durango texture header metadata.</li>
+<li>`BcnPngWriter.cs` supports BC1/2/3/4/5/7 plus selected uncompressed DXGI formats, writes PNG output, and rejects Durango/Xbox tiled swatchbins.</li>
+<li>The project file targets `net9.0-windows`, names the executable `forza-map-tile-converter`, references vendored ForzaTechStudio projects, and uses `BCnEncoder.Net` plus `System.Drawing.Common`.</li>
+<li>Repository searches showed handoffs in contributor build/audit commands, desktop release publishing, desktop package smoke checks, backend converter path resolution, web world-map overlay consumption, and third-party notices.</li>
 </ul>
 <h2>Known Gaps</h2>
 <ul>
-<li>Entrypoints, neighbouring systems, and cross-solution handoffs need evidence-backed backfill.</li>
+<li>No sample FH6 map ZIP or golden manifest is documented in this solution bundle.</li>
+<li>The converter&#x27;s source states Durango/Xbox tiled swatchbins are unsupported.</li>
+<li>Backend and web map-overlay behaviour should be validated in their own solution bundles when changing the manifest shape or served tile URLs.</li>
 </ul>
 </body>
 </html>

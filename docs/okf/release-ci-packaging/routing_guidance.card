@@ -7,14 +7,16 @@ owned_paths:
 - packaging/
 - tools/build-desktop-release.ps1
 - tools/smoke-desktop-package.py
-- ForzaTelemetryTrackerUpdater.spec
 - requirements-telemetry-release-lock.txt
 - THIRD_PARTY_NOTICES.md
 - licenses/
 - docs/desktop-release.md
 read_first:
 - docs/okf/release-ci-packaging/routing_guidance.card
-- docs/okf/release-ci-packaging/solution.md
+- docs/okf/release-ci-packaging/routing.md
+- .github/workflows/desktop-release.yml
+- tools/build-desktop-release.ps1
+- docs/desktop-release.md
 keywords:
 - installer
 - pyinstaller
@@ -22,9 +24,17 @@ keywords:
 - github actions
 - ci
 - release
-- attestation
+- semver tag
+- artifact attestation
 - checksum
 - dependency audit
+- lockfile
+- webview2
+- smoke-http-only
 - licence notice
 handoffs:
-- Unknown until deep backfill.
+- Desktop Backend owns packaged runtime metadata consumption, update checks, smoke HTTP mode, and bundled map-converter lookup.
+- Web Dashboard owns frontend tests and build inputs consumed by the release package.
+- FH6 Map Tile Converter owns converter source; this bundle owns publishing and bundling its Windows output.
+- Feedback Worker owns report ingestion; release metadata wires the packaged feedback endpoint.
+- Project Docs owns general community docs; this bundle owns release-specific installer and attestation guidance.

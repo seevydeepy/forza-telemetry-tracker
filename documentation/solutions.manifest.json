@@ -129,7 +129,6 @@
         "packaging/",
         "tools/build-desktop-release.ps1",
         "tools/smoke-desktop-package.py",
-        "ForzaTelemetryTrackerUpdater.spec",
         "requirements-telemetry-release-lock.txt",
         "THIRD_PARTY_NOTICES.md",
         "licenses/",

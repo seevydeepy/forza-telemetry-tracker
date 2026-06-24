@@ -25,7 +25,15 @@ keywords:
 - security
 - community
 - issue template
+- pull request template
 - design plan
 - preview asset
+- ko-fi
+- funding
+- code of conduct
 handoffs:
-- Unknown until deep backfill.
+- Runtime behaviour, local storage, update checks, feedback client, and map-cache claims hand off to desktop-backend.
+- Dashboard, modal, replay, route review, import/export, and visible UI claims hand off to web-dashboard.
+- Anonymous feedback Worker, D1, GitHub App, rate-limit, and private triage behaviour hand off to feedback-worker.
+- Installer, release workflow, attestation, dependency lock, third-party notice, and release-guide claims hand off to release-ci-packaging.
+- FH6 map asset conversion internals hand off to fh6-map-tile-converter.

@@ -8,14 +8,24 @@ owned_paths:
 read_first:
 - docs/okf/feedback-worker/routing_guidance.card
 - docs/okf/feedback-worker/solution.md
+- tools/feedback_worker/src/index.ts
+- tools/feedback_worker/src/githubApp.ts
+- tools/feedback_worker/src/schema.ts
 keywords:
 - cloudflare
 - worker
 - d1
 - github app
+- github issue
 - feedback report
+- report_ref
+- FTT-
 - rate limit
 - hmac
+- redaction
+- private triage
 - anonymous feedback
 handoffs:
-- Unknown until deep backfill.
+- Desktop Backend owns the local FastAPI feedback endpoints, diagnostics builder, retry outbox, and client endpoint activation.
+- Web Dashboard owns the Send Feedback modal, menu action, diagnostics toggle, and toast states.
+- Release CI Packaging owns packaged release metadata that enables the production feedback endpoint.
