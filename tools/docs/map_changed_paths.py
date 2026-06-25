@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Map changed paths to OKF solutions using documentation/solutions.manifest.json."""
+"""Map changed paths to OKF solutions using solutions.manifest.json."""
 
 from __future__ import annotations
 
@@ -22,6 +22,21 @@ def is_match(path: str, owned: str) -> bool:
     return path == owned or path.startswith(owned + "/")
 
 
+DOC_ROOT_PREFERENCES = ("docs", "documentation", "doc", "wiki", "manual", "manuals")
+SIMILAR_DOC_TOKENS = ("doc", "wiki", "manual")
+
+
+def find_manifest(repo: Path) -> Path:
+    for root in DOC_ROOT_PREFERENCES:
+        path = repo / root / "solutions.manifest.json"
+        if path.exists():
+            return path
+    for path in sorted(repo.glob("*/solutions.manifest.json")):
+        if any(token in path.parent.name.lower() for token in SIMILAR_DOC_TOKENS):
+            return path
+    raise FileNotFoundError("could not find solutions.manifest.json in a docs/documentation-like folder")
+
+
 def git_paths(repo: Path) -> list[str]:
     commands = [
         ["git", "diff", "--name-only", "--cached"],
@@ -42,7 +57,7 @@ def main() -> int:
     parser.add_argument("--repo", default=".")
     args = parser.parse_args()
     repo = Path(args.repo).resolve()
-    manifest_path = repo / "documentation" / "solutions.manifest.json"
+    manifest_path = find_manifest(repo)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     paths = [norm(p) for p in (args.paths or git_paths(repo))]
     excluded_prefixes = [norm(p) for p in manifest.get("excluded_paths", [])]

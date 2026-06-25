@@ -3,10 +3,10 @@
   "wiki": {
     "root": "docs/okf",
     "index": "docs/okf/index.md",
-    "umbrella": "documentation/wiki.html",
+    "umbrella": "docs/wiki.html",
     "generated_files": [
       "docs/okf/index.md",
-      "documentation/wiki.html"
+      "docs/wiki.html"
     ]
   },
   "routing": {
@@ -19,8 +19,8 @@
   },
   "excluded_paths": [
     "docs/okf/",
-    "documentation/wiki.html",
-    "documentation/solutions.manifest.json",
+    "docs/wiki.html",
+    "docs/solutions.manifest.json",
     "tools/docs/"
   ],
   "solutions": [
