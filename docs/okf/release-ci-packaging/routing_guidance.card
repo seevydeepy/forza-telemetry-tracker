@@ -13,6 +13,7 @@ owned_paths:
 - docs/desktop-release.md
 read_first:
 - docs/okf/release-ci-packaging/routing_guidance.card
+- docs/okf/release-ci-packaging/solution.md
 - docs/okf/release-ci-packaging/routing.md
 - .github/workflows/desktop-release.yml
 - tools/build-desktop-release.ps1
@@ -25,6 +26,7 @@ keywords:
 - ci
 - release
 - semver tag
+- attestation
 - artifact attestation
 - checksum
 - dependency audit
@@ -38,3 +40,8 @@ handoffs:
 - FH6 Map Tile Converter owns converter source; this bundle owns publishing and bundling its Windows output.
 - Feedback Worker owns report ingestion; release metadata wires the packaged feedback endpoint.
 - Project Docs owns general community docs; this bundle owns release-specific installer and attestation guidance.
+validation:
+- python tools/docs/map_changed_paths.py <representative-owned-path>
+- .\tools\docs\build_all_wikis.ps1 -Check
+stale_notes:
+- Review after ownership, entrypoint, handoff, or validation changes.

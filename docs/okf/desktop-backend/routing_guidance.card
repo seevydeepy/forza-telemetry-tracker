@@ -42,3 +42,8 @@ handoffs:
 - feedback-worker: receives reports submitted by FeedbackService.
 - fh6-map-tile-converter: invoked by world-map cache building.
 - release-ci-packaging: packages launcher, runtime requirements, metadata, and smoke checks.
+validation:
+- python tools/docs/map_changed_paths.py <representative-owned-path>
+- .\tools\docs\build_all_wikis.ps1 -Check
+stale_notes:
+- Review after ownership, entrypoint, handoff, or validation changes.

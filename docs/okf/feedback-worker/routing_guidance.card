@@ -29,3 +29,8 @@ handoffs:
 - Desktop Backend owns the local FastAPI feedback endpoints, diagnostics builder, retry outbox, and client endpoint activation.
 - Web Dashboard owns the Send Feedback modal, menu action, diagnostics toggle, and toast states.
 - Release CI Packaging owns packaged release metadata that enables the production feedback endpoint.
+validation:
+- python tools/docs/map_changed_paths.py <representative-owned-path>
+- .\tools\docs\build_all_wikis.ps1 -Check
+stale_notes:
+- Review after ownership, entrypoint, handoff, or validation changes.

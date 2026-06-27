@@ -9,6 +9,8 @@ owned_paths:
 - SECURITY.md
 - CODE_OF_CONDUCT.md
 - LICENSE
+- .gitignore
+- AGENTS.md
 - .github/FUNDING.yml
 - .github/PULL_REQUEST_TEMPLATE.md
 - .github/ISSUE_TEMPLATE/
@@ -24,6 +26,9 @@ keywords:
 - privacy
 - security
 - community
+- gitignore
+- agent instructions
+- okf routing
 - issue template
 - pull request template
 - design plan
@@ -37,3 +42,8 @@ handoffs:
 - Anonymous feedback Worker, D1, GitHub App, rate-limit, and private triage behaviour hand off to feedback-worker.
 - Installer, release workflow, attestation, dependency lock, third-party notice, and release-guide claims hand off to release-ci-packaging.
 - FH6 map asset conversion internals hand off to fh6-map-tile-converter.
+validation:
+- python tools/docs/map_changed_paths.py <representative-owned-path>
+- .\tools\docs\build_all_wikis.ps1 -Check
+stale_notes:
+- Review after ownership, entrypoint, handoff, or validation changes.

@@ -4,6 +4,8 @@ id: web-dashboard
 owned_paths:
 - web/telemetry-tracker/
 read_first:
+- docs/okf/web-dashboard/routing_guidance.card
+- docs/okf/web-dashboard/solution.md
 - web/telemetry-tracker/src/App.svelte
 - web/telemetry-tracker/src/api.ts
 - web/telemetry-tracker/src/desktopBridge.ts
@@ -12,6 +14,13 @@ read_first:
 keywords:
 - svelte
 - vite
+- dashboard
+- canvas
+- overlay
+- settings modal
+- import modal
+- export modal
+- route review
 - telemetry dashboard
 - route visualisation
 - telemetry canvas
@@ -34,3 +43,8 @@ handoffs:
 - Backend API and SSE provider for `/api/*` and `/events`.
 - Desktop pywebview host for native folder/file pickers.
 - Track/map/analysis data providers surfaced through API payloads.
+validation:
+- python tools/docs/map_changed_paths.py <representative-owned-path>
+- .\tools\docs\build_all_wikis.ps1 -Check
+stale_notes:
+- Review after ownership, entrypoint, handoff, or validation changes.

@@ -14,6 +14,7 @@ keywords:
 - map tile
 - swatchbin
 - forzatechstudio
+- dotnet
 - forza-map-tile-converter
 - inspect-zip
 - convert-zip
@@ -31,3 +32,8 @@ handoffs:
 - release-ci-packaging converter publish and package smoke checks
 - web-dashboard world-map overlay manifest and PNG tile consumption
 - third-party notices for vendored ForzaTechStudio parser code
+validation:
+- python tools/docs/map_changed_paths.py <representative-owned-path>
+- .\tools\docs\build_all_wikis.ps1 -Check
+stale_notes:
+- Review after ownership, entrypoint, handoff, or validation changes.
