@@ -169,6 +169,202 @@ input, select {
     <article class="article-shell" id="article"></article>
   </main>
 </div>
+<div hidden id="okf-doc-templates">
+<template data-doc-path="index.md">
+<p>Root project documentation, community metadata, support, privacy, security, funding, issue templates, design plans, and preview assets not owned by a narrower runtime or release bundle.</p>
+<h2 id="pages">Pages</h2>
+<ul>
+<li><a href="#doc/routing_guidance.card" data-doc-link="routing_guidance.card" data-doc-anchor="">Project Docs and Community Metadata Routing Card</a></li>
+<li><a href="#doc/routing.md" data-doc-link="routing.md" data-doc-anchor="">Project Docs and Community Metadata Routing</a></li>
+<li><a href="#doc/solution.md" data-doc-link="solution.md" data-doc-anchor="">Project Docs and Community Metadata</a></li>
+<li><a href="#doc/log.md" data-doc-link="log.md" data-doc-anchor="">Project Docs and Community Metadata OKF Log</a></li>
+</ul>
+</template>
+<template data-doc-path="routing_guidance.card">
+<p>id: project-docs owned_paths:</p>
+<ul>
+<li>README.md</li>
+<li>CONTRIBUTING.md</li>
+<li>SUPPORT.md</li>
+<li>PRIVACY.md</li>
+<li>SECURITY.md</li>
+<li>CODE<em>OF</em>CONDUCT.md</li>
+<li>LICENSE</li>
+<li>.gitignore</li>
+<li>AGENTS.md</li>
+<li>.github/FUNDING.yml</li>
+<li>.github/PULL<em>REQUEST</em>TEMPLATE.md</li>
+<li>.github/ISSUE_TEMPLATE/</li>
+<li>docs/assets/</li>
+<li>docs/superpowers/ read_first:</li>
+<li>docs/okf/project-docs/routing_guidance.card</li>
+<li>docs/okf/project-docs/solution.md keywords:</li>
+<li>readme</li>
+<li>contributing</li>
+<li>support</li>
+<li>privacy</li>
+<li>security</li>
+<li>community</li>
+<li>gitignore</li>
+<li>agent instructions</li>
+<li>okf routing</li>
+<li>issue template</li>
+<li>pull request template</li>
+<li>design plan</li>
+<li>preview asset</li>
+<li>ko-fi</li>
+<li>funding</li>
+<li>code of conduct handoffs:</li>
+<li>Runtime behaviour, local storage, update checks, feedback client, and map-cache claims hand off to desktop-backend.</li>
+<li>Dashboard, modal, replay, route review, import/export, and visible UI claims hand off to web-dashboard.</li>
+<li>Anonymous feedback Worker, D1, GitHub App, rate-limit, and private triage behaviour hand off to feedback-worker.</li>
+<li>Installer, release workflow, attestation, dependency lock, third-party notice, and release-guide claims hand off to release-ci-packaging.</li>
+<li>FH6 map asset conversion internals hand off to fh6-map-tile-converter. validation:</li>
+<li>python tools/docs/map<em>changed</em>paths.py &lt;representative-owned-path&gt;</li>
+<li>.\tools\docs\build<em>all</em>wikis.ps1 -Check stale_notes:</li>
+<li>Review after ownership, entrypoint, handoff, or validation changes.</li>
+</ul>
+</template>
+<template data-doc-path="routing.md">
+<h2 id="read-this-when">Read This When</h2>
+<ul>
+<li>A change touches one of this solution&#x27;s owned paths.</li>
+<li>A symptom matches one of this solution&#x27;s routing keywords.</li>
+</ul>
+<h2 id="first-files-to-inspect">First Files To Inspect</h2>
+<ul>
+<li><code>docs/okf/project-docs/routing_guidance.card</code></li>
+<li><code>docs/okf/project-docs/solution.md</code></li>
+<li>For landing-page, install, preview, privacy summary, support-link, update-check, or Ko-fi wording: <code>README.md</code></li>
+<li>For contributor setup, validation, release-lock, forbidden artefact, or PR expectation changes: <code>CONTRIBUTING.md</code></li>
+<li>For user help, troubleshooting, public issue routing, SmartScreen support wording, or feedback intake: <code>SUPPORT.md</code></li>
+<li>For local data, network behaviour, feedback diagnostics, outbox, GitHub Releases, Ko-fi, or localhost health-check claims: <code>PRIVACY.md</code></li>
+<li>For vulnerability handling and supported-version wording: <code>SECURITY.md</code></li>
+<li>For GitHub intake fields or public-release-impact checklist changes: <code>.github/PULL_REQUEST_TEMPLATE.md</code> and <code>.github/ISSUE_TEMPLATE/</code></li>
+<li>For README preview media: <code>docs/assets/</code></li>
+<li>For historical implementation plans/specs: <code>docs/superpowers/</code></li>
+</ul>
+<h2 id="owned-paths">Owned Paths</h2>
+<ul>
+<li>README.md</li>
+<li>CONTRIBUTING.md</li>
+<li>SUPPORT.md</li>
+<li>PRIVACY.md</li>
+<li>SECURITY.md</li>
+<li>CODE<em>OF</em>CONDUCT.md</li>
+<li>LICENSE</li>
+<li>.github/FUNDING.yml</li>
+<li>.github/PULL<em>REQUEST</em>TEMPLATE.md</li>
+<li>.github/ISSUE_TEMPLATE/</li>
+<li>docs/assets/</li>
+<li>docs/superpowers/</li>
+</ul>
+<h2 id="symptoms-and-search-terms">Symptoms And Search Terms</h2>
+<ul>
+<li>readme</li>
+<li>contributing</li>
+<li>support</li>
+<li>privacy</li>
+<li>security</li>
+<li>community</li>
+<li>issue template</li>
+<li>pull request template</li>
+<li>design plan</li>
+<li>preview asset</li>
+<li>funding</li>
+<li>ko-fi</li>
+<li>smart screen</li>
+<li>unaffiliated</li>
+<li>unofficial</li>
+<li>data out setup</li>
+<li>public issue</li>
+<li>private vulnerability</li>
+<li>local-first</li>
+<li>privacy policy</li>
+<li>telemetry database</li>
+<li>generated map cache</li>
+<li>support route</li>
+</ul>
+<h2 id="handoffs">Handoffs</h2>
+<ul>
+<li>Route runtime implementation questions to <code>desktop-backend</code> when the doc claim depends on Python/FastAPI, UDP Data Out capture, SQLite, local outbox, update checks, desktop launcher health checks, or world-map status.</li>
+<li>Route dashboard or visible UI behaviour questions to <code>web-dashboard</code> when the doc claim depends on Svelte components, modals, replay, route review, settings, import/export, or feedback UI.</li>
+<li>Route anonymous feedback infrastructure questions to <code>feedback-worker</code> when the doc claim depends on Worker/D1/GitHub App/private triage/rate-limit/HMAC behaviour. Do not use this bundle for <code>docs/feedback_reporting_*.md</code>.</li>
+<li>Route installer, release, attestation, dependency-lock, third-party notice, licence-bundle, and <code>docs/desktop-release.md</code> questions to <code>release-ci-packaging</code>.</li>
+<li>Route map tile conversion internals to <code>fh6-map-tile-converter</code>; keep this bundle limited to public-facing install-folder and map-cache documentation.</li>
+</ul>
+</template>
+<template data-doc-path="solution.md">
+<h2 id="purpose">Purpose</h2>
+<p>Root project documentation, community metadata, support, privacy, security, funding, issue templates, design plans, and preview assets not owned by a narrower runtime or release bundle.</p>
+<h2 id="owned-paths">Owned Paths</h2>
+<ul>
+<li>README.md</li>
+<li>CONTRIBUTING.md</li>
+<li>SUPPORT.md</li>
+<li>PRIVACY.md</li>
+<li>SECURITY.md</li>
+<li>CODE<em>OF</em>CONDUCT.md</li>
+<li>LICENSE</li>
+<li>.github/FUNDING.yml</li>
+<li>.github/PULL<em>REQUEST</em>TEMPLATE.md</li>
+<li>.github/ISSUE_TEMPLATE/</li>
+<li>docs/assets/</li>
+<li>docs/superpowers/</li>
+</ul>
+<h2 id="entrypoints">Entrypoints</h2>
+<ul>
+<li><code>README.md</code> is the public project landing page. It states the local-first Windows desktop purpose, preview GIFs, install flow, Data Out setup, privacy summary, developer commands, support routes, licence, and Ko-fi link.</li>
+<li><code>CONTRIBUTING.md</code> is the maintainer/contributor entrypoint for local setup, validation commands, pull request expectations, release-lock regeneration, and forbidden artefacts.</li>
+<li><code>SUPPORT.md</code>, <code>PRIVACY.md</code>, and <code>SECURITY.md</code> are the public support, data-handling, and vulnerability-reporting entrypoints.</li>
+<li><code>.github/PULL_REQUEST_TEMPLATE.md</code> and <code>.github/ISSUE_TEMPLATE/</code> are the GitHub intake surfaces for validation evidence, public-release impact checks, bug reports, feature requests, support links, and security routing.</li>
+<li><code>docs/assets/</code> holds README preview media. <code>docs/superpowers/</code> holds historical plans and specs for agentic implementation work.</li>
+</ul>
+<h2 id="neighbouring-systems">Neighbouring Systems</h2>
+<ul>
+<li><code>desktop-backend</code>: owns the FastAPI/Python runtime, local SQLite storage, Data Out capture, local feedback client/outbox, update-check implementation, and world-map status described by the public docs.</li>
+<li><code>web-dashboard</code>: owns the Svelte UI surfaces referenced by docs, including feedback, settings, import/export, replay, route review, and dashboard behaviour.</li>
+<li><code>feedback-worker</code>: owns Cloudflare Worker, D1, GitHub App, private triage repository, HMAC/rate-limit, and feedback-reporting runbook details; project-docs only summarises public user-facing behaviour.</li>
+<li><code>release-ci-packaging</code>: owns installer packaging, release workflow, dependency locks, third-party notices, licences folder, release attestations, and <code>docs/desktop-release.md</code>.</li>
+<li><code>fh6-map-tile-converter</code>: owns map tile conversion internals; project-docs only documents the user-facing install-folder and map-cache privacy expectations.</li>
+</ul>
+<h2 id="contracts">Contracts</h2>
+<ul>
+<li>Public docs must keep the project framed as an unofficial community tool unaffiliated with Microsoft, Xbox Game Studios, Turn 10 Studios, Playground Games, or the Forza franchise owners.</li>
+<li>Public docs must preserve the local-first privacy contract: no automatic analytics, crash reporting, tracking pixels, advertising SDKs, user accounts, or background telemetry upload behaviour.</li>
+<li>Support and issue intake must steer private diagnostics, security reports, telemetry databases, local game files, generated map caches, credentials, and private keys away from public issues unless a maintainer explicitly asks for a redacted sample.</li>
+<li>README release/install wording should stay aligned with the Windows installer path, unsigned SmartScreen warning, GitHub Releases update check, and release/packaging ownership.</li>
+</ul>
+<h2 id="maintenance-notes">Maintenance Notes</h2>
+<ul>
+<li>Keep this page focused on stable ownership, entrypoints, and contracts.</li>
+<li>Use <code>routing.md</code> for symptom/search routing details.</li>
+</ul>
+</template>
+<template data-doc-path="log.md">
+<h2 id="bootstrap">Bootstrap</h2>
+<ul>
+<li>Shallow OKF bundle created from repository structure.</li>
+</ul>
+<h2 id="deep-backfill">Deep Backfill</h2>
+<ul>
+<li><code>README.md</code> establishes the public landing page: local-first Windows desktop tool, FH6 Data Out setup at <code>127.0.0.1:5400</code>, GitHub Releases installer flow, preview GIFs in <code>docs/assets/</code>, privacy summary, developer commands, support routes, MIT licence, unaffiliated Forza wording, and Ko-fi link.</li>
+<li><code>CONTRIBUTING.md</code> establishes contributor setup and validation commands, PR expectations, release-lock regeneration, and forbidden artefacts such as generated map caches, local SQLite databases, local game files, private keys, and credentials.</li>
+<li><code>SUPPORT.md</code>, <code>PRIVACY.md</code>, and <code>SECURITY.md</code> establish support routing, local data and network behaviour, feedback privacy, public issue safety, SmartScreen status, and private vulnerability reporting.</li>
+<li><code>.github/PULL_REQUEST_TEMPLATE.md</code> mirrors validation and public-release-impact checks; <code>.github/ISSUE_TEMPLATE/</code> provides bug, feature, support, and security intake routing.</li>
+<li><code>.github/FUNDING.yml</code> contains only the Ko-fi funding link used by README/support surfaces.</li>
+<li><code>docs/assets/</code> currently contains <code>route-review-demo.gif</code> and <code>dashboard-replay-demo.gif</code>, both referenced by README preview sections.</li>
+<li><code>docs/superpowers/</code> contains historical implementation plans/specs for world-map install-folder behaviour, release artifact attestations, v0.1.5/v0.1.6 fixes, and anonymous feedback pipeline work. Those plans route into the owning implementation bundles when active code/docs change.</li>
+<li>Neighbouring OKF routing cards confirm bundle handoffs for desktop backend, web dashboard, feedback worker, release/CI/packaging, and FH6 map tile converter.</li>
+</ul>
+<h2 id="known-gaps">Known Gaps</h2>
+<ul>
+<li>Code of conduct content is intentionally minimal in source (<code>Be chill</code>); do not infer a fuller moderation policy without a source change.</li>
+<li><code>docs/superpowers/</code> contains historical plans, not guaranteed-current implementation truth. Verify current owner files before using a plan as evidence for behaviour.</li>
+<li>This backfill deliberately did not inspect or change <code>docs/feedback_reporting_*.md</code> or <code>docs/desktop-release.md</code>; those are owned by neighbouring bundles.</li>
+</ul>
+</template>
+</div>
 <script id="okf-data" type="application/json">
 {
   "backlinks": {
@@ -189,7 +385,6 @@ input, select {
   "docs": [
     {
       "description": "Root project documentation, community metadata, support, privacy, security, funding, issue templates, design plans, and preview assets not owned by a narrower runtime or release bundle.",
-      "html": "<p>Root project documentation, community metadata, support, privacy, security, funding, issue templates, design plans, and preview assets not owned by a narrower runtime or release bundle.<\/p>\n<h2 id=\"pages\">Pages<\/h2>\n<ul>\n<li><a href=\"#doc/routing_guidance.card\" data-doc-link=\"routing_guidance.card\" data-doc-anchor=\"\">Project Docs and Community Metadata Routing Card<\/a><\/li>\n<li><a href=\"#doc/routing.md\" data-doc-link=\"routing.md\" data-doc-anchor=\"\">Project Docs and Community Metadata Routing<\/a><\/li>\n<li><a href=\"#doc/solution.md\" data-doc-link=\"solution.md\" data-doc-anchor=\"\">Project Docs and Community Metadata<\/a><\/li>\n<li><a href=\"#doc/log.md\" data-doc-link=\"log.md\" data-doc-anchor=\"\">Project Docs and Community Metadata OKF Log<\/a><\/li>\n<\/ul>",
       "metadata": {
         "description": "Root project documentation, community metadata, support, privacy, security, funding, issue templates, design plans, and preview assets not owned by a narrower runtime or release bundle.",
         "routing_keywords": [
@@ -246,7 +441,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<p>id: project-docs owned_paths:<\/p>\n<ul>\n<li>README.md<\/li>\n<li>CONTRIBUTING.md<\/li>\n<li>SUPPORT.md<\/li>\n<li>PRIVACY.md<\/li>\n<li>SECURITY.md<\/li>\n<li>CODE<em>OF<\/em>CONDUCT.md<\/li>\n<li>LICENSE<\/li>\n<li>.gitignore<\/li>\n<li>AGENTS.md<\/li>\n<li>.github/FUNDING.yml<\/li>\n<li>.github/PULL<em>REQUEST<\/em>TEMPLATE.md<\/li>\n<li>.github/ISSUE_TEMPLATE/<\/li>\n<li>docs/assets/<\/li>\n<li>docs/superpowers/ read_first:<\/li>\n<li>docs/okf/project-docs/routing_guidance.card<\/li>\n<li>docs/okf/project-docs/solution.md keywords:<\/li>\n<li>readme<\/li>\n<li>contributing<\/li>\n<li>support<\/li>\n<li>privacy<\/li>\n<li>security<\/li>\n<li>community<\/li>\n<li>gitignore<\/li>\n<li>agent instructions<\/li>\n<li>okf routing<\/li>\n<li>issue template<\/li>\n<li>pull request template<\/li>\n<li>design plan<\/li>\n<li>preview asset<\/li>\n<li>ko-fi<\/li>\n<li>funding<\/li>\n<li>code of conduct handoffs:<\/li>\n<li>Runtime behaviour, local storage, update checks, feedback client, and map-cache claims hand off to desktop-backend.<\/li>\n<li>Dashboard, modal, replay, route review, import/export, and visible UI claims hand off to web-dashboard.<\/li>\n<li>Anonymous feedback Worker, D1, GitHub App, rate-limit, and private triage behaviour hand off to feedback-worker.<\/li>\n<li>Installer, release workflow, attestation, dependency lock, third-party notice, and release-guide claims hand off to release-ci-packaging.<\/li>\n<li>FH6 map asset conversion internals hand off to fh6-map-tile-converter. validation:<\/li>\n<li>python tools/docs/map<em>changed<\/em>paths.py &lt;representative-owned-path&gt;<\/li>\n<li>.\\tools\\docs\\build<em>all<\/em>wikis.ps1 -Check stale_notes:<\/li>\n<li>Review after ownership, entrypoint, handoff, or validation changes.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "routing_guidance.card",
@@ -257,7 +451,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"read-this-when\">Read This When<\/h2>\n<ul>\n<li>A change touches one of this solution&#x27;s owned paths.<\/li>\n<li>A symptom matches one of this solution&#x27;s routing keywords.<\/li>\n<\/ul>\n<h2 id=\"first-files-to-inspect\">First Files To Inspect<\/h2>\n<ul>\n<li><code>docs/okf/project-docs/routing_guidance.card<\/code><\/li>\n<li><code>docs/okf/project-docs/solution.md<\/code><\/li>\n<li>For landing-page, install, preview, privacy summary, support-link, update-check, or Ko-fi wording: <code>README.md<\/code><\/li>\n<li>For contributor setup, validation, release-lock, forbidden artefact, or PR expectation changes: <code>CONTRIBUTING.md<\/code><\/li>\n<li>For user help, troubleshooting, public issue routing, SmartScreen support wording, or feedback intake: <code>SUPPORT.md<\/code><\/li>\n<li>For local data, network behaviour, feedback diagnostics, outbox, GitHub Releases, Ko-fi, or localhost health-check claims: <code>PRIVACY.md<\/code><\/li>\n<li>For vulnerability handling and supported-version wording: <code>SECURITY.md<\/code><\/li>\n<li>For GitHub intake fields or public-release-impact checklist changes: <code>.github/PULL_REQUEST_TEMPLATE.md<\/code> and <code>.github/ISSUE_TEMPLATE/<\/code><\/li>\n<li>For README preview media: <code>docs/assets/<\/code><\/li>\n<li>For historical implementation plans/specs: <code>docs/superpowers/<\/code><\/li>\n<\/ul>\n<h2 id=\"owned-paths\">Owned Paths<\/h2>\n<ul>\n<li>README.md<\/li>\n<li>CONTRIBUTING.md<\/li>\n<li>SUPPORT.md<\/li>\n<li>PRIVACY.md<\/li>\n<li>SECURITY.md<\/li>\n<li>CODE<em>OF<\/em>CONDUCT.md<\/li>\n<li>LICENSE<\/li>\n<li>.github/FUNDING.yml<\/li>\n<li>.github/PULL<em>REQUEST<\/em>TEMPLATE.md<\/li>\n<li>.github/ISSUE_TEMPLATE/<\/li>\n<li>docs/assets/<\/li>\n<li>docs/superpowers/<\/li>\n<\/ul>\n<h2 id=\"symptoms-and-search-terms\">Symptoms And Search Terms<\/h2>\n<ul>\n<li>readme<\/li>\n<li>contributing<\/li>\n<li>support<\/li>\n<li>privacy<\/li>\n<li>security<\/li>\n<li>community<\/li>\n<li>issue template<\/li>\n<li>pull request template<\/li>\n<li>design plan<\/li>\n<li>preview asset<\/li>\n<li>funding<\/li>\n<li>ko-fi<\/li>\n<li>smart screen<\/li>\n<li>unaffiliated<\/li>\n<li>unofficial<\/li>\n<li>data out setup<\/li>\n<li>public issue<\/li>\n<li>private vulnerability<\/li>\n<li>local-first<\/li>\n<li>privacy policy<\/li>\n<li>telemetry database<\/li>\n<li>generated map cache<\/li>\n<li>support route<\/li>\n<\/ul>\n<h2 id=\"handoffs\">Handoffs<\/h2>\n<ul>\n<li>Route runtime implementation questions to <code>desktop-backend<\/code> when the doc claim depends on Python/FastAPI, UDP Data Out capture, SQLite, local outbox, update checks, desktop launcher health checks, or world-map status.<\/li>\n<li>Route dashboard or visible UI behaviour questions to <code>web-dashboard<\/code> when the doc claim depends on Svelte components, modals, replay, route review, settings, import/export, or feedback UI.<\/li>\n<li>Route anonymous feedback infrastructure questions to <code>feedback-worker<\/code> when the doc claim depends on Worker/D1/GitHub App/private triage/rate-limit/HMAC behaviour. Do not use this bundle for <code>docs/feedback_reporting_*.md<\/code>.<\/li>\n<li>Route installer, release, attestation, dependency-lock, third-party notice, licence-bundle, and <code>docs/desktop-release.md<\/code> questions to <code>release-ci-packaging<\/code>.<\/li>\n<li>Route map tile conversion internals to <code>fh6-map-tile-converter<\/code>; keep this bundle limited to public-facing install-folder and map-cache documentation.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "routing.md",
@@ -268,7 +461,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"purpose\">Purpose<\/h2>\n<p>Root project documentation, community metadata, support, privacy, security, funding, issue templates, design plans, and preview assets not owned by a narrower runtime or release bundle.<\/p>\n<h2 id=\"owned-paths\">Owned Paths<\/h2>\n<ul>\n<li>README.md<\/li>\n<li>CONTRIBUTING.md<\/li>\n<li>SUPPORT.md<\/li>\n<li>PRIVACY.md<\/li>\n<li>SECURITY.md<\/li>\n<li>CODE<em>OF<\/em>CONDUCT.md<\/li>\n<li>LICENSE<\/li>\n<li>.github/FUNDING.yml<\/li>\n<li>.github/PULL<em>REQUEST<\/em>TEMPLATE.md<\/li>\n<li>.github/ISSUE_TEMPLATE/<\/li>\n<li>docs/assets/<\/li>\n<li>docs/superpowers/<\/li>\n<\/ul>\n<h2 id=\"entrypoints\">Entrypoints<\/h2>\n<ul>\n<li><code>README.md<\/code> is the public project landing page. It states the local-first Windows desktop purpose, preview GIFs, install flow, Data Out setup, privacy summary, developer commands, support routes, licence, and Ko-fi link.<\/li>\n<li><code>CONTRIBUTING.md<\/code> is the maintainer/contributor entrypoint for local setup, validation commands, pull request expectations, release-lock regeneration, and forbidden artefacts.<\/li>\n<li><code>SUPPORT.md<\/code>, <code>PRIVACY.md<\/code>, and <code>SECURITY.md<\/code> are the public support, data-handling, and vulnerability-reporting entrypoints.<\/li>\n<li><code>.github/PULL_REQUEST_TEMPLATE.md<\/code> and <code>.github/ISSUE_TEMPLATE/<\/code> are the GitHub intake surfaces for validation evidence, public-release impact checks, bug reports, feature requests, support links, and security routing.<\/li>\n<li><code>docs/assets/<\/code> holds README preview media. <code>docs/superpowers/<\/code> holds historical plans and specs for agentic implementation work.<\/li>\n<\/ul>\n<h2 id=\"neighbouring-systems\">Neighbouring Systems<\/h2>\n<ul>\n<li><code>desktop-backend<\/code>: owns the FastAPI/Python runtime, local SQLite storage, Data Out capture, local feedback client/outbox, update-check implementation, and world-map status described by the public docs.<\/li>\n<li><code>web-dashboard<\/code>: owns the Svelte UI surfaces referenced by docs, including feedback, settings, import/export, replay, route review, and dashboard behaviour.<\/li>\n<li><code>feedback-worker<\/code>: owns Cloudflare Worker, D1, GitHub App, private triage repository, HMAC/rate-limit, and feedback-reporting runbook details; project-docs only summarises public user-facing behaviour.<\/li>\n<li><code>release-ci-packaging<\/code>: owns installer packaging, release workflow, dependency locks, third-party notices, licences folder, release attestations, and <code>docs/desktop-release.md<\/code>.<\/li>\n<li><code>fh6-map-tile-converter<\/code>: owns map tile conversion internals; project-docs only documents the user-facing install-folder and map-cache privacy expectations.<\/li>\n<\/ul>\n<h2 id=\"contracts\">Contracts<\/h2>\n<ul>\n<li>Public docs must keep the project framed as an unofficial community tool unaffiliated with Microsoft, Xbox Game Studios, Turn 10 Studios, Playground Games, or the Forza franchise owners.<\/li>\n<li>Public docs must preserve the local-first privacy contract: no automatic analytics, crash reporting, tracking pixels, advertising SDKs, user accounts, or background telemetry upload behaviour.<\/li>\n<li>Support and issue intake must steer private diagnostics, security reports, telemetry databases, local game files, generated map caches, credentials, and private keys away from public issues unless a maintainer explicitly asks for a redacted sample.<\/li>\n<li>README release/install wording should stay aligned with the Windows installer path, unsigned SmartScreen warning, GitHub Releases update check, and release/packaging ownership.<\/li>\n<\/ul>\n<h2 id=\"maintenance-notes\">Maintenance Notes<\/h2>\n<ul>\n<li>Keep this page focused on stable ownership, entrypoints, and contracts.<\/li>\n<li>Use <code>routing.md<\/code> for symptom/search routing details.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "solution.md",
@@ -279,7 +471,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"bootstrap\">Bootstrap<\/h2>\n<ul>\n<li>Shallow OKF bundle created from repository structure.<\/li>\n<\/ul>\n<h2 id=\"deep-backfill\">Deep Backfill<\/h2>\n<ul>\n<li><code>README.md<\/code> establishes the public landing page: local-first Windows desktop tool, FH6 Data Out setup at <code>127.0.0.1:5400<\/code>, GitHub Releases installer flow, preview GIFs in <code>docs/assets/<\/code>, privacy summary, developer commands, support routes, MIT licence, unaffiliated Forza wording, and Ko-fi link.<\/li>\n<li><code>CONTRIBUTING.md<\/code> establishes contributor setup and validation commands, PR expectations, release-lock regeneration, and forbidden artefacts such as generated map caches, local SQLite databases, local game files, private keys, and credentials.<\/li>\n<li><code>SUPPORT.md<\/code>, <code>PRIVACY.md<\/code>, and <code>SECURITY.md<\/code> establish support routing, local data and network behaviour, feedback privacy, public issue safety, SmartScreen status, and private vulnerability reporting.<\/li>\n<li><code>.github/PULL_REQUEST_TEMPLATE.md<\/code> mirrors validation and public-release-impact checks; <code>.github/ISSUE_TEMPLATE/<\/code> provides bug, feature, support, and security intake routing.<\/li>\n<li><code>.github/FUNDING.yml<\/code> contains only the Ko-fi funding link used by README/support surfaces.<\/li>\n<li><code>docs/assets/<\/code> currently contains <code>route-review-demo.gif<\/code> and <code>dashboard-replay-demo.gif<\/code>, both referenced by README preview sections.<\/li>\n<li><code>docs/superpowers/<\/code> contains historical implementation plans/specs for world-map install-folder behaviour, release artifact attestations, v0.1.5/v0.1.6 fixes, and anonymous feedback pipeline work. Those plans route into the owning implementation bundles when active code/docs change.<\/li>\n<li>Neighbouring OKF routing cards confirm bundle handoffs for desktop backend, web dashboard, feedback worker, release/CI/packaging, and FH6 map tile converter.<\/li>\n<\/ul>\n<h2 id=\"known-gaps\">Known Gaps<\/h2>\n<ul>\n<li>Code of conduct content is intentionally minimal in source (<code>Be chill<\/code>); do not infer a fuller moderation policy without a source change.<\/li>\n<li><code>docs/superpowers/<\/code> contains historical plans, not guaranteed-current implementation truth. Verify current owner files before using a plan as evidence for behaviour.<\/li>\n<li>This backfill deliberately did not inspect or change <code>docs/feedback_reporting_*.md<\/code> or <code>docs/desktop-release.md<\/code>; those are owned by neighbouring bundles.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "log.md",
@@ -320,6 +511,9 @@ input, select {
   const bundle = JSON.parse(document.getElementById("okf-data").textContent);
   const docs = bundle.docs;
   const docsByPath = new Map(docs.map((doc) => [doc.path, doc]));
+  const docTemplates = new Map(
+    [...document.querySelectorAll("template[data-doc-path]")].map((template) => [template.dataset.docPath, template])
+  );
   const article = document.getElementById("article");
   const docList = document.getElementById("docList");
   const search = document.getElementById("search");
@@ -438,7 +632,7 @@ input, select {
         <div class="source-link">Source path: ${escapeHtml(doc.path)}</div>
         ${renderRouting(doc.metadata || {})}
       </header>
-      <section class="article-body">${doc.html}</section>
+      <section class="article-body"></section>
       <section class="relationships" aria-label="OKF relationships">
         <h3>Links from this page</h3>
         ${linkPills(doc.outgoing, "No internal OKF links from this page.")}
@@ -446,6 +640,13 @@ input, select {
         ${linkPills(bundle.backlinks[doc.path] || [], "No other wiki page links here yet.")}
       </section>
     `;
+    const body = article.querySelector(".article-body");
+    const template = docTemplates.get(doc.path);
+    if (body && template) {
+      body.replaceChildren(template.content.cloneNode(true));
+    } else if (body) {
+      body.textContent = "Document body unavailable.";
+    }
     renderList();
     if (anchor) {
       requestAnimationFrame(() => {

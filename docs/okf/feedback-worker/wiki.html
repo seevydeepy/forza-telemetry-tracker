@@ -169,6 +169,161 @@ input, select {
     <article class="article-shell" id="article"></article>
   </main>
 </div>
+<div hidden id="okf-doc-templates">
+<template data-doc-path="index.md">
+<p>Cloudflare Worker, D1 schema, and public feedback-reporting documentation for user-initiated anonymous reports into maintainer GitHub issue triage.</p>
+<h2 id="pages">Pages</h2>
+<ul>
+<li><a href="#doc/routing_guidance.card" data-doc-link="routing_guidance.card" data-doc-anchor="">Feedback Worker Routing Card</a></li>
+<li><a href="#doc/routing.md" data-doc-link="routing.md" data-doc-anchor="">Feedback Worker Routing</a></li>
+<li><a href="#doc/solution.md" data-doc-link="solution.md" data-doc-anchor="">Feedback Worker</a></li>
+<li><a href="#doc/log.md" data-doc-link="log.md" data-doc-anchor="">Feedback Worker OKF Log</a></li>
+</ul>
+</template>
+<template data-doc-path="routing_guidance.card">
+<p>id: feedback-worker owned_paths:</p>
+<ul>
+<li>tools/feedback_worker/</li>
+<li>docs/feedback<em>reporting</em>setup.md</li>
+<li>docs/feedback<em>reporting</em>design<em>handoff.md read</em>first:</li>
+<li>docs/okf/feedback-worker/routing_guidance.card</li>
+<li>docs/okf/feedback-worker/solution.md</li>
+<li>tools/feedback_worker/src/index.ts</li>
+<li>tools/feedback_worker/src/githubApp.ts</li>
+<li>tools/feedback_worker/src/schema.ts keywords:</li>
+<li>cloudflare</li>
+<li>worker</li>
+<li>d1</li>
+<li>github app</li>
+<li>github issue</li>
+<li>feedback report</li>
+<li>report_ref</li>
+<li>FTT-</li>
+<li>rate limit</li>
+<li>hmac</li>
+<li>redaction</li>
+<li>private triage</li>
+<li>anonymous feedback handoffs:</li>
+<li>Desktop Backend owns the local FastAPI feedback endpoints, diagnostics builder, retry outbox, and client endpoint activation.</li>
+<li>Web Dashboard owns the Send Feedback modal, menu action, diagnostics toggle, and toast states.</li>
+<li>Release CI Packaging owns packaged release metadata that enables the production feedback endpoint. validation:</li>
+<li>python tools/docs/map<em>changed</em>paths.py &lt;representative-owned-path&gt;</li>
+<li>.\tools\docs\build<em>all</em>wikis.ps1 -Check stale_notes:</li>
+<li>Review after ownership, entrypoint, handoff, or validation changes.</li>
+</ul>
+</template>
+<template data-doc-path="routing.md">
+<h2 id="read-this-when">Read This When</h2>
+<ul>
+<li>A change touches one of this solution&#x27;s owned paths.</li>
+<li>A symptom matches one of this solution&#x27;s routing keywords.</li>
+</ul>
+<h2 id="first-files-to-inspect">First Files To Inspect</h2>
+<ul>
+<li><code>docs/okf/feedback-worker/routing_guidance.card</code></li>
+<li><code>docs/okf/feedback-worker/solution.md</code></li>
+<li><code>tools/feedback_worker/src/index.ts</code></li>
+<li><code>tools/feedback_worker/src/schema.ts</code></li>
+<li><code>tools/feedback_worker/src/githubApp.ts</code></li>
+</ul>
+<h2 id="owned-paths">Owned Paths</h2>
+<ul>
+<li>tools/feedback_worker/</li>
+<li>docs/feedback<em>reporting</em>setup.md</li>
+<li>docs/feedback<em>reporting</em>design_handoff.md</li>
+</ul>
+<h2 id="symptoms-and-search-terms">Symptoms And Search Terms</h2>
+<ul>
+<li>cloudflare</li>
+<li>worker</li>
+<li>d1</li>
+<li>github app</li>
+<li>github issue</li>
+<li>feedback report</li>
+<li>report_ref</li>
+<li>FTT-</li>
+<li>rate limit</li>
+<li>hmac</li>
+<li>redaction</li>
+<li>private triage</li>
+<li>anonymous feedback</li>
+</ul>
+<h2 id="symptom-routing">Symptom Routing</h2>
+<ul>
+<li>Worker returns <code>400</code>, <code>413</code>, <code>422</code>, <code>429</code>, <code>503</code>, or <code>202</code>: start in <code>tools/feedback_worker/src/index.ts</code>, then inspect <code>src/schema.ts</code> for validation failures or <code>src/rateLimit.ts</code> for quota behaviour.</li>
+<li>Duplicate or missing private issues for a report ref: inspect <code>readReport</code>, <code>reconcileExistingGitHubIssue</code>, <code>insertCreatingReport</code>, <code>claimFailedReport</code>, and <code>markCreated</code> in <code>tools/feedback_worker/src/index.ts</code>, then <code>findExistingGitHubIssue</code> in <code>src/githubApp.ts</code>.</li>
+<li>GitHub authentication, private key, installation token, or label fallback failures: inspect <code>tools/feedback_worker/src/githubApp.ts</code> and the setup values documented in <code>docs/feedback_reporting_setup.md</code>.</li>
+<li>Sensitive text, raw IPs, reporter IDs, local usernames, emails, or secrets appear in a GitHub issue: inspect <code>scrubSensitiveText</code>, <code>redactRawIdentifiers</code>, <code>sanitizeStructuredValue</code>, and <code>buildIssueBody</code> in <code>tools/feedback_worker/src/githubApp.ts</code>.</li>
+<li>Bad category, report-ref format, reporter ID, timestamp, description length, or diagnostics size: inspect <code>tools/feedback_worker/src/schema.ts</code>.</li>
+<li>D1 migration, binding, Worker name, deployed URL, or limit defaults look wrong: inspect <code>tools/feedback_worker/wrangler.toml</code>, <code>tools/feedback_worker/migrations/0001_feedback_state.sql</code>, and <code>docs/feedback_reporting_setup.md</code>.</li>
+<li>Production endpoint should be enabled or disabled in packaged/local builds: route to Desktop Backend and Release CI Packaging after reading the Client Endpoint Activation and Rollback sections in <code>docs/feedback_reporting_setup.md</code>.</li>
+</ul>
+<h2 id="handoffs">Handoffs</h2>
+<ul>
+<li>Desktop Backend: local <code>/api/feedback/config</code>, <code>/api/feedback/reports</code>, diagnostics sanitisation, SQLite retry outbox, and endpoint activation/rollback.</li>
+<li>Web Dashboard: Send Feedback modal, category dropdown, diagnostics toggle, and progress/success/queued/error toasts.</li>
+<li>Release CI Packaging: release metadata and build workflow arguments that set the production feedback endpoint.</li>
+<li>Project Docs: README, PRIVACY, SUPPORT, and operator-facing feedback setup disclosure.</li>
+</ul>
+</template>
+<template data-doc-path="solution.md">
+<h2 id="purpose">Purpose</h2>
+<p>Cloudflare Worker backend and runbook for user-initiated anonymous feedback reports. It accepts <code>POST /v1/reports</code>, validates the Forza report schema, enforces D1-backed idempotency and rate limits, and creates private GitHub triage issues through a dedicated GitHub App.</p>
+<h2 id="owned-paths">Owned Paths</h2>
+<ul>
+<li>tools/feedback_worker/</li>
+<li>docs/feedback<em>reporting</em>setup.md</li>
+<li>docs/feedback<em>reporting</em>design_handoff.md</li>
+</ul>
+<h2 id="entrypoints">Entrypoints</h2>
+<ul>
+<li><code>tools/feedback_worker/src/index.ts</code>: Worker fetch handler, <code>GET /health</code>, <code>POST /v1/reports</code>, body size checks, report state transitions, HMAC reporter/IP hashes, fixed-window rate limits, and D1 idempotency.</li>
+<li><code>tools/feedback_worker/src/schema.ts</code>: accepted report categories, <code>FTT-[A-Z2-7]{8}</code> report refs, GUID reporter IDs, description limits, diagnostics log cap, and timestamp validation.</li>
+<li><code>tools/feedback_worker/src/githubApp.ts</code>: GitHub App JWT/token exchange, exact report-ref search, private issue creation, category labels, label fallback, and issue-body redaction.</li>
+<li><code>tools/feedback_worker/src/rateLimit.ts</code>: D1 fixed-window counter update.</li>
+<li><code>tools/feedback_worker/migrations/0001_feedback_state.sql</code>: <code>reports</code> and <code>rate_limits</code> tables.</li>
+<li><code>tools/feedback_worker/wrangler.toml</code>: Worker name, D1 binding, GitHub repo vars, body and rate-limit defaults.</li>
+<li><code>tools/feedback_worker/test/worker.test.ts</code>: executable coverage for schema rejection, idempotency, failed-row retry, rate limits, label fallback, JWT key formats, and redaction.</li>
+</ul>
+<h2 id="neighbouring-systems">Neighbouring Systems</h2>
+<ul>
+<li>Desktop Backend builds and submits reports through local FastAPI; the Svelte UI should not call Cloudflare directly.</li>
+<li>Desktop Backend also owns diagnostics collection, sanitisation before submission, and the local retry outbox when the endpoint is unavailable.</li>
+<li>Web Dashboard owns the Send Feedback modal, category selection, opt-out diagnostics toggle, and sent/queued/error toast flow.</li>
+<li>Release CI Packaging controls when packaged builds receive the production <code>https://forza-telemetry-feedback.cvdp.workers.dev/v1/reports</code> endpoint.</li>
+<li>The private <code>seevydeepy/forza-telemetry-feedback</code> repository is the triage target. User feedback must not be filed in the public tracker repository.</li>
+</ul>
+<h2 id="maintenance-notes">Maintenance Notes</h2>
+<ul>
+<li>Keep Worker changes paired with <code>npm test</code> and <code>npm run typecheck</code> from <code>tools/feedback_worker</code>.</li>
+<li>Keep deployment and privacy claims aligned with <code>docs/feedback_reporting_setup.md</code>; do not document unprovisioned buckets, attachments, screenshots, or telemetry uploads.</li>
+<li>Treat raw IPs, reporter UUIDs, credentials, local user paths, emails, and tokens as privacy-sensitive. The Worker should only persist HMAC-derived identifiers and redacted issue text.</li>
+</ul>
+</template>
+<template data-doc-path="log.md">
+<h2 id="bootstrap">Bootstrap</h2>
+<ul>
+<li>Shallow OKF bundle created from repository structure.</li>
+</ul>
+<h2 id="deep-backfill">Deep Backfill</h2>
+<ul>
+<li>Backfilled stable purpose, entrypoints, routing terms, and handoffs from the checked-in Worker scaffold and feedback docs.</li>
+<li><code>tools/feedback_worker/src/index.ts</code> shows the active Worker endpoints: <code>GET /health</code> and <code>POST /v1/reports</code>. It handles body-size checks, schema validation, HMAC reporter/IP hashes, D1 report rows, fixed-window rate limits, idempotent duplicate handling, failed-row retry, GitHub issue creation, and JSON responses.</li>
+<li><code>tools/feedback_worker/src/schema.ts</code> defines the accepted categories, <code>FTT-[A-Z2-7]{8}</code> report refs, GUID reporter IDs, description bounds, diagnostics log cap, and timestamp parsing.</li>
+<li><code>tools/feedback_worker/src/githubApp.ts</code> shows the GitHub App integration, PKCS#1/PKCS#8 private-key support, installation token exchange, exact report-ref search, issue creation, label fallback, and redaction of reporter IDs, IPs, secrets, emails, and local user paths before issue text is written.</li>
+<li><code>tools/feedback_worker/src/rateLimit.ts</code> and <code>tools/feedback_worker/migrations/0001_feedback_state.sql</code> show the D1-backed <code>reports</code> and <code>rate_limits</code> persistence model.</li>
+<li><code>tools/feedback_worker/wrangler.toml</code> names the Worker <code>forza-telemetry-feedback</code>, binds <code>FEEDBACK_DB</code>, targets private repo <code>seevydeepy/forza-telemetry-feedback</code>, and sets default body and hourly rate limits.</li>
+<li><code>tools/feedback_worker/test/worker.test.ts</code> covers health, invalid JSON/schema, size limits, idempotency, duplicate reporter mismatch, concurrent duplicate refs, failed state retry, reporter/IP rate limits, label fallback, JWT key formats, and redaction.</li>
+<li><code>docs/feedback_reporting_setup.md</code> is the deployment and operations runbook: provision private triage repo, GitHub App, Cloudflare D1, Worker secrets, smoke checks, endpoint activation, rollback, privacy checks, local Worker development, and validation commands.</li>
+<li><code>docs/feedback_reporting_design_handoff.md</code> documents the cross-system design: Svelte modal to local FastAPI, Python diagnostics/outbox, Cloudflare Worker, D1 state, GitHub App, and private GitHub issues.</li>
+</ul>
+<h2 id="known-gaps">Known Gaps</h2>
+<ul>
+<li>Live Cloudflare deployment and GitHub App installation state are operational facts, not proven by this backfill. Use the smoke checks in <code>docs/feedback_reporting_setup.md</code> before claiming production readiness.</li>
+<li>The Worker bundle only covers the Cloudflare/GitHub side. Client UI, local FastAPI feedback endpoints, diagnostics collection, and retry outbox belong to neighbouring solution areas.</li>
+</ul>
+</template>
+</div>
 <script id="okf-data" type="application/json">
 {
   "backlinks": {
@@ -189,7 +344,6 @@ input, select {
   "docs": [
     {
       "description": "Cloudflare Worker, D1 schema, and public feedback-reporting documentation for user-initiated anonymous reports into maintainer GitHub issue triage.",
-      "html": "<p>Cloudflare Worker, D1 schema, and public feedback-reporting documentation for user-initiated anonymous reports into maintainer GitHub issue triage.<\/p>\n<h2 id=\"pages\">Pages<\/h2>\n<ul>\n<li><a href=\"#doc/routing_guidance.card\" data-doc-link=\"routing_guidance.card\" data-doc-anchor=\"\">Feedback Worker Routing Card<\/a><\/li>\n<li><a href=\"#doc/routing.md\" data-doc-link=\"routing.md\" data-doc-anchor=\"\">Feedback Worker Routing<\/a><\/li>\n<li><a href=\"#doc/solution.md\" data-doc-link=\"solution.md\" data-doc-anchor=\"\">Feedback Worker<\/a><\/li>\n<li><a href=\"#doc/log.md\" data-doc-link=\"log.md\" data-doc-anchor=\"\">Feedback Worker OKF Log<\/a><\/li>\n<\/ul>",
       "metadata": {
         "description": "Cloudflare Worker, D1 schema, and public feedback-reporting documentation for user-initiated anonymous reports into maintainer GitHub issue triage.",
         "routing_keywords": [
@@ -231,7 +385,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<p>id: feedback-worker owned_paths:<\/p>\n<ul>\n<li>tools/feedback_worker/<\/li>\n<li>docs/feedback<em>reporting<\/em>setup.md<\/li>\n<li>docs/feedback<em>reporting<\/em>design<em>handoff.md read<\/em>first:<\/li>\n<li>docs/okf/feedback-worker/routing_guidance.card<\/li>\n<li>docs/okf/feedback-worker/solution.md<\/li>\n<li>tools/feedback_worker/src/index.ts<\/li>\n<li>tools/feedback_worker/src/githubApp.ts<\/li>\n<li>tools/feedback_worker/src/schema.ts keywords:<\/li>\n<li>cloudflare<\/li>\n<li>worker<\/li>\n<li>d1<\/li>\n<li>github app<\/li>\n<li>github issue<\/li>\n<li>feedback report<\/li>\n<li>report_ref<\/li>\n<li>FTT-<\/li>\n<li>rate limit<\/li>\n<li>hmac<\/li>\n<li>redaction<\/li>\n<li>private triage<\/li>\n<li>anonymous feedback handoffs:<\/li>\n<li>Desktop Backend owns the local FastAPI feedback endpoints, diagnostics builder, retry outbox, and client endpoint activation.<\/li>\n<li>Web Dashboard owns the Send Feedback modal, menu action, diagnostics toggle, and toast states.<\/li>\n<li>Release CI Packaging owns packaged release metadata that enables the production feedback endpoint. validation:<\/li>\n<li>python tools/docs/map<em>changed<\/em>paths.py &lt;representative-owned-path&gt;<\/li>\n<li>.\\tools\\docs\\build<em>all<\/em>wikis.ps1 -Check stale_notes:<\/li>\n<li>Review after ownership, entrypoint, handoff, or validation changes.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "routing_guidance.card",
@@ -242,7 +395,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"read-this-when\">Read This When<\/h2>\n<ul>\n<li>A change touches one of this solution&#x27;s owned paths.<\/li>\n<li>A symptom matches one of this solution&#x27;s routing keywords.<\/li>\n<\/ul>\n<h2 id=\"first-files-to-inspect\">First Files To Inspect<\/h2>\n<ul>\n<li><code>docs/okf/feedback-worker/routing_guidance.card<\/code><\/li>\n<li><code>docs/okf/feedback-worker/solution.md<\/code><\/li>\n<li><code>tools/feedback_worker/src/index.ts<\/code><\/li>\n<li><code>tools/feedback_worker/src/schema.ts<\/code><\/li>\n<li><code>tools/feedback_worker/src/githubApp.ts<\/code><\/li>\n<\/ul>\n<h2 id=\"owned-paths\">Owned Paths<\/h2>\n<ul>\n<li>tools/feedback_worker/<\/li>\n<li>docs/feedback<em>reporting<\/em>setup.md<\/li>\n<li>docs/feedback<em>reporting<\/em>design_handoff.md<\/li>\n<\/ul>\n<h2 id=\"symptoms-and-search-terms\">Symptoms And Search Terms<\/h2>\n<ul>\n<li>cloudflare<\/li>\n<li>worker<\/li>\n<li>d1<\/li>\n<li>github app<\/li>\n<li>github issue<\/li>\n<li>feedback report<\/li>\n<li>report_ref<\/li>\n<li>FTT-<\/li>\n<li>rate limit<\/li>\n<li>hmac<\/li>\n<li>redaction<\/li>\n<li>private triage<\/li>\n<li>anonymous feedback<\/li>\n<\/ul>\n<h2 id=\"symptom-routing\">Symptom Routing<\/h2>\n<ul>\n<li>Worker returns <code>400<\/code>, <code>413<\/code>, <code>422<\/code>, <code>429<\/code>, <code>503<\/code>, or <code>202<\/code>: start in <code>tools/feedback_worker/src/index.ts<\/code>, then inspect <code>src/schema.ts<\/code> for validation failures or <code>src/rateLimit.ts<\/code> for quota behaviour.<\/li>\n<li>Duplicate or missing private issues for a report ref: inspect <code>readReport<\/code>, <code>reconcileExistingGitHubIssue<\/code>, <code>insertCreatingReport<\/code>, <code>claimFailedReport<\/code>, and <code>markCreated<\/code> in <code>tools/feedback_worker/src/index.ts<\/code>, then <code>findExistingGitHubIssue<\/code> in <code>src/githubApp.ts<\/code>.<\/li>\n<li>GitHub authentication, private key, installation token, or label fallback failures: inspect <code>tools/feedback_worker/src/githubApp.ts<\/code> and the setup values documented in <code>docs/feedback_reporting_setup.md<\/code>.<\/li>\n<li>Sensitive text, raw IPs, reporter IDs, local usernames, emails, or secrets appear in a GitHub issue: inspect <code>scrubSensitiveText<\/code>, <code>redactRawIdentifiers<\/code>, <code>sanitizeStructuredValue<\/code>, and <code>buildIssueBody<\/code> in <code>tools/feedback_worker/src/githubApp.ts<\/code>.<\/li>\n<li>Bad category, report-ref format, reporter ID, timestamp, description length, or diagnostics size: inspect <code>tools/feedback_worker/src/schema.ts<\/code>.<\/li>\n<li>D1 migration, binding, Worker name, deployed URL, or limit defaults look wrong: inspect <code>tools/feedback_worker/wrangler.toml<\/code>, <code>tools/feedback_worker/migrations/0001_feedback_state.sql<\/code>, and <code>docs/feedback_reporting_setup.md<\/code>.<\/li>\n<li>Production endpoint should be enabled or disabled in packaged/local builds: route to Desktop Backend and Release CI Packaging after reading the Client Endpoint Activation and Rollback sections in <code>docs/feedback_reporting_setup.md<\/code>.<\/li>\n<\/ul>\n<h2 id=\"handoffs\">Handoffs<\/h2>\n<ul>\n<li>Desktop Backend: local <code>/api/feedback/config<\/code>, <code>/api/feedback/reports<\/code>, diagnostics sanitisation, SQLite retry outbox, and endpoint activation/rollback.<\/li>\n<li>Web Dashboard: Send Feedback modal, category dropdown, diagnostics toggle, and progress/success/queued/error toasts.<\/li>\n<li>Release CI Packaging: release metadata and build workflow arguments that set the production feedback endpoint.<\/li>\n<li>Project Docs: README, PRIVACY, SUPPORT, and operator-facing feedback setup disclosure.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "routing.md",
@@ -253,7 +405,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"purpose\">Purpose<\/h2>\n<p>Cloudflare Worker backend and runbook for user-initiated anonymous feedback reports. It accepts <code>POST /v1/reports<\/code>, validates the Forza report schema, enforces D1-backed idempotency and rate limits, and creates private GitHub triage issues through a dedicated GitHub App.<\/p>\n<h2 id=\"owned-paths\">Owned Paths<\/h2>\n<ul>\n<li>tools/feedback_worker/<\/li>\n<li>docs/feedback<em>reporting<\/em>setup.md<\/li>\n<li>docs/feedback<em>reporting<\/em>design_handoff.md<\/li>\n<\/ul>\n<h2 id=\"entrypoints\">Entrypoints<\/h2>\n<ul>\n<li><code>tools/feedback_worker/src/index.ts<\/code>: Worker fetch handler, <code>GET /health<\/code>, <code>POST /v1/reports<\/code>, body size checks, report state transitions, HMAC reporter/IP hashes, fixed-window rate limits, and D1 idempotency.<\/li>\n<li><code>tools/feedback_worker/src/schema.ts<\/code>: accepted report categories, <code>FTT-[A-Z2-7]{8}<\/code> report refs, GUID reporter IDs, description limits, diagnostics log cap, and timestamp validation.<\/li>\n<li><code>tools/feedback_worker/src/githubApp.ts<\/code>: GitHub App JWT/token exchange, exact report-ref search, private issue creation, category labels, label fallback, and issue-body redaction.<\/li>\n<li><code>tools/feedback_worker/src/rateLimit.ts<\/code>: D1 fixed-window counter update.<\/li>\n<li><code>tools/feedback_worker/migrations/0001_feedback_state.sql<\/code>: <code>reports<\/code> and <code>rate_limits<\/code> tables.<\/li>\n<li><code>tools/feedback_worker/wrangler.toml<\/code>: Worker name, D1 binding, GitHub repo vars, body and rate-limit defaults.<\/li>\n<li><code>tools/feedback_worker/test/worker.test.ts<\/code>: executable coverage for schema rejection, idempotency, failed-row retry, rate limits, label fallback, JWT key formats, and redaction.<\/li>\n<\/ul>\n<h2 id=\"neighbouring-systems\">Neighbouring Systems<\/h2>\n<ul>\n<li>Desktop Backend builds and submits reports through local FastAPI; the Svelte UI should not call Cloudflare directly.<\/li>\n<li>Desktop Backend also owns diagnostics collection, sanitisation before submission, and the local retry outbox when the endpoint is unavailable.<\/li>\n<li>Web Dashboard owns the Send Feedback modal, category selection, opt-out diagnostics toggle, and sent/queued/error toast flow.<\/li>\n<li>Release CI Packaging controls when packaged builds receive the production <code>https://forza-telemetry-feedback.cvdp.workers.dev/v1/reports<\/code> endpoint.<\/li>\n<li>The private <code>seevydeepy/forza-telemetry-feedback<\/code> repository is the triage target. User feedback must not be filed in the public tracker repository.<\/li>\n<\/ul>\n<h2 id=\"maintenance-notes\">Maintenance Notes<\/h2>\n<ul>\n<li>Keep Worker changes paired with <code>npm test<\/code> and <code>npm run typecheck<\/code> from <code>tools/feedback_worker<\/code>.<\/li>\n<li>Keep deployment and privacy claims aligned with <code>docs/feedback_reporting_setup.md<\/code>; do not document unprovisioned buckets, attachments, screenshots, or telemetry uploads.<\/li>\n<li>Treat raw IPs, reporter UUIDs, credentials, local user paths, emails, and tokens as privacy-sensitive. The Worker should only persist HMAC-derived identifiers and redacted issue text.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "solution.md",
@@ -264,7 +415,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"bootstrap\">Bootstrap<\/h2>\n<ul>\n<li>Shallow OKF bundle created from repository structure.<\/li>\n<\/ul>\n<h2 id=\"deep-backfill\">Deep Backfill<\/h2>\n<ul>\n<li>Backfilled stable purpose, entrypoints, routing terms, and handoffs from the checked-in Worker scaffold and feedback docs.<\/li>\n<li><code>tools/feedback_worker/src/index.ts<\/code> shows the active Worker endpoints: <code>GET /health<\/code> and <code>POST /v1/reports<\/code>. It handles body-size checks, schema validation, HMAC reporter/IP hashes, D1 report rows, fixed-window rate limits, idempotent duplicate handling, failed-row retry, GitHub issue creation, and JSON responses.<\/li>\n<li><code>tools/feedback_worker/src/schema.ts<\/code> defines the accepted categories, <code>FTT-[A-Z2-7]{8}<\/code> report refs, GUID reporter IDs, description bounds, diagnostics log cap, and timestamp parsing.<\/li>\n<li><code>tools/feedback_worker/src/githubApp.ts<\/code> shows the GitHub App integration, PKCS#1/PKCS#8 private-key support, installation token exchange, exact report-ref search, issue creation, label fallback, and redaction of reporter IDs, IPs, secrets, emails, and local user paths before issue text is written.<\/li>\n<li><code>tools/feedback_worker/src/rateLimit.ts<\/code> and <code>tools/feedback_worker/migrations/0001_feedback_state.sql<\/code> show the D1-backed <code>reports<\/code> and <code>rate_limits<\/code> persistence model.<\/li>\n<li><code>tools/feedback_worker/wrangler.toml<\/code> names the Worker <code>forza-telemetry-feedback<\/code>, binds <code>FEEDBACK_DB<\/code>, targets private repo <code>seevydeepy/forza-telemetry-feedback<\/code>, and sets default body and hourly rate limits.<\/li>\n<li><code>tools/feedback_worker/test/worker.test.ts<\/code> covers health, invalid JSON/schema, size limits, idempotency, duplicate reporter mismatch, concurrent duplicate refs, failed state retry, reporter/IP rate limits, label fallback, JWT key formats, and redaction.<\/li>\n<li><code>docs/feedback_reporting_setup.md<\/code> is the deployment and operations runbook: provision private triage repo, GitHub App, Cloudflare D1, Worker secrets, smoke checks, endpoint activation, rollback, privacy checks, local Worker development, and validation commands.<\/li>\n<li><code>docs/feedback_reporting_design_handoff.md<\/code> documents the cross-system design: Svelte modal to local FastAPI, Python diagnostics/outbox, Cloudflare Worker, D1 state, GitHub App, and private GitHub issues.<\/li>\n<\/ul>\n<h2 id=\"known-gaps\">Known Gaps<\/h2>\n<ul>\n<li>Live Cloudflare deployment and GitHub App installation state are operational facts, not proven by this backfill. Use the smoke checks in <code>docs/feedback_reporting_setup.md<\/code> before claiming production readiness.<\/li>\n<li>The Worker bundle only covers the Cloudflare/GitHub side. Client UI, local FastAPI feedback endpoints, diagnostics collection, and retry outbox belong to neighbouring solution areas.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "log.md",
@@ -305,6 +455,9 @@ input, select {
   const bundle = JSON.parse(document.getElementById("okf-data").textContent);
   const docs = bundle.docs;
   const docsByPath = new Map(docs.map((doc) => [doc.path, doc]));
+  const docTemplates = new Map(
+    [...document.querySelectorAll("template[data-doc-path]")].map((template) => [template.dataset.docPath, template])
+  );
   const article = document.getElementById("article");
   const docList = document.getElementById("docList");
   const search = document.getElementById("search");
@@ -423,7 +576,7 @@ input, select {
         <div class="source-link">Source path: ${escapeHtml(doc.path)}</div>
         ${renderRouting(doc.metadata || {})}
       </header>
-      <section class="article-body">${doc.html}</section>
+      <section class="article-body"></section>
       <section class="relationships" aria-label="OKF relationships">
         <h3>Links from this page</h3>
         ${linkPills(doc.outgoing, "No internal OKF links from this page.")}
@@ -431,6 +584,13 @@ input, select {
         ${linkPills(bundle.backlinks[doc.path] || [], "No other wiki page links here yet.")}
       </section>
     `;
+    const body = article.querySelector(".article-body");
+    const template = docTemplates.get(doc.path);
+    if (body && template) {
+      body.replaceChildren(template.content.cloneNode(true));
+    } else if (body) {
+      body.textContent = "Document body unavailable.";
+    }
     renderList();
     if (anchor) {
       requestAnimationFrame(() => {

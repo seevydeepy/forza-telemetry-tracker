@@ -169,6 +169,201 @@ input, select {
     <article class="article-shell" id="article"></article>
   </main>
 </div>
+<div hidden id="okf-doc-templates">
+<template data-doc-path="index.md">
+<p>Python FastAPI desktop backend for local UDP telemetry capture, SQLite storage, lap/session analysis, export, replay, update checks, feedback submission, and FH6 world-map integration.</p>
+<h2 id="pages">Pages</h2>
+<ul>
+<li><a href="#doc/routing_guidance.card" data-doc-link="routing_guidance.card" data-doc-anchor="">Desktop Backend Routing Card</a></li>
+<li><a href="#doc/routing.md" data-doc-link="routing.md" data-doc-anchor="">Desktop Backend Routing</a></li>
+<li><a href="#doc/solution.md" data-doc-link="solution.md" data-doc-anchor="">Desktop Backend</a></li>
+<li><a href="#doc/log.md" data-doc-link="log.md" data-doc-anchor="">Desktop Backend OKF Log</a></li>
+</ul>
+</template>
+<template data-doc-path="routing_guidance.card">
+<p>id: desktop-backend owned_paths:</p>
+<ul>
+<li>telemetry_tracker/</li>
+<li>tests/</li>
+<li>tools/run-telemetry-tracker.py</li>
+<li>tools/capture-data-out.py</li>
+<li>tools/capture-session.py</li>
+<li>tools/parse-data-out.py</li>
+<li>tools/maintain-telemetry-db.py</li>
+<li>requirements-telemetry-tracker.txt</li>
+<li>requirements-telemetry-desktop.txt</li>
+<li>requirements-telemetry-test.txt read_first:</li>
+<li>docs/okf/desktop-backend/routing_guidance.card</li>
+<li>docs/okf/desktop-backend/solution.md</li>
+<li>telemetry_tracker/app.py</li>
+<li>telemetry_tracker/storage.py</li>
+<li>telemetry<em>tracker/desktop</em>launcher.py</li>
+<li>tools/run-telemetry-tracker.py keywords:</li>
+<li>fastapi</li>
+<li>udp</li>
+<li>data out</li>
+<li>sqlite</li>
+<li>capture</li>
+<li>lap</li>
+<li>session</li>
+<li>export</li>
+<li>replay</li>
+<li>world map</li>
+<li>update check</li>
+<li>feedback client</li>
+<li>pywebview</li>
+<li>port conflict</li>
+<li>raw import</li>
+<li>export job</li>
+<li>sse handoffs:</li>
+<li>web-dashboard: consumes REST, SSE, static assets, and pywebview bridge selections.</li>
+<li>feedback-worker: receives reports submitted by FeedbackService.</li>
+<li>fh6-map-tile-converter: invoked by world-map cache building.</li>
+<li>release-ci-packaging: packages launcher, runtime requirements, metadata, and smoke checks. validation:</li>
+<li>python tools/docs/map<em>changed</em>paths.py &lt;representative-owned-path&gt;</li>
+<li>.\tools\docs\build<em>all</em>wikis.ps1 -Check stale_notes:</li>
+<li>Review after ownership, entrypoint, handoff, or validation changes.</li>
+</ul>
+</template>
+<template data-doc-path="routing.md">
+<h2 id="read-this-when">Read This When</h2>
+<ul>
+<li>A change touches one of this solution&#x27;s owned paths.</li>
+<li>A symptom matches one of this solution&#x27;s routing keywords.</li>
+</ul>
+<h2 id="first-files-to-inspect">First Files To Inspect</h2>
+<ul>
+<li><code>docs/okf/desktop-backend/routing_guidance.card</code></li>
+<li><code>docs/okf/desktop-backend/solution.md</code></li>
+<li><code>telemetry_tracker/app.py</code></li>
+<li><code>telemetry_tracker/storage.py</code></li>
+<li><code>telemetry_tracker/desktop_launcher.py</code></li>
+<li><code>tools/run-telemetry-tracker.py</code></li>
+</ul>
+<h2 id="owned-paths">Owned Paths</h2>
+<ul>
+<li>telemetry_tracker/</li>
+<li>tests/</li>
+<li>tools/run-telemetry-tracker.py</li>
+<li>tools/capture-data-out.py</li>
+<li>tools/capture-session.py</li>
+<li>tools/parse-data-out.py</li>
+<li>tools/maintain-telemetry-db.py</li>
+<li>requirements-telemetry-tracker.txt</li>
+<li>requirements-telemetry-desktop.txt</li>
+<li>requirements-telemetry-test.txt</li>
+</ul>
+<h2 id="symptoms-and-search-terms">Symptoms And Search Terms</h2>
+<ul>
+<li>fastapi</li>
+<li>udp</li>
+<li>data out</li>
+<li>sqlite</li>
+<li>capture</li>
+<li>lap</li>
+<li>session</li>
+<li>export</li>
+<li>replay</li>
+<li>world map</li>
+<li>update check</li>
+<li>feedback client</li>
+<li>pywebview</li>
+<li>port conflict</li>
+<li>raw import</li>
+<li>export job</li>
+<li>sse</li>
+</ul>
+<h2 id="symptom-routing">Symptom Routing</h2>
+<ul>
+<li>Backend route, HTTP status, API payload, validation, CORS/static serving, REST/SSE event, import/export job, replay, feedback, diagnostics, update check, track profile, or world-map API issue: start in <code>telemetry_tracker/app.py</code>, then follow the imported service module.</li>
+<li>Live telemetry missing or listener status wrong: inspect <code>telemetry_tracker/udp_listener.py</code>, <code>telemetry_tracker/packet_bridge.py</code>, <code>telemetry_tracker/capture.py</code>, <code>telemetry_tracker/lap_detection.py</code>, and <code>telemetry_tracker/ingest.py</code>.</li>
+<li>SQLite schema, migration, stored settings, session/lap/sample query, feedback queue, track profile, map tile record, or database maintenance issue: inspect <code>telemetry_tracker/storage.py</code> and <code>tools/maintain-telemetry-db.py</code>.</li>
+<li>Packaged desktop startup, pywebview bridge, folder/file picker, user-data path, backend readiness, or UDP port conflict issue: inspect <code>telemetry_tracker/desktop_launcher.py</code>, <code>telemetry_tracker/app_paths.py</code>, and <code>telemetry_tracker/port_conflicts.py</code>.</li>
+<li>Development server startup issue: inspect <code>tools/run-telemetry-tracker.py</code>, then <code>telemetry_tracker/app.py</code> and <code>telemetry_tracker/storage.py</code>.</li>
+<li>Raw FH Data Out packet, parser, capture artifact, latest pointer, capture session, or CLI capture issue: inspect <code>telemetry_tracker/data_out/</code>, <code>tools/capture-data-out.py</code>, <code>tools/capture-session.py</code>, and <code>tools/parse-data-out.py</code>.</li>
+<li>Lap analysis, markers, collision/smashable detection, reference lap, ghost, delta, or comparison issue: inspect <code>telemetry_tracker/analysis.py</code>, <code>collision_detection.py</code>, <code>comparison.py</code>, <code>lap_summaries.py</code>, and matching API routes in <code>app.py</code>.</li>
+<li>Track matching, route signatures, track assets, car catalogue, or local FH6 media scan issue: inspect <code>telemetry_tracker/track_matcher.py</code>, <code>track_profiles.py</code>, <code>track_assets.py</code>, <code>track_catalog.py</code>, <code>car_catalog.py</code>, and <code>car_info.py</code>.</li>
+<li>World-map tile cache, season, calibration, tile serving, or converter subprocess issue: inspect <code>telemetry_tracker/world_map.py</code>; hand off converter implementation defects to <code>fh6-map-tile-converter</code>.</li>
+<li>Feedback submission, diagnostics payload, pending retry, or worker rejection issue: inspect <code>telemetry_tracker/feedback.py</code>, <code>telemetry_tracker/diagnostics.py</code>, and backend feedback routes; hand off remote worker/API defects to <code>feedback-worker</code>.</li>
+<li>Test failure under <code>tests/test_tracker_*.py</code>: route by the module named in the test filename first, then the API/tool entrypoint used by the test.</li>
+</ul>
+<h2 id="handoffs">Handoffs</h2>
+<ul>
+<li>Web Dashboard owns frontend behaviour under <code>web/telemetry-tracker/</code>; keep backend payload/API contract changes coordinated there.</li>
+<li>Feedback Worker owns the remote Cloudflare Worker and D1 intake; backend owns local validation, diagnostics, queueing, and retry.</li>
+<li>FH6 Map Tile Converter owns converter internals under <code>tools/fh6-map-tile-converter/</code>; backend owns invocation, cache metadata, settings, and tile serving.</li>
+<li>Release, CI, and Packaging owns installer/release workflow and packaged smoke tooling; backend owns the runtime launcher code and requirements listed in this bundle.</li>
+</ul>
+</template>
+<template data-doc-path="solution.md">
+<h2 id="purpose">Purpose</h2>
+<p>Python FastAPI desktop backend for local UDP telemetry capture, SQLite storage, lap/session analysis, export, replay, update checks, feedback submission, and FH6 world-map integration.</p>
+<h2 id="owned-paths">Owned Paths</h2>
+<ul>
+<li>telemetry_tracker/</li>
+<li>tests/</li>
+<li>tools/run-telemetry-tracker.py</li>
+<li>tools/capture-data-out.py</li>
+<li>tools/capture-session.py</li>
+<li>tools/parse-data-out.py</li>
+<li>tools/maintain-telemetry-db.py</li>
+<li>requirements-telemetry-tracker.txt</li>
+<li>requirements-telemetry-desktop.txt</li>
+<li>requirements-telemetry-test.txt</li>
+</ul>
+<h2 id="entrypoints">Entrypoints</h2>
+<ul>
+<li><code>telemetry_tracker/app.py</code> exposes <code>create_app()</code> and the FastAPI routes for status, capture control, sessions, laps, replay/import, export jobs, feedback, diagnostics, update checks, track profiles, and world-map APIs.</li>
+<li><code>telemetry_tracker/app.py</code> <code>CapturePipeline</code> wires raw packets through packet decoding, capture state, lap detection, storage, analysis, and live event publication.</li>
+<li><code>telemetry_tracker/desktop_launcher.py</code> starts the packaged Windows desktop app: allocates the local HTTP port, starts the backend, resolves UDP port conflicts, opens pywebview, and exposes native file/folder selection.</li>
+<li><code>tools/run-telemetry-tracker.py</code> is the development HTTP entrypoint for Uvicorn plus optional UDP listener startup.</li>
+<li><code>tools/capture-data-out.py</code>, <code>tools/capture-session.py</code>, and <code>tools/parse-data-out.py</code> are raw FH Data Out capture/session/parse utilities.</li>
+<li><code>tools/maintain-telemetry-db.py</code> prunes eligible non-race samples, checkpoints WAL, and optionally VACUUMs the SQLite database.</li>
+</ul>
+<h2 id="neighbouring-systems">Neighbouring Systems</h2>
+<ul>
+<li>Web Dashboard (<code>web/telemetry-tracker/</code>) consumes these REST/SSE APIs, mounted static assets, and pywebview bridge selections.</li>
+<li>Feedback Worker receives reports submitted by the backend feedback client; backend owns local validation, diagnostics collection, queueing, and retry.</li>
+<li>FH6 Map Tile Converter is called from the world-map cache path; backend owns cache status, settings, tile serving, and converter invocation.</li>
+<li>Release, CI, and Packaging owns PyInstaller/Inno/metadata packaging around the backend launcher, requirements, and smoke checks.</li>
+</ul>
+<h2 id="key-internal-files">Key Internal Files</h2>
+<ul>
+<li><code>telemetry_tracker/storage.py</code>: SQLite schema, migrations, settings, sessions, laps, samples, track profiles, world-map records, feedback queue, and maintenance helpers.</li>
+<li><code>telemetry_tracker/udp_listener.py</code>: async UDP socket lifecycle, packet-size validation, status events, and packet handler dispatch.</li>
+<li><code>telemetry_tracker/packet_bridge.py</code> and <code>telemetry_tracker/data_out/</code>: FH Data Out packet schema, decoding, test encoding, raw packet iteration, capture summaries, and CSV/artifact writing.</li>
+<li><code>telemetry_tracker/capture.py</code>, <code>lap_detection.py</code>, <code>lap_quality.py</code>, <code>ingest.py</code>: live capture state, auto/manual lap/session handling, quality decisions, and recent-sample ingestion.</li>
+<li><code>telemetry_tracker/analysis.py</code>, <code>comparison.py</code>, <code>track_matcher.py</code>, <code>track_profiles.py</code>, <code>track_assets.py</code>: lap analysis, reference/ghost/delta data, track matching, route signatures, and uploaded track assets.</li>
+<li><code>telemetry_tracker/export.py</code>, <code>replay.py</code>, <code>feedback.py</code>, <code>diagnostics.py</code>, <code>app_updates.py</code>, <code>world_map.py</code>: export/import jobs, raw replay, feedback, diagnostics, update checks, and map tile cache support.</li>
+</ul>
+<h2 id="maintenance-notes">Maintenance Notes</h2>
+<ul>
+<li>Keep this page focused on stable ownership, entrypoints, and contracts.</li>
+<li>Use <code>routing.md</code> for symptom/search routing details.</li>
+<li>Use the focused <code>tests/test_tracker_*.py</code> or <code>tests/test_capture_tool.py</code> file that matches the touched backend module or tool; broad backend changes normally route through <code>pytest tests</code>.</li>
+</ul>
+</template>
+<template data-doc-path="log.md">
+<h2 id="bootstrap">Bootstrap</h2>
+<ul>
+<li>Shallow OKF bundle created from repository structure.</li>
+</ul>
+<h2 id="2026-06-25-deep-backfill">2026-06-25 Deep Backfill</h2>
+<ul>
+<li>Confirmed backend root in <code>telemetry_tracker/app.py</code>: <code>CapturePipeline</code>, <code>create_app()</code>, and FastAPI routes cover status, world-map cache build, feedback reports, export jobs, replay/import jobs, and SSE events.</li>
+<li>Confirmed desktop/runtime entrypoints: <code>telemetry_tracker/desktop_launcher.py</code> defines <code>DesktopBackend</code>, <code>DesktopBridge</code>, smoke HTTP mode, desktop launch, and <code>main()</code>; <code>tools/run-telemetry-tracker.py</code> creates the app and starts Uvicorn after checking HTTP/UDP port conflicts.</li>
+<li>Confirmed raw capture and session tools: <code>tools/capture-data-out.py</code> writes capture artifacts from active FH Data Out packets and rejects reserved ports 5200-5300; <code>tools/capture-session.py</code> starts/stops background capture by invoking <code>tools/capture-data-out.py</code> and tracks new capture analysis state.</li>
+<li>Confirmed SQLite ownership: <code>telemetry_tracker/storage.py</code> has <code>SCHEMA_VERSION = 12</code>, <code>TelemetryStore</code>, migrations, database-size helpers, session/lap APIs, and packet/sample batch insertion.</li>
+<li>Confirmed packet/listener boundary: <code>telemetry_tracker/data_out/__init__.py</code> defines <code>PACKET_SIZE = 324</code>, decoding, test encoding, raw packet iteration, capture classification, artifact writing, and latest-pointer writing; <code>telemetry_tracker/udp_listener.py</code> validates datagram size before dispatching packets.</li>
+<li>Confirmed dependencies: <code>requirements-telemetry-tracker.txt</code> owns FastAPI, Uvicorn, httpx, and multipart runtime; <code>requirements-telemetry-desktop.txt</code> adds PyInstaller and pywebview; <code>requirements-telemetry-test.txt</code> adds pytest.</li>
+<li>Confirmed test routing: <code>tests/test_tracker_*.py</code> files exercise backend modules and API surfaces with <code>TelemetryStore</code>, <code>create_app()</code>, <code>TestClient</code>, and module-specific helpers; <code>tests/test_capture_tool.py</code>, <code>test_tracker_runner.py</code>, <code>test_tracker_maintenance_tool.py</code>, and <code>test_tracker_desktop_launcher.py</code> cover the owned tools and launcher.</li>
+</ul>
+<h2 id="known-gaps">Known Gaps</h2>
+<ul>
+<li>API contract details remain in source/tests rather than duplicated here; update this bundle only when ownership, entrypoints, or routing changes.</li>
+</ul>
+</template>
+</div>
 <script id="okf-data" type="application/json">
 {
   "backlinks": {
@@ -189,7 +384,6 @@ input, select {
   "docs": [
     {
       "description": "Python FastAPI desktop backend for local UDP telemetry capture, SQLite storage, lap/session analysis, export, replay, update checks, feedback submission, and FH6 world-map integration.",
-      "html": "<p>Python FastAPI desktop backend for local UDP telemetry capture, SQLite storage, lap/session analysis, export, replay, update checks, feedback submission, and FH6 world-map integration.<\/p>\n<h2 id=\"pages\">Pages<\/h2>\n<ul>\n<li><a href=\"#doc/routing_guidance.card\" data-doc-link=\"routing_guidance.card\" data-doc-anchor=\"\">Desktop Backend Routing Card<\/a><\/li>\n<li><a href=\"#doc/routing.md\" data-doc-link=\"routing.md\" data-doc-anchor=\"\">Desktop Backend Routing<\/a><\/li>\n<li><a href=\"#doc/solution.md\" data-doc-link=\"solution.md\" data-doc-anchor=\"\">Desktop Backend<\/a><\/li>\n<li><a href=\"#doc/log.md\" data-doc-link=\"log.md\" data-doc-anchor=\"\">Desktop Backend OKF Log<\/a><\/li>\n<\/ul>",
       "metadata": {
         "description": "Python FastAPI desktop backend for local UDP telemetry capture, SQLite storage, lap/session analysis, export, replay, update checks, feedback submission, and FH6 world-map integration.",
         "routing_keywords": [
@@ -242,7 +436,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<p>id: desktop-backend owned_paths:<\/p>\n<ul>\n<li>telemetry_tracker/<\/li>\n<li>tests/<\/li>\n<li>tools/run-telemetry-tracker.py<\/li>\n<li>tools/capture-data-out.py<\/li>\n<li>tools/capture-session.py<\/li>\n<li>tools/parse-data-out.py<\/li>\n<li>tools/maintain-telemetry-db.py<\/li>\n<li>requirements-telemetry-tracker.txt<\/li>\n<li>requirements-telemetry-desktop.txt<\/li>\n<li>requirements-telemetry-test.txt read_first:<\/li>\n<li>docs/okf/desktop-backend/routing_guidance.card<\/li>\n<li>docs/okf/desktop-backend/solution.md<\/li>\n<li>telemetry_tracker/app.py<\/li>\n<li>telemetry_tracker/storage.py<\/li>\n<li>telemetry<em>tracker/desktop<\/em>launcher.py<\/li>\n<li>tools/run-telemetry-tracker.py keywords:<\/li>\n<li>fastapi<\/li>\n<li>udp<\/li>\n<li>data out<\/li>\n<li>sqlite<\/li>\n<li>capture<\/li>\n<li>lap<\/li>\n<li>session<\/li>\n<li>export<\/li>\n<li>replay<\/li>\n<li>world map<\/li>\n<li>update check<\/li>\n<li>feedback client<\/li>\n<li>pywebview<\/li>\n<li>port conflict<\/li>\n<li>raw import<\/li>\n<li>export job<\/li>\n<li>sse handoffs:<\/li>\n<li>web-dashboard: consumes REST, SSE, static assets, and pywebview bridge selections.<\/li>\n<li>feedback-worker: receives reports submitted by FeedbackService.<\/li>\n<li>fh6-map-tile-converter: invoked by world-map cache building.<\/li>\n<li>release-ci-packaging: packages launcher, runtime requirements, metadata, and smoke checks. validation:<\/li>\n<li>python tools/docs/map<em>changed<\/em>paths.py &lt;representative-owned-path&gt;<\/li>\n<li>.\\tools\\docs\\build<em>all<\/em>wikis.ps1 -Check stale_notes:<\/li>\n<li>Review after ownership, entrypoint, handoff, or validation changes.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "routing_guidance.card",
@@ -253,7 +446,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"read-this-when\">Read This When<\/h2>\n<ul>\n<li>A change touches one of this solution&#x27;s owned paths.<\/li>\n<li>A symptom matches one of this solution&#x27;s routing keywords.<\/li>\n<\/ul>\n<h2 id=\"first-files-to-inspect\">First Files To Inspect<\/h2>\n<ul>\n<li><code>docs/okf/desktop-backend/routing_guidance.card<\/code><\/li>\n<li><code>docs/okf/desktop-backend/solution.md<\/code><\/li>\n<li><code>telemetry_tracker/app.py<\/code><\/li>\n<li><code>telemetry_tracker/storage.py<\/code><\/li>\n<li><code>telemetry_tracker/desktop_launcher.py<\/code><\/li>\n<li><code>tools/run-telemetry-tracker.py<\/code><\/li>\n<\/ul>\n<h2 id=\"owned-paths\">Owned Paths<\/h2>\n<ul>\n<li>telemetry_tracker/<\/li>\n<li>tests/<\/li>\n<li>tools/run-telemetry-tracker.py<\/li>\n<li>tools/capture-data-out.py<\/li>\n<li>tools/capture-session.py<\/li>\n<li>tools/parse-data-out.py<\/li>\n<li>tools/maintain-telemetry-db.py<\/li>\n<li>requirements-telemetry-tracker.txt<\/li>\n<li>requirements-telemetry-desktop.txt<\/li>\n<li>requirements-telemetry-test.txt<\/li>\n<\/ul>\n<h2 id=\"symptoms-and-search-terms\">Symptoms And Search Terms<\/h2>\n<ul>\n<li>fastapi<\/li>\n<li>udp<\/li>\n<li>data out<\/li>\n<li>sqlite<\/li>\n<li>capture<\/li>\n<li>lap<\/li>\n<li>session<\/li>\n<li>export<\/li>\n<li>replay<\/li>\n<li>world map<\/li>\n<li>update check<\/li>\n<li>feedback client<\/li>\n<li>pywebview<\/li>\n<li>port conflict<\/li>\n<li>raw import<\/li>\n<li>export job<\/li>\n<li>sse<\/li>\n<\/ul>\n<h2 id=\"symptom-routing\">Symptom Routing<\/h2>\n<ul>\n<li>Backend route, HTTP status, API payload, validation, CORS/static serving, REST/SSE event, import/export job, replay, feedback, diagnostics, update check, track profile, or world-map API issue: start in <code>telemetry_tracker/app.py<\/code>, then follow the imported service module.<\/li>\n<li>Live telemetry missing or listener status wrong: inspect <code>telemetry_tracker/udp_listener.py<\/code>, <code>telemetry_tracker/packet_bridge.py<\/code>, <code>telemetry_tracker/capture.py<\/code>, <code>telemetry_tracker/lap_detection.py<\/code>, and <code>telemetry_tracker/ingest.py<\/code>.<\/li>\n<li>SQLite schema, migration, stored settings, session/lap/sample query, feedback queue, track profile, map tile record, or database maintenance issue: inspect <code>telemetry_tracker/storage.py<\/code> and <code>tools/maintain-telemetry-db.py<\/code>.<\/li>\n<li>Packaged desktop startup, pywebview bridge, folder/file picker, user-data path, backend readiness, or UDP port conflict issue: inspect <code>telemetry_tracker/desktop_launcher.py<\/code>, <code>telemetry_tracker/app_paths.py<\/code>, and <code>telemetry_tracker/port_conflicts.py<\/code>.<\/li>\n<li>Development server startup issue: inspect <code>tools/run-telemetry-tracker.py<\/code>, then <code>telemetry_tracker/app.py<\/code> and <code>telemetry_tracker/storage.py<\/code>.<\/li>\n<li>Raw FH Data Out packet, parser, capture artifact, latest pointer, capture session, or CLI capture issue: inspect <code>telemetry_tracker/data_out/<\/code>, <code>tools/capture-data-out.py<\/code>, <code>tools/capture-session.py<\/code>, and <code>tools/parse-data-out.py<\/code>.<\/li>\n<li>Lap analysis, markers, collision/smashable detection, reference lap, ghost, delta, or comparison issue: inspect <code>telemetry_tracker/analysis.py<\/code>, <code>collision_detection.py<\/code>, <code>comparison.py<\/code>, <code>lap_summaries.py<\/code>, and matching API routes in <code>app.py<\/code>.<\/li>\n<li>Track matching, route signatures, track assets, car catalogue, or local FH6 media scan issue: inspect <code>telemetry_tracker/track_matcher.py<\/code>, <code>track_profiles.py<\/code>, <code>track_assets.py<\/code>, <code>track_catalog.py<\/code>, <code>car_catalog.py<\/code>, and <code>car_info.py<\/code>.<\/li>\n<li>World-map tile cache, season, calibration, tile serving, or converter subprocess issue: inspect <code>telemetry_tracker/world_map.py<\/code>; hand off converter implementation defects to <code>fh6-map-tile-converter<\/code>.<\/li>\n<li>Feedback submission, diagnostics payload, pending retry, or worker rejection issue: inspect <code>telemetry_tracker/feedback.py<\/code>, <code>telemetry_tracker/diagnostics.py<\/code>, and backend feedback routes; hand off remote worker/API defects to <code>feedback-worker<\/code>.<\/li>\n<li>Test failure under <code>tests/test_tracker_*.py<\/code>: route by the module named in the test filename first, then the API/tool entrypoint used by the test.<\/li>\n<\/ul>\n<h2 id=\"handoffs\">Handoffs<\/h2>\n<ul>\n<li>Web Dashboard owns frontend behaviour under <code>web/telemetry-tracker/<\/code>; keep backend payload/API contract changes coordinated there.<\/li>\n<li>Feedback Worker owns the remote Cloudflare Worker and D1 intake; backend owns local validation, diagnostics, queueing, and retry.<\/li>\n<li>FH6 Map Tile Converter owns converter internals under <code>tools/fh6-map-tile-converter/<\/code>; backend owns invocation, cache metadata, settings, and tile serving.<\/li>\n<li>Release, CI, and Packaging owns installer/release workflow and packaged smoke tooling; backend owns the runtime launcher code and requirements listed in this bundle.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "routing.md",
@@ -264,7 +456,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"purpose\">Purpose<\/h2>\n<p>Python FastAPI desktop backend for local UDP telemetry capture, SQLite storage, lap/session analysis, export, replay, update checks, feedback submission, and FH6 world-map integration.<\/p>\n<h2 id=\"owned-paths\">Owned Paths<\/h2>\n<ul>\n<li>telemetry_tracker/<\/li>\n<li>tests/<\/li>\n<li>tools/run-telemetry-tracker.py<\/li>\n<li>tools/capture-data-out.py<\/li>\n<li>tools/capture-session.py<\/li>\n<li>tools/parse-data-out.py<\/li>\n<li>tools/maintain-telemetry-db.py<\/li>\n<li>requirements-telemetry-tracker.txt<\/li>\n<li>requirements-telemetry-desktop.txt<\/li>\n<li>requirements-telemetry-test.txt<\/li>\n<\/ul>\n<h2 id=\"entrypoints\">Entrypoints<\/h2>\n<ul>\n<li><code>telemetry_tracker/app.py<\/code> exposes <code>create_app()<\/code> and the FastAPI routes for status, capture control, sessions, laps, replay/import, export jobs, feedback, diagnostics, update checks, track profiles, and world-map APIs.<\/li>\n<li><code>telemetry_tracker/app.py<\/code> <code>CapturePipeline<\/code> wires raw packets through packet decoding, capture state, lap detection, storage, analysis, and live event publication.<\/li>\n<li><code>telemetry_tracker/desktop_launcher.py<\/code> starts the packaged Windows desktop app: allocates the local HTTP port, starts the backend, resolves UDP port conflicts, opens pywebview, and exposes native file/folder selection.<\/li>\n<li><code>tools/run-telemetry-tracker.py<\/code> is the development HTTP entrypoint for Uvicorn plus optional UDP listener startup.<\/li>\n<li><code>tools/capture-data-out.py<\/code>, <code>tools/capture-session.py<\/code>, and <code>tools/parse-data-out.py<\/code> are raw FH Data Out capture/session/parse utilities.<\/li>\n<li><code>tools/maintain-telemetry-db.py<\/code> prunes eligible non-race samples, checkpoints WAL, and optionally VACUUMs the SQLite database.<\/li>\n<\/ul>\n<h2 id=\"neighbouring-systems\">Neighbouring Systems<\/h2>\n<ul>\n<li>Web Dashboard (<code>web/telemetry-tracker/<\/code>) consumes these REST/SSE APIs, mounted static assets, and pywebview bridge selections.<\/li>\n<li>Feedback Worker receives reports submitted by the backend feedback client; backend owns local validation, diagnostics collection, queueing, and retry.<\/li>\n<li>FH6 Map Tile Converter is called from the world-map cache path; backend owns cache status, settings, tile serving, and converter invocation.<\/li>\n<li>Release, CI, and Packaging owns PyInstaller/Inno/metadata packaging around the backend launcher, requirements, and smoke checks.<\/li>\n<\/ul>\n<h2 id=\"key-internal-files\">Key Internal Files<\/h2>\n<ul>\n<li><code>telemetry_tracker/storage.py<\/code>: SQLite schema, migrations, settings, sessions, laps, samples, track profiles, world-map records, feedback queue, and maintenance helpers.<\/li>\n<li><code>telemetry_tracker/udp_listener.py<\/code>: async UDP socket lifecycle, packet-size validation, status events, and packet handler dispatch.<\/li>\n<li><code>telemetry_tracker/packet_bridge.py<\/code> and <code>telemetry_tracker/data_out/<\/code>: FH Data Out packet schema, decoding, test encoding, raw packet iteration, capture summaries, and CSV/artifact writing.<\/li>\n<li><code>telemetry_tracker/capture.py<\/code>, <code>lap_detection.py<\/code>, <code>lap_quality.py<\/code>, <code>ingest.py<\/code>: live capture state, auto/manual lap/session handling, quality decisions, and recent-sample ingestion.<\/li>\n<li><code>telemetry_tracker/analysis.py<\/code>, <code>comparison.py<\/code>, <code>track_matcher.py<\/code>, <code>track_profiles.py<\/code>, <code>track_assets.py<\/code>: lap analysis, reference/ghost/delta data, track matching, route signatures, and uploaded track assets.<\/li>\n<li><code>telemetry_tracker/export.py<\/code>, <code>replay.py<\/code>, <code>feedback.py<\/code>, <code>diagnostics.py<\/code>, <code>app_updates.py<\/code>, <code>world_map.py<\/code>: export/import jobs, raw replay, feedback, diagnostics, update checks, and map tile cache support.<\/li>\n<\/ul>\n<h2 id=\"maintenance-notes\">Maintenance Notes<\/h2>\n<ul>\n<li>Keep this page focused on stable ownership, entrypoints, and contracts.<\/li>\n<li>Use <code>routing.md<\/code> for symptom/search routing details.<\/li>\n<li>Use the focused <code>tests/test_tracker_*.py<\/code> or <code>tests/test_capture_tool.py<\/code> file that matches the touched backend module or tool; broad backend changes normally route through <code>pytest tests<\/code>.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "solution.md",
@@ -275,7 +466,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"bootstrap\">Bootstrap<\/h2>\n<ul>\n<li>Shallow OKF bundle created from repository structure.<\/li>\n<\/ul>\n<h2 id=\"2026-06-25-deep-backfill\">2026-06-25 Deep Backfill<\/h2>\n<ul>\n<li>Confirmed backend root in <code>telemetry_tracker/app.py<\/code>: <code>CapturePipeline<\/code>, <code>create_app()<\/code>, and FastAPI routes cover status, world-map cache build, feedback reports, export jobs, replay/import jobs, and SSE events.<\/li>\n<li>Confirmed desktop/runtime entrypoints: <code>telemetry_tracker/desktop_launcher.py<\/code> defines <code>DesktopBackend<\/code>, <code>DesktopBridge<\/code>, smoke HTTP mode, desktop launch, and <code>main()<\/code>; <code>tools/run-telemetry-tracker.py<\/code> creates the app and starts Uvicorn after checking HTTP/UDP port conflicts.<\/li>\n<li>Confirmed raw capture and session tools: <code>tools/capture-data-out.py<\/code> writes capture artifacts from active FH Data Out packets and rejects reserved ports 5200-5300; <code>tools/capture-session.py<\/code> starts/stops background capture by invoking <code>tools/capture-data-out.py<\/code> and tracks new capture analysis state.<\/li>\n<li>Confirmed SQLite ownership: <code>telemetry_tracker/storage.py<\/code> has <code>SCHEMA_VERSION = 12<\/code>, <code>TelemetryStore<\/code>, migrations, database-size helpers, session/lap APIs, and packet/sample batch insertion.<\/li>\n<li>Confirmed packet/listener boundary: <code>telemetry_tracker/data_out/__init__.py<\/code> defines <code>PACKET_SIZE = 324<\/code>, decoding, test encoding, raw packet iteration, capture classification, artifact writing, and latest-pointer writing; <code>telemetry_tracker/udp_listener.py<\/code> validates datagram size before dispatching packets.<\/li>\n<li>Confirmed dependencies: <code>requirements-telemetry-tracker.txt<\/code> owns FastAPI, Uvicorn, httpx, and multipart runtime; <code>requirements-telemetry-desktop.txt<\/code> adds PyInstaller and pywebview; <code>requirements-telemetry-test.txt<\/code> adds pytest.<\/li>\n<li>Confirmed test routing: <code>tests/test_tracker_*.py<\/code> files exercise backend modules and API surfaces with <code>TelemetryStore<\/code>, <code>create_app()<\/code>, <code>TestClient<\/code>, and module-specific helpers; <code>tests/test_capture_tool.py<\/code>, <code>test_tracker_runner.py<\/code>, <code>test_tracker_maintenance_tool.py<\/code>, and <code>test_tracker_desktop_launcher.py<\/code> cover the owned tools and launcher.<\/li>\n<\/ul>\n<h2 id=\"known-gaps\">Known Gaps<\/h2>\n<ul>\n<li>API contract details remain in source/tests rather than duplicated here; update this bundle only when ownership, entrypoints, or routing changes.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "log.md",
@@ -316,6 +506,9 @@ input, select {
   const bundle = JSON.parse(document.getElementById("okf-data").textContent);
   const docs = bundle.docs;
   const docsByPath = new Map(docs.map((doc) => [doc.path, doc]));
+  const docTemplates = new Map(
+    [...document.querySelectorAll("template[data-doc-path]")].map((template) => [template.dataset.docPath, template])
+  );
   const article = document.getElementById("article");
   const docList = document.getElementById("docList");
   const search = document.getElementById("search");
@@ -434,7 +627,7 @@ input, select {
         <div class="source-link">Source path: ${escapeHtml(doc.path)}</div>
         ${renderRouting(doc.metadata || {})}
       </header>
-      <section class="article-body">${doc.html}</section>
+      <section class="article-body"></section>
       <section class="relationships" aria-label="OKF relationships">
         <h3>Links from this page</h3>
         ${linkPills(doc.outgoing, "No internal OKF links from this page.")}
@@ -442,6 +635,13 @@ input, select {
         ${linkPills(bundle.backlinks[doc.path] || [], "No other wiki page links here yet.")}
       </section>
     `;
+    const body = article.querySelector(".article-body");
+    const template = docTemplates.get(doc.path);
+    if (body && template) {
+      body.replaceChildren(template.content.cloneNode(true));
+    } else if (body) {
+      body.textContent = "Document body unavailable.";
+    }
     renderList();
     if (anchor) {
       requestAnimationFrame(() => {

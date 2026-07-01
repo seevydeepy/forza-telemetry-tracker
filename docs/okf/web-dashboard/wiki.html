@@ -169,6 +169,158 @@ input, select {
     <article class="article-shell" id="article"></article>
   </main>
 </div>
+<div hidden id="okf-doc-templates">
+<template data-doc-path="index.md">
+<p>Svelte and Vite frontend embedded by the desktop app for live telemetry, replay, route review, settings, feedback, import, export, and dashboard visualisation.</p>
+<h2 id="pages">Pages</h2>
+<ul>
+<li><a href="#doc/routing_guidance.card" data-doc-link="routing_guidance.card" data-doc-anchor="">Web Dashboard Routing Card</a></li>
+<li><a href="#doc/routing.md" data-doc-link="routing.md" data-doc-anchor="">Web Dashboard Routing</a></li>
+<li><a href="#doc/solution.md" data-doc-link="solution.md" data-doc-anchor="">Web Dashboard</a></li>
+<li><a href="#doc/log.md" data-doc-link="log.md" data-doc-anchor="">Web Dashboard OKF Log</a></li>
+</ul>
+</template>
+<template data-doc-path="routing_guidance.card">
+<p>id: web-dashboard owned_paths:</p>
+<ul>
+<li>web/telemetry-tracker/ read_first:</li>
+<li>docs/okf/web-dashboard/routing_guidance.card</li>
+<li>docs/okf/web-dashboard/solution.md</li>
+<li>web/telemetry-tracker/src/App.svelte</li>
+<li>web/telemetry-tracker/src/api.ts</li>
+<li>web/telemetry-tracker/src/desktopBridge.ts</li>
+<li>web/telemetry-tracker/src/TelemetryCanvas.svelte</li>
+<li>web/telemetry-tracker/src/TelemetryDashboard.svelte keywords:</li>
+<li>svelte</li>
+<li>vite</li>
+<li>dashboard</li>
+<li>canvas</li>
+<li>overlay</li>
+<li>settings modal</li>
+<li>import modal</li>
+<li>export modal</li>
+<li>route review</li>
+<li>telemetry dashboard</li>
+<li>route visualisation</li>
+<li>telemetry canvas</li>
+<li>eventsource</li>
+<li>/events</li>
+<li>/api/status</li>
+<li>/api/capture</li>
+<li>/api/live/recent</li>
+<li>/api/sessions</li>
+<li>/api/laps</li>
+<li>/api/replay/import-jobs</li>
+<li>/api/telemetry/export-jobs</li>
+<li>/api/map</li>
+<li>pywebview</li>
+<li>choose<em>fh6</em>install_folder</li>
+<li>choose<em>raw</em>telemetry_files</li>
+<li>feedback modal</li>
+<li>diagnostics panel handoffs:</li>
+<li>Backend API and SSE provider for <code>/api/*</code> and <code>/events</code>.</li>
+<li>Desktop pywebview host for native folder/file pickers.</li>
+<li>Track/map/analysis data providers surfaced through API payloads. validation:</li>
+<li>python tools/docs/map<em>changed</em>paths.py &lt;representative-owned-path&gt;</li>
+<li>.\tools\docs\build<em>all</em>wikis.ps1 -Check stale_notes:</li>
+<li>Review after ownership, entrypoint, handoff, or validation changes.</li>
+</ul>
+</template>
+<template data-doc-path="routing.md">
+<h2 id="read-this-when">Read This When</h2>
+<ul>
+<li>A change touches <code>web/telemetry-tracker/</code>.</li>
+<li>A symptom appears in the desktop embedded web UI, Vite dev UI, telemetry canvas, dashboard widgets, modals, import/export flows, or pywebview picker handling.</li>
+<li>A frontend error mentions <code>/api/*</code>, <code>/events</code>, <code>EventSource</code>, <code>pywebview</code>, Svelte, Vite, Vitest, canvas rendering, route review, or dashboard playback.</li>
+</ul>
+<h2 id="first-files-to-inspect">First Files To Inspect</h2>
+<ul>
+<li><code>web/telemetry-tracker/src/App.svelte</code> for workflow state, API orchestration, SSE connection, live/replay mode, modals, and top-level composition.</li>
+<li><code>web/telemetry-tracker/src/api.ts</code> for endpoint names, request bodies, response types, and error messages.</li>
+<li><code>web/telemetry-tracker/src/types.ts</code> for frontend payload shape expectations.</li>
+<li><code>web/telemetry-tracker/src/desktopBridge.ts</code> for native file/folder picker availability and normalisation.</li>
+<li><code>web/telemetry-tracker/src/TelemetryCanvas.svelte</code> for route rendering, overlays, markers, ghosts, track assets, world-map tiles, pan/zoom, and point selection.</li>
+<li><code>web/telemetry-tracker/src/TelemetryDashboard.svelte</code> and <code>web/telemetry-tracker/src/Dashboard*.svelte</code> for dashboard widget display.</li>
+<li><code>web/telemetry-tracker/vite.config.ts</code> and <code>web/telemetry-tracker/package.json</code> for frontend build/test/dev-server issues.</li>
+</ul>
+<h2 id="owned-paths">Owned Paths</h2>
+<ul>
+<li><code>web/telemetry-tracker/</code></li>
+</ul>
+<h2 id="symptoms-and-search-terms">Symptoms And Search Terms</h2>
+<ul>
+<li>Blank or stale UI: <code>main.ts</code>, <code>App.svelte</code>, <code>recoverAndConnect</code>, <code>fetchStatus</code>, <code>fetchRecentLiveSamples</code>, <code>EventSource</code>, <code>/events</code>.</li>
+<li>API request failure: <code>api.ts</code>, endpoint path, <code>expectJson</code>, displayed error text.</li>
+<li>Capture controls or listener status wrong: <code>CaptureControls</code>, <code>FloatingCaptureControls</code>, <code>fetchCaptureStatus</code>, <code>setCaptureMode</code>, <code>startCapture</code>, <code>stopCapture</code>.</li>
+<li>Route visualisation wrong: <code>TelemetryCanvas.svelte</code>, <code>OverlayToolbar</code>, <code>ReviewTimeline</code>, <code>ghostSamples</code>, <code>markers</code>, <code>selectedRange</code>, <code>worldMapTileSet</code>.</li>
+<li>Dashboard widgets wrong: <code>CanvasModeToggle</code>, <code>TelemetryDashboard.svelte</code>, <code>DashboardPlaybackBar</code>, <code>dashboardPlayback.ts</code>, <code>dashboardWidgets.ts</code>.</li>
+<li>Import/export issue: <code>ImportTelemetryModal</code>, <code>ExportTelemetryModal</code>, <code>fetchRawTelemetryImportJobs</code>, <code>fetchTelemetryExportJobs</code>, <code>desktopBridge.ts</code>.</li>
+<li>Map setup/cache issue: <code>WorldMapSetupPanel</code>, <code>WorldMapSettingsPanel</code>, <code>WorldMapInstallLocationField</code>, <code>worldMap.ts</code>, <code>/api/map</code>.</li>
+<li>Native picker missing: <code>desktopBridge.ts</code>, <code>pywebview</code>, <code>choose_fh6_install_folder</code>, <code>choose_export_folder</code>, <code>choose_raw_telemetry_files</code>, <code>choose_raw_telemetry_folder</code>.</li>
+<li>Feedback, about, diagnostics, or update UI issue: <code>FeedbackModal</code>, <code>AboutModal</code>, <code>DiagnosticsPanel</code>, <code>/api/feedback</code>, <code>/api/app</code>, <code>/api/diagnostics</code>.</li>
+<li>CSS/layout regression: <code>app.css</code>, component-local <code>&lt;style&gt;</code>, matching <code>*.test.ts</code> style/layout tests.</li>
+</ul>
+<h2 id="handoffs">Handoffs</h2>
+<ul>
+<li>Desktop Backend: route there when frontend calls are correct but <code>/api/*</code> or <code>/events</code> data, status codes, payload shape, <code>window.pywebview.api</code>, summaries, markers, ghosts, track profiles, world-map tiles, imports, exports, or diagnostics are wrong.</li>
+</ul>
+<h2 id="known-gaps">Known Gaps</h2>
+<ul>
+<li>This backfill only inspected <code>web/telemetry-tracker/</code>; backend route/provider files were not re-mapped here.</li>
+<li>Component-level ownership inside the frontend is broad; use the first-file list before editing scattered widget files.</li>
+</ul>
+</template>
+<template data-doc-path="solution.md">
+<h2 id="purpose">Purpose</h2>
+<p>Svelte/Vite frontend for the local Forza Telemetry Tracker app. It presents live capture status, route visualisation, dashboard widgets, replay/session review, map overlays, diagnostics, feedback, import/export jobs, and settings.</p>
+<h2 id="owned-paths">Owned Paths</h2>
+<ul>
+<li><code>web/telemetry-tracker/</code></li>
+</ul>
+<h2 id="key-entrypoints">Key Entrypoints</h2>
+<ul>
+<li><code>web/telemetry-tracker/src/main.ts</code> mounts the Svelte app into <code>#app</code>.</li>
+<li><code>web/telemetry-tracker/src/App.svelte</code> is the main orchestration surface for API loading, SSE connection, capture controls, modals, route/dashboard mode, session/lap selection, import/export jobs, diagnostics, and toasts.</li>
+<li><code>web/telemetry-tracker/src/api.ts</code> centralises frontend HTTP calls to <code>/api/*</code>.</li>
+<li><code>web/telemetry-tracker/src/desktopBridge.ts</code> wraps optional <code>window.pywebview.api</code> native picker calls.</li>
+<li><code>web/telemetry-tracker/vite.config.ts</code> defines the Vite/Svelte build, Vitest setup, and dev proxy for <code>/api</code> and <code>/events</code>.</li>
+</ul>
+<h2 id="neighbouring-systems">Neighbouring Systems</h2>
+<ul>
+<li>Backend API owns the <code>/api/*</code> contracts consumed by <code>api.ts</code>; change both sides when payload shape, endpoint name, or error handling changes.</li>
+<li>Backend event stream owns <code>/events</code>; frontend reconnect, sample ingestion, and toast behaviour live in <code>App.svelte</code>.</li>
+<li>Desktop host owns <code>window.pywebview.api</code> picker methods used by <code>desktopBridge.ts</code>.</li>
+<li>Telemetry storage, analysis, track profiles, world-map cache, feedback, diagnostics, import, and export systems feed this UI through API payloads rather than direct frontend ownership.</li>
+</ul>
+<h2 id="maintenance-notes">Maintenance Notes</h2>
+<ul>
+<li>Start with <code>App.svelte</code> for workflow bugs, then narrow to the component, helper, test, or API wrapper named by the symptom.</li>
+<li>Keep UI copy/layout changes in Svelte/CSS files and contract changes in <code>api.ts</code>/<code>types.ts</code> with matching backend verification.</li>
+<li>Use <code>routing.md</code> for symptom/search routing details.</li>
+</ul>
+</template>
+<template data-doc-path="log.md">
+<h2 id="bootstrap">Bootstrap</h2>
+<ul>
+<li>Shallow OKF bundle created from repository structure.</li>
+</ul>
+<h2 id="deep-backfill">Deep Backfill</h2>
+<ul>
+<li>Evidence: <code>package.json</code> declares the frontend as the local-first desktop app UI with <code>vite</code>, <code>vite build</code>, and <code>vitest run --environment jsdom</code> scripts.</li>
+<li>Evidence: <code>main.ts</code> mounts <code>App.svelte</code> into the <code>#app</code> element.</li>
+<li>Evidence: <code>App.svelte</code> imports API functions, major modal/panel components, <code>TelemetryCanvas</code>, <code>TelemetryDashboard</code>, <code>ReviewTimeline</code>, and <code>DashboardPlaybackBar</code>.</li>
+<li>Evidence: <code>App.svelte</code> opens <code>new EventSource(&#x27;/events&#x27;)</code>, loads initial status/live/session/world-map data, and renders route or dashboard mode from the same shell.</li>
+<li>Evidence: <code>api.ts</code> centralises <code>/api/status</code>, <code>/api/capture</code>, <code>/api/live/recent</code>, <code>/api/sessions</code>, <code>/api/laps</code>, <code>/api/replay/import-jobs</code>, <code>/api/telemetry/export-jobs</code>, <code>/api/map</code>, feedback, diagnostics, and app update calls.</li>
+<li>Evidence: <code>desktopBridge.ts</code> gates optional <code>window.pywebview.api</code> pickers for FH6 install folder, export folder, raw telemetry files, and raw telemetry folders.</li>
+<li>Evidence: <code>TelemetryCanvas.svelte</code> owns 2D canvas route rendering with overlays, markers, ghost samples, track assets, world-map tiles, pan/zoom, and point/issue selection events.</li>
+<li>Evidence: <code>TelemetryDashboard.svelte</code> composes the tach/speed/gear, inputs, tyres, suspension, accelerometer, lap timing, mini-route, fuel/race, and car-details dashboard widgets.</li>
+</ul>
+<h2 id="known-gaps">Known Gaps</h2>
+<ul>
+<li>Backend API, SSE, pywebview provider, storage, map cache, import/export, feedback, and diagnostics implementations were not inspected because this backfill was scoped to <code>web/telemetry-tracker/</code>.</li>
+</ul>
+</template>
+</div>
 <script id="okf-data" type="application/json">
 {
   "backlinks": {
@@ -189,7 +341,6 @@ input, select {
   "docs": [
     {
       "description": "Svelte and Vite frontend embedded by the desktop app for live telemetry, replay, route review, settings, feedback, import, export, and dashboard visualisation.",
-      "html": "<p>Svelte and Vite frontend embedded by the desktop app for live telemetry, replay, route review, settings, feedback, import, export, and dashboard visualisation.<\/p>\n<h2 id=\"pages\">Pages<\/h2>\n<ul>\n<li><a href=\"#doc/routing_guidance.card\" data-doc-link=\"routing_guidance.card\" data-doc-anchor=\"\">Web Dashboard Routing Card<\/a><\/li>\n<li><a href=\"#doc/routing.md\" data-doc-link=\"routing.md\" data-doc-anchor=\"\">Web Dashboard Routing<\/a><\/li>\n<li><a href=\"#doc/solution.md\" data-doc-link=\"solution.md\" data-doc-anchor=\"\">Web Dashboard<\/a><\/li>\n<li><a href=\"#doc/log.md\" data-doc-link=\"log.md\" data-doc-anchor=\"\">Web Dashboard OKF Log<\/a><\/li>\n<\/ul>",
       "metadata": {
         "description": "Svelte and Vite frontend embedded by the desktop app for live telemetry, replay, route review, settings, feedback, import, export, and dashboard visualisation.",
         "routing_keywords": [
@@ -231,7 +382,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<p>id: web-dashboard owned_paths:<\/p>\n<ul>\n<li>web/telemetry-tracker/ read_first:<\/li>\n<li>docs/okf/web-dashboard/routing_guidance.card<\/li>\n<li>docs/okf/web-dashboard/solution.md<\/li>\n<li>web/telemetry-tracker/src/App.svelte<\/li>\n<li>web/telemetry-tracker/src/api.ts<\/li>\n<li>web/telemetry-tracker/src/desktopBridge.ts<\/li>\n<li>web/telemetry-tracker/src/TelemetryCanvas.svelte<\/li>\n<li>web/telemetry-tracker/src/TelemetryDashboard.svelte keywords:<\/li>\n<li>svelte<\/li>\n<li>vite<\/li>\n<li>dashboard<\/li>\n<li>canvas<\/li>\n<li>overlay<\/li>\n<li>settings modal<\/li>\n<li>import modal<\/li>\n<li>export modal<\/li>\n<li>route review<\/li>\n<li>telemetry dashboard<\/li>\n<li>route visualisation<\/li>\n<li>telemetry canvas<\/li>\n<li>eventsource<\/li>\n<li>/events<\/li>\n<li>/api/status<\/li>\n<li>/api/capture<\/li>\n<li>/api/live/recent<\/li>\n<li>/api/sessions<\/li>\n<li>/api/laps<\/li>\n<li>/api/replay/import-jobs<\/li>\n<li>/api/telemetry/export-jobs<\/li>\n<li>/api/map<\/li>\n<li>pywebview<\/li>\n<li>choose<em>fh6<\/em>install_folder<\/li>\n<li>choose<em>raw<\/em>telemetry_files<\/li>\n<li>feedback modal<\/li>\n<li>diagnostics panel handoffs:<\/li>\n<li>Backend API and SSE provider for <code>/api/*<\/code> and <code>/events<\/code>.<\/li>\n<li>Desktop pywebview host for native folder/file pickers.<\/li>\n<li>Track/map/analysis data providers surfaced through API payloads. validation:<\/li>\n<li>python tools/docs/map<em>changed<\/em>paths.py &lt;representative-owned-path&gt;<\/li>\n<li>.\\tools\\docs\\build<em>all<\/em>wikis.ps1 -Check stale_notes:<\/li>\n<li>Review after ownership, entrypoint, handoff, or validation changes.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "routing_guidance.card",
@@ -242,7 +392,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"read-this-when\">Read This When<\/h2>\n<ul>\n<li>A change touches <code>web/telemetry-tracker/<\/code>.<\/li>\n<li>A symptom appears in the desktop embedded web UI, Vite dev UI, telemetry canvas, dashboard widgets, modals, import/export flows, or pywebview picker handling.<\/li>\n<li>A frontend error mentions <code>/api/*<\/code>, <code>/events<\/code>, <code>EventSource<\/code>, <code>pywebview<\/code>, Svelte, Vite, Vitest, canvas rendering, route review, or dashboard playback.<\/li>\n<\/ul>\n<h2 id=\"first-files-to-inspect\">First Files To Inspect<\/h2>\n<ul>\n<li><code>web/telemetry-tracker/src/App.svelte<\/code> for workflow state, API orchestration, SSE connection, live/replay mode, modals, and top-level composition.<\/li>\n<li><code>web/telemetry-tracker/src/api.ts<\/code> for endpoint names, request bodies, response types, and error messages.<\/li>\n<li><code>web/telemetry-tracker/src/types.ts<\/code> for frontend payload shape expectations.<\/li>\n<li><code>web/telemetry-tracker/src/desktopBridge.ts<\/code> for native file/folder picker availability and normalisation.<\/li>\n<li><code>web/telemetry-tracker/src/TelemetryCanvas.svelte<\/code> for route rendering, overlays, markers, ghosts, track assets, world-map tiles, pan/zoom, and point selection.<\/li>\n<li><code>web/telemetry-tracker/src/TelemetryDashboard.svelte<\/code> and <code>web/telemetry-tracker/src/Dashboard*.svelte<\/code> for dashboard widget display.<\/li>\n<li><code>web/telemetry-tracker/vite.config.ts<\/code> and <code>web/telemetry-tracker/package.json<\/code> for frontend build/test/dev-server issues.<\/li>\n<\/ul>\n<h2 id=\"owned-paths\">Owned Paths<\/h2>\n<ul>\n<li><code>web/telemetry-tracker/<\/code><\/li>\n<\/ul>\n<h2 id=\"symptoms-and-search-terms\">Symptoms And Search Terms<\/h2>\n<ul>\n<li>Blank or stale UI: <code>main.ts<\/code>, <code>App.svelte<\/code>, <code>recoverAndConnect<\/code>, <code>fetchStatus<\/code>, <code>fetchRecentLiveSamples<\/code>, <code>EventSource<\/code>, <code>/events<\/code>.<\/li>\n<li>API request failure: <code>api.ts<\/code>, endpoint path, <code>expectJson<\/code>, displayed error text.<\/li>\n<li>Capture controls or listener status wrong: <code>CaptureControls<\/code>, <code>FloatingCaptureControls<\/code>, <code>fetchCaptureStatus<\/code>, <code>setCaptureMode<\/code>, <code>startCapture<\/code>, <code>stopCapture<\/code>.<\/li>\n<li>Route visualisation wrong: <code>TelemetryCanvas.svelte<\/code>, <code>OverlayToolbar<\/code>, <code>ReviewTimeline<\/code>, <code>ghostSamples<\/code>, <code>markers<\/code>, <code>selectedRange<\/code>, <code>worldMapTileSet<\/code>.<\/li>\n<li>Dashboard widgets wrong: <code>CanvasModeToggle<\/code>, <code>TelemetryDashboard.svelte<\/code>, <code>DashboardPlaybackBar<\/code>, <code>dashboardPlayback.ts<\/code>, <code>dashboardWidgets.ts<\/code>.<\/li>\n<li>Import/export issue: <code>ImportTelemetryModal<\/code>, <code>ExportTelemetryModal<\/code>, <code>fetchRawTelemetryImportJobs<\/code>, <code>fetchTelemetryExportJobs<\/code>, <code>desktopBridge.ts<\/code>.<\/li>\n<li>Map setup/cache issue: <code>WorldMapSetupPanel<\/code>, <code>WorldMapSettingsPanel<\/code>, <code>WorldMapInstallLocationField<\/code>, <code>worldMap.ts<\/code>, <code>/api/map<\/code>.<\/li>\n<li>Native picker missing: <code>desktopBridge.ts<\/code>, <code>pywebview<\/code>, <code>choose_fh6_install_folder<\/code>, <code>choose_export_folder<\/code>, <code>choose_raw_telemetry_files<\/code>, <code>choose_raw_telemetry_folder<\/code>.<\/li>\n<li>Feedback, about, diagnostics, or update UI issue: <code>FeedbackModal<\/code>, <code>AboutModal<\/code>, <code>DiagnosticsPanel<\/code>, <code>/api/feedback<\/code>, <code>/api/app<\/code>, <code>/api/diagnostics<\/code>.<\/li>\n<li>CSS/layout regression: <code>app.css<\/code>, component-local <code>&lt;style&gt;<\/code>, matching <code>*.test.ts<\/code> style/layout tests.<\/li>\n<\/ul>\n<h2 id=\"handoffs\">Handoffs<\/h2>\n<ul>\n<li>Desktop Backend: route there when frontend calls are correct but <code>/api/*<\/code> or <code>/events<\/code> data, status codes, payload shape, <code>window.pywebview.api<\/code>, summaries, markers, ghosts, track profiles, world-map tiles, imports, exports, or diagnostics are wrong.<\/li>\n<\/ul>\n<h2 id=\"known-gaps\">Known Gaps<\/h2>\n<ul>\n<li>This backfill only inspected <code>web/telemetry-tracker/<\/code>; backend route/provider files were not re-mapped here.<\/li>\n<li>Component-level ownership inside the frontend is broad; use the first-file list before editing scattered widget files.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "routing.md",
@@ -253,7 +402,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"purpose\">Purpose<\/h2>\n<p>Svelte/Vite frontend for the local Forza Telemetry Tracker app. It presents live capture status, route visualisation, dashboard widgets, replay/session review, map overlays, diagnostics, feedback, import/export jobs, and settings.<\/p>\n<h2 id=\"owned-paths\">Owned Paths<\/h2>\n<ul>\n<li><code>web/telemetry-tracker/<\/code><\/li>\n<\/ul>\n<h2 id=\"key-entrypoints\">Key Entrypoints<\/h2>\n<ul>\n<li><code>web/telemetry-tracker/src/main.ts<\/code> mounts the Svelte app into <code>#app<\/code>.<\/li>\n<li><code>web/telemetry-tracker/src/App.svelte<\/code> is the main orchestration surface for API loading, SSE connection, capture controls, modals, route/dashboard mode, session/lap selection, import/export jobs, diagnostics, and toasts.<\/li>\n<li><code>web/telemetry-tracker/src/api.ts<\/code> centralises frontend HTTP calls to <code>/api/*<\/code>.<\/li>\n<li><code>web/telemetry-tracker/src/desktopBridge.ts<\/code> wraps optional <code>window.pywebview.api<\/code> native picker calls.<\/li>\n<li><code>web/telemetry-tracker/vite.config.ts<\/code> defines the Vite/Svelte build, Vitest setup, and dev proxy for <code>/api<\/code> and <code>/events<\/code>.<\/li>\n<\/ul>\n<h2 id=\"neighbouring-systems\">Neighbouring Systems<\/h2>\n<ul>\n<li>Backend API owns the <code>/api/*<\/code> contracts consumed by <code>api.ts<\/code>; change both sides when payload shape, endpoint name, or error handling changes.<\/li>\n<li>Backend event stream owns <code>/events<\/code>; frontend reconnect, sample ingestion, and toast behaviour live in <code>App.svelte<\/code>.<\/li>\n<li>Desktop host owns <code>window.pywebview.api<\/code> picker methods used by <code>desktopBridge.ts<\/code>.<\/li>\n<li>Telemetry storage, analysis, track profiles, world-map cache, feedback, diagnostics, import, and export systems feed this UI through API payloads rather than direct frontend ownership.<\/li>\n<\/ul>\n<h2 id=\"maintenance-notes\">Maintenance Notes<\/h2>\n<ul>\n<li>Start with <code>App.svelte<\/code> for workflow bugs, then narrow to the component, helper, test, or API wrapper named by the symptom.<\/li>\n<li>Keep UI copy/layout changes in Svelte/CSS files and contract changes in <code>api.ts<\/code>/<code>types.ts<\/code> with matching backend verification.<\/li>\n<li>Use <code>routing.md<\/code> for symptom/search routing details.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "solution.md",
@@ -264,7 +412,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"bootstrap\">Bootstrap<\/h2>\n<ul>\n<li>Shallow OKF bundle created from repository structure.<\/li>\n<\/ul>\n<h2 id=\"deep-backfill\">Deep Backfill<\/h2>\n<ul>\n<li>Evidence: <code>package.json<\/code> declares the frontend as the local-first desktop app UI with <code>vite<\/code>, <code>vite build<\/code>, and <code>vitest run --environment jsdom<\/code> scripts.<\/li>\n<li>Evidence: <code>main.ts<\/code> mounts <code>App.svelte<\/code> into the <code>#app<\/code> element.<\/li>\n<li>Evidence: <code>App.svelte<\/code> imports API functions, major modal/panel components, <code>TelemetryCanvas<\/code>, <code>TelemetryDashboard<\/code>, <code>ReviewTimeline<\/code>, and <code>DashboardPlaybackBar<\/code>.<\/li>\n<li>Evidence: <code>App.svelte<\/code> opens <code>new EventSource(&#x27;/events&#x27;)<\/code>, loads initial status/live/session/world-map data, and renders route or dashboard mode from the same shell.<\/li>\n<li>Evidence: <code>api.ts<\/code> centralises <code>/api/status<\/code>, <code>/api/capture<\/code>, <code>/api/live/recent<\/code>, <code>/api/sessions<\/code>, <code>/api/laps<\/code>, <code>/api/replay/import-jobs<\/code>, <code>/api/telemetry/export-jobs<\/code>, <code>/api/map<\/code>, feedback, diagnostics, and app update calls.<\/li>\n<li>Evidence: <code>desktopBridge.ts<\/code> gates optional <code>window.pywebview.api<\/code> pickers for FH6 install folder, export folder, raw telemetry files, and raw telemetry folders.<\/li>\n<li>Evidence: <code>TelemetryCanvas.svelte<\/code> owns 2D canvas route rendering with overlays, markers, ghost samples, track assets, world-map tiles, pan/zoom, and point/issue selection events.<\/li>\n<li>Evidence: <code>TelemetryDashboard.svelte<\/code> composes the tach/speed/gear, inputs, tyres, suspension, accelerometer, lap timing, mini-route, fuel/race, and car-details dashboard widgets.<\/li>\n<\/ul>\n<h2 id=\"known-gaps\">Known Gaps<\/h2>\n<ul>\n<li>Backend API, SSE, pywebview provider, storage, map cache, import/export, feedback, and diagnostics implementations were not inspected because this backfill was scoped to <code>web/telemetry-tracker/<\/code>.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "log.md",
@@ -305,6 +452,9 @@ input, select {
   const bundle = JSON.parse(document.getElementById("okf-data").textContent);
   const docs = bundle.docs;
   const docsByPath = new Map(docs.map((doc) => [doc.path, doc]));
+  const docTemplates = new Map(
+    [...document.querySelectorAll("template[data-doc-path]")].map((template) => [template.dataset.docPath, template])
+  );
   const article = document.getElementById("article");
   const docList = document.getElementById("docList");
   const search = document.getElementById("search");
@@ -423,7 +573,7 @@ input, select {
         <div class="source-link">Source path: ${escapeHtml(doc.path)}</div>
         ${renderRouting(doc.metadata || {})}
       </header>
-      <section class="article-body">${doc.html}</section>
+      <section class="article-body"></section>
       <section class="relationships" aria-label="OKF relationships">
         <h3>Links from this page</h3>
         ${linkPills(doc.outgoing, "No internal OKF links from this page.")}
@@ -431,6 +581,13 @@ input, select {
         ${linkPills(bundle.backlinks[doc.path] || [], "No other wiki page links here yet.")}
       </section>
     `;
+    const body = article.querySelector(".article-body");
+    const template = docTemplates.get(doc.path);
+    if (body && template) {
+      body.replaceChildren(template.content.cloneNode(true));
+    } else if (body) {
+      body.textContent = "Document body unavailable.";
+    }
     renderList();
     if (anchor) {
       requestAnimationFrame(() => {

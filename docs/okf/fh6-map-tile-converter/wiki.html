@@ -169,6 +169,153 @@ input, select {
     <article class="article-shell" id="article"></article>
   </main>
 </div>
+<div hidden id="okf-doc-templates">
+<template data-doc-path="index.md">
+<p>.NET map tile conversion utility and vendored ForzaTechStudio readers used to generate local map cache assets from a user-selected FH6 install.</p>
+<h2 id="pages">Pages</h2>
+<ul>
+<li><a href="#doc/routing_guidance.card" data-doc-link="routing_guidance.card" data-doc-anchor="">FH6 Map Tile Converter Routing Card</a></li>
+<li><a href="#doc/routing.md" data-doc-link="routing.md" data-doc-anchor="">FH6 Map Tile Converter Routing</a></li>
+<li><a href="#doc/solution.md" data-doc-link="solution.md" data-doc-anchor="">FH6 Map Tile Converter</a></li>
+<li><a href="#doc/log.md" data-doc-link="log.md" data-doc-anchor="">FH6 Map Tile Converter OKF Log</a></li>
+</ul>
+</template>
+<template data-doc-path="routing_guidance.card">
+<p>id: fh6-map-tile-converter owned_paths:</p>
+<ul>
+<li>tools/fh6-map-tile-converter/ read_first:</li>
+<li>docs/okf/fh6-map-tile-converter/routing_guidance.card</li>
+<li>docs/okf/fh6-map-tile-converter/solution.md</li>
+<li>tools/fh6-map-tile-converter/Program.cs</li>
+<li>tools/fh6-map-tile-converter/Swatchbin/SwatchbinReader.cs</li>
+<li>tools/fh6-map-tile-converter/Swatchbin/BcnPngWriter.cs</li>
+<li>tools/fh6-map-tile-converter/ForzaTelemetryTracker.FH6MapTileConverter.csproj keywords:</li>
+<li>map tile</li>
+<li>swatchbin</li>
+<li>forzatechstudio</li>
+<li>dotnet</li>
+<li>forza-map-tile-converter</li>
+<li>inspect-zip</li>
+<li>convert-zip</li>
+<li>Map<em>Brio</em>Season.zip</li>
+<li>tileCoordinateSystem</li>
+<li>fh6-row-column-v1</li>
+<li>DXGI</li>
+<li>BCn</li>
+<li>Durango</li>
+<li>world map cache</li>
+<li>texture</li>
+<li>converter handoffs:</li>
+<li>desktop-backend world-map cache path resolution and tile serving</li>
+<li>release-ci-packaging converter publish and package smoke checks</li>
+<li>web-dashboard world-map overlay manifest and PNG tile consumption</li>
+<li>third-party notices for vendored ForzaTechStudio parser code validation:</li>
+<li>python tools/docs/map<em>changed</em>paths.py &lt;representative-owned-path&gt;</li>
+<li>.\tools\docs\build<em>all</em>wikis.ps1 -Check stale_notes:</li>
+<li>Review after ownership, entrypoint, handoff, or validation changes.</li>
+</ul>
+</template>
+<template data-doc-path="routing.md">
+<h2 id="read-this-when">Read This When</h2>
+<ul>
+<li>A change touches one of this solution&#x27;s owned paths.</li>
+<li>A symptom matches one of this solution&#x27;s routing keywords.</li>
+</ul>
+<h2 id="first-files-to-inspect">First Files To Inspect</h2>
+<ul>
+<li><code>docs/okf/fh6-map-tile-converter/routing_guidance.card</code></li>
+<li><code>docs/okf/fh6-map-tile-converter/solution.md</code></li>
+<li><code>tools/fh6-map-tile-converter/Program.cs</code></li>
+<li><code>tools/fh6-map-tile-converter/Swatchbin/SwatchbinReader.cs</code></li>
+<li><code>tools/fh6-map-tile-converter/Swatchbin/BcnPngWriter.cs</code></li>
+<li><code>tools/fh6-map-tile-converter/ForzaTelemetryTracker.FH6MapTileConverter.csproj</code></li>
+</ul>
+<h2 id="owned-paths">Owned Paths</h2>
+<ul>
+<li>tools/fh6-map-tile-converter/</li>
+</ul>
+<h2 id="symptoms-and-search-terms">Symptoms And Search Terms</h2>
+<ul>
+<li>map tile</li>
+<li>swatchbin</li>
+<li>forzatechstudio</li>
+<li>forza-map-tile-converter</li>
+<li>inspect-zip</li>
+<li>convert-zip</li>
+<li>Map<em>Brio</em>Season.zip</li>
+<li>tileCoordinateSystem</li>
+<li>fh6-row-column-v1</li>
+<li>DXGI</li>
+<li>BCn</li>
+<li>Durango</li>
+<li>world map cache</li>
+<li>texture</li>
+<li>converter</li>
+</ul>
+<h2 id="handoffs">Handoffs</h2>
+<ul>
+<li>If the converter executable is missing, search desktop path resolution and packaging for <code>forza-map-tile-converter.exe</code> or <code>bin/map-converter</code>.</li>
+<li>If archive inspection or conversion fails, start in <code>Program.cs</code>, then <code>SwatchbinReader.cs</code> for bundle/TXCB/TXCH parsing or <code>BcnPngWriter.cs</code> for format support.</li>
+<li>If generated tiles exist but the overlay is wrong, hand off to the desktop backend and web-dashboard world-map paths after checking the manifest fields and coordinate system here.</li>
+<li>If release packaging fails, hand off to <code>tools/build-desktop-release.ps1</code> and desktop package smoke tests after confirming this project publishes successfully.</li>
+<li>If vendored parser code changes, update third-party notice evidence alongside the converter change.</li>
+</ul>
+<h2 id="known-gaps">Known Gaps</h2>
+<ul>
+<li>No fixture archive is documented in this bundle, so behaviour claims should be backed by a real FH6 map ZIP or existing backend/web tests.</li>
+<li>Durango/Xbox tiled swatchbins are explicitly unsupported by the PNG writer.</li>
+</ul>
+</template>
+<template data-doc-path="solution.md">
+<h2 id="purpose">Purpose</h2>
+<p>Windows-only .NET CLI that inspects and converts FH6 <code>.swatchbin</code> map tile archives into PNG tile folders plus a JSON manifest for the local world-map cache.</p>
+<h2 id="owned-paths">Owned Paths</h2>
+<ul>
+<li>tools/fh6-map-tile-converter/</li>
+</ul>
+<h2 id="entrypoints">Entrypoints</h2>
+<ul>
+<li><code>tools/fh6-map-tile-converter/Program.cs</code> exposes <code>forza-map-tile-converter inspect-zip --input &lt;Map_Brio_Season.zip&gt;</code> for archive inspection.</li>
+<li><code>tools/fh6-map-tile-converter/Program.cs</code> exposes <code>forza-map-tile-converter convert-zip --input &lt;Map_Brio_Season.zip&gt; --output &lt;dir&gt; --format png --manifest &lt;manifest.json&gt;</code> for cache generation.</li>
+<li><code>tools/fh6-map-tile-converter/ForzaTelemetryTracker.FH6MapTileConverter.csproj</code> builds the <code>forza-map-tile-converter</code> executable for <code>net9.0-windows</code>.</li>
+</ul>
+<h2 id="neighbouring-systems">Neighbouring Systems</h2>
+<ul>
+<li>Desktop backend world-map cache code locates the converter executable and serves generated tile sets.</li>
+<li>Desktop release packaging publishes the converter into <code>bin/map-converter/</code> and smoke tests assert it is present.</li>
+<li>Web dashboard world-map overlay consumes the tile-set manifest and PNG tile URLs; it should not parse <code>.swatchbin</code> files directly.</li>
+<li>Third-party notices cover the vendored ForzaTechStudio parsing code under this solution.</li>
+</ul>
+<h2 id="maintenance-notes">Maintenance Notes</h2>
+<ul>
+<li>Tile archive entries must be named <code>&lt;z&gt;-&lt;row&gt;-&lt;column&gt;.swatchbin</code>; the converter emits manifest paths as <code>&lt;z&gt;/&lt;x&gt;/&lt;y&gt;.png</code> using <code>fh6-row-column-v1</code>.</li>
+<li>The PNG path supports PC swatchbins and rejects Durango/Xbox tiled swatchbins.</li>
+<li>BCn formats are decoded through <code>BCnEncoder.Net</code>; uncompressed RGBA/BGRA paths are handled locally.</li>
+<li>Keep changes inside <code>tools/fh6-map-tile-converter/</code> unless the backend, packaging, or web manifest contract also changes.</li>
+</ul>
+</template>
+<template data-doc-path="log.md">
+<h2 id="bootstrap">Bootstrap</h2>
+<ul>
+<li>Shallow OKF bundle created from repository structure.</li>
+</ul>
+<h2 id="deep-backfill">Deep Backfill</h2>
+<ul>
+<li><code>Program.cs</code> exposes two commands: <code>inspect-zip</code> serialises <code>.swatchbin</code> archive metadata, and <code>convert-zip</code> writes PNG tiles plus a manifest.</li>
+<li><code>Program.cs</code> parses tile entry names as <code>&lt;z&gt;-&lt;row&gt;-&lt;column&gt;.swatchbin</code>, converts row/column into manifest <code>x</code>/<code>y</code>, and labels manifests with <code>fh6-row-column-v1</code>.</li>
+<li><code>SwatchbinReader.cs</code> loads Forza bundle texture content blobs through the vendored ForzaTechStudio projects and records PC or Durango texture header metadata.</li>
+<li><code>BcnPngWriter.cs</code> supports BC1/2/3/4/5/7 plus selected uncompressed DXGI formats, writes PNG output, and rejects Durango/Xbox tiled swatchbins.</li>
+<li>The project file targets <code>net9.0-windows</code>, names the executable <code>forza-map-tile-converter</code>, references vendored ForzaTechStudio projects, and uses <code>BCnEncoder.Net</code> plus <code>System.Drawing.Common</code>.</li>
+<li>Repository searches showed handoffs in contributor build/audit commands, desktop release publishing, desktop package smoke checks, backend converter path resolution, web world-map overlay consumption, and third-party notices.</li>
+</ul>
+<h2 id="known-gaps">Known Gaps</h2>
+<ul>
+<li>No sample FH6 map ZIP or golden manifest is documented in this solution bundle.</li>
+<li>The converter&#x27;s source states Durango/Xbox tiled swatchbins are unsupported.</li>
+<li>Backend and web map-overlay behaviour should be validated in their own solution bundles when changing the manifest shape or served tile URLs.</li>
+</ul>
+</template>
+</div>
 <script id="okf-data" type="application/json">
 {
   "backlinks": {
@@ -189,7 +336,6 @@ input, select {
   "docs": [
     {
       "description": ".NET map tile conversion utility and vendored ForzaTechStudio readers used to generate local map cache assets from a user-selected FH6 install.",
-      "html": "<p>.NET map tile conversion utility and vendored ForzaTechStudio readers used to generate local map cache assets from a user-selected FH6 install.<\/p>\n<h2 id=\"pages\">Pages<\/h2>\n<ul>\n<li><a href=\"#doc/routing_guidance.card\" data-doc-link=\"routing_guidance.card\" data-doc-anchor=\"\">FH6 Map Tile Converter Routing Card<\/a><\/li>\n<li><a href=\"#doc/routing.md\" data-doc-link=\"routing.md\" data-doc-anchor=\"\">FH6 Map Tile Converter Routing<\/a><\/li>\n<li><a href=\"#doc/solution.md\" data-doc-link=\"solution.md\" data-doc-anchor=\"\">FH6 Map Tile Converter<\/a><\/li>\n<li><a href=\"#doc/log.md\" data-doc-link=\"log.md\" data-doc-anchor=\"\">FH6 Map Tile Converter OKF Log<\/a><\/li>\n<\/ul>",
       "metadata": {
         "description": ".NET map tile conversion utility and vendored ForzaTechStudio readers used to generate local map cache assets from a user-selected FH6 install.",
         "routing_keywords": [
@@ -228,7 +374,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<p>id: fh6-map-tile-converter owned_paths:<\/p>\n<ul>\n<li>tools/fh6-map-tile-converter/ read_first:<\/li>\n<li>docs/okf/fh6-map-tile-converter/routing_guidance.card<\/li>\n<li>docs/okf/fh6-map-tile-converter/solution.md<\/li>\n<li>tools/fh6-map-tile-converter/Program.cs<\/li>\n<li>tools/fh6-map-tile-converter/Swatchbin/SwatchbinReader.cs<\/li>\n<li>tools/fh6-map-tile-converter/Swatchbin/BcnPngWriter.cs<\/li>\n<li>tools/fh6-map-tile-converter/ForzaTelemetryTracker.FH6MapTileConverter.csproj keywords:<\/li>\n<li>map tile<\/li>\n<li>swatchbin<\/li>\n<li>forzatechstudio<\/li>\n<li>dotnet<\/li>\n<li>forza-map-tile-converter<\/li>\n<li>inspect-zip<\/li>\n<li>convert-zip<\/li>\n<li>Map<em>Brio<\/em>Season.zip<\/li>\n<li>tileCoordinateSystem<\/li>\n<li>fh6-row-column-v1<\/li>\n<li>DXGI<\/li>\n<li>BCn<\/li>\n<li>Durango<\/li>\n<li>world map cache<\/li>\n<li>texture<\/li>\n<li>converter handoffs:<\/li>\n<li>desktop-backend world-map cache path resolution and tile serving<\/li>\n<li>release-ci-packaging converter publish and package smoke checks<\/li>\n<li>web-dashboard world-map overlay manifest and PNG tile consumption<\/li>\n<li>third-party notices for vendored ForzaTechStudio parser code validation:<\/li>\n<li>python tools/docs/map<em>changed<\/em>paths.py &lt;representative-owned-path&gt;<\/li>\n<li>.\\tools\\docs\\build<em>all<\/em>wikis.ps1 -Check stale_notes:<\/li>\n<li>Review after ownership, entrypoint, handoff, or validation changes.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "routing_guidance.card",
@@ -239,7 +384,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"read-this-when\">Read This When<\/h2>\n<ul>\n<li>A change touches one of this solution&#x27;s owned paths.<\/li>\n<li>A symptom matches one of this solution&#x27;s routing keywords.<\/li>\n<\/ul>\n<h2 id=\"first-files-to-inspect\">First Files To Inspect<\/h2>\n<ul>\n<li><code>docs/okf/fh6-map-tile-converter/routing_guidance.card<\/code><\/li>\n<li><code>docs/okf/fh6-map-tile-converter/solution.md<\/code><\/li>\n<li><code>tools/fh6-map-tile-converter/Program.cs<\/code><\/li>\n<li><code>tools/fh6-map-tile-converter/Swatchbin/SwatchbinReader.cs<\/code><\/li>\n<li><code>tools/fh6-map-tile-converter/Swatchbin/BcnPngWriter.cs<\/code><\/li>\n<li><code>tools/fh6-map-tile-converter/ForzaTelemetryTracker.FH6MapTileConverter.csproj<\/code><\/li>\n<\/ul>\n<h2 id=\"owned-paths\">Owned Paths<\/h2>\n<ul>\n<li>tools/fh6-map-tile-converter/<\/li>\n<\/ul>\n<h2 id=\"symptoms-and-search-terms\">Symptoms And Search Terms<\/h2>\n<ul>\n<li>map tile<\/li>\n<li>swatchbin<\/li>\n<li>forzatechstudio<\/li>\n<li>forza-map-tile-converter<\/li>\n<li>inspect-zip<\/li>\n<li>convert-zip<\/li>\n<li>Map<em>Brio<\/em>Season.zip<\/li>\n<li>tileCoordinateSystem<\/li>\n<li>fh6-row-column-v1<\/li>\n<li>DXGI<\/li>\n<li>BCn<\/li>\n<li>Durango<\/li>\n<li>world map cache<\/li>\n<li>texture<\/li>\n<li>converter<\/li>\n<\/ul>\n<h2 id=\"handoffs\">Handoffs<\/h2>\n<ul>\n<li>If the converter executable is missing, search desktop path resolution and packaging for <code>forza-map-tile-converter.exe<\/code> or <code>bin/map-converter<\/code>.<\/li>\n<li>If archive inspection or conversion fails, start in <code>Program.cs<\/code>, then <code>SwatchbinReader.cs<\/code> for bundle/TXCB/TXCH parsing or <code>BcnPngWriter.cs<\/code> for format support.<\/li>\n<li>If generated tiles exist but the overlay is wrong, hand off to the desktop backend and web-dashboard world-map paths after checking the manifest fields and coordinate system here.<\/li>\n<li>If release packaging fails, hand off to <code>tools/build-desktop-release.ps1<\/code> and desktop package smoke tests after confirming this project publishes successfully.<\/li>\n<li>If vendored parser code changes, update third-party notice evidence alongside the converter change.<\/li>\n<\/ul>\n<h2 id=\"known-gaps\">Known Gaps<\/h2>\n<ul>\n<li>No fixture archive is documented in this bundle, so behaviour claims should be backed by a real FH6 map ZIP or existing backend/web tests.<\/li>\n<li>Durango/Xbox tiled swatchbins are explicitly unsupported by the PNG writer.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "routing.md",
@@ -250,7 +394,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"purpose\">Purpose<\/h2>\n<p>Windows-only .NET CLI that inspects and converts FH6 <code>.swatchbin<\/code> map tile archives into PNG tile folders plus a JSON manifest for the local world-map cache.<\/p>\n<h2 id=\"owned-paths\">Owned Paths<\/h2>\n<ul>\n<li>tools/fh6-map-tile-converter/<\/li>\n<\/ul>\n<h2 id=\"entrypoints\">Entrypoints<\/h2>\n<ul>\n<li><code>tools/fh6-map-tile-converter/Program.cs<\/code> exposes <code>forza-map-tile-converter inspect-zip --input &lt;Map_Brio_Season.zip&gt;<\/code> for archive inspection.<\/li>\n<li><code>tools/fh6-map-tile-converter/Program.cs<\/code> exposes <code>forza-map-tile-converter convert-zip --input &lt;Map_Brio_Season.zip&gt; --output &lt;dir&gt; --format png --manifest &lt;manifest.json&gt;<\/code> for cache generation.<\/li>\n<li><code>tools/fh6-map-tile-converter/ForzaTelemetryTracker.FH6MapTileConverter.csproj<\/code> builds the <code>forza-map-tile-converter<\/code> executable for <code>net9.0-windows<\/code>.<\/li>\n<\/ul>\n<h2 id=\"neighbouring-systems\">Neighbouring Systems<\/h2>\n<ul>\n<li>Desktop backend world-map cache code locates the converter executable and serves generated tile sets.<\/li>\n<li>Desktop release packaging publishes the converter into <code>bin/map-converter/<\/code> and smoke tests assert it is present.<\/li>\n<li>Web dashboard world-map overlay consumes the tile-set manifest and PNG tile URLs; it should not parse <code>.swatchbin<\/code> files directly.<\/li>\n<li>Third-party notices cover the vendored ForzaTechStudio parsing code under this solution.<\/li>\n<\/ul>\n<h2 id=\"maintenance-notes\">Maintenance Notes<\/h2>\n<ul>\n<li>Tile archive entries must be named <code>&lt;z&gt;-&lt;row&gt;-&lt;column&gt;.swatchbin<\/code>; the converter emits manifest paths as <code>&lt;z&gt;/&lt;x&gt;/&lt;y&gt;.png<\/code> using <code>fh6-row-column-v1<\/code>.<\/li>\n<li>The PNG path supports PC swatchbins and rejects Durango/Xbox tiled swatchbins.<\/li>\n<li>BCn formats are decoded through <code>BCnEncoder.Net<\/code>; uncompressed RGBA/BGRA paths are handled locally.<\/li>\n<li>Keep changes inside <code>tools/fh6-map-tile-converter/<\/code> unless the backend, packaging, or web manifest contract also changes.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "solution.md",
@@ -261,7 +404,6 @@ input, select {
     },
     {
       "description": "",
-      "html": "<h2 id=\"bootstrap\">Bootstrap<\/h2>\n<ul>\n<li>Shallow OKF bundle created from repository structure.<\/li>\n<\/ul>\n<h2 id=\"deep-backfill\">Deep Backfill<\/h2>\n<ul>\n<li><code>Program.cs<\/code> exposes two commands: <code>inspect-zip<\/code> serialises <code>.swatchbin<\/code> archive metadata, and <code>convert-zip<\/code> writes PNG tiles plus a manifest.<\/li>\n<li><code>Program.cs<\/code> parses tile entry names as <code>&lt;z&gt;-&lt;row&gt;-&lt;column&gt;.swatchbin<\/code>, converts row/column into manifest <code>x<\/code>/<code>y<\/code>, and labels manifests with <code>fh6-row-column-v1<\/code>.<\/li>\n<li><code>SwatchbinReader.cs<\/code> loads Forza bundle texture content blobs through the vendored ForzaTechStudio projects and records PC or Durango texture header metadata.<\/li>\n<li><code>BcnPngWriter.cs<\/code> supports BC1/2/3/4/5/7 plus selected uncompressed DXGI formats, writes PNG output, and rejects Durango/Xbox tiled swatchbins.<\/li>\n<li>The project file targets <code>net9.0-windows<\/code>, names the executable <code>forza-map-tile-converter<\/code>, references vendored ForzaTechStudio projects, and uses <code>BCnEncoder.Net<\/code> plus <code>System.Drawing.Common<\/code>.<\/li>\n<li>Repository searches showed handoffs in contributor build/audit commands, desktop release publishing, desktop package smoke checks, backend converter path resolution, web world-map overlay consumption, and third-party notices.<\/li>\n<\/ul>\n<h2 id=\"known-gaps\">Known Gaps<\/h2>\n<ul>\n<li>No sample FH6 map ZIP or golden manifest is documented in this solution bundle.<\/li>\n<li>The converter&#x27;s source states Durango/Xbox tiled swatchbins are unsupported.<\/li>\n<li>Backend and web map-overlay behaviour should be validated in their own solution bundles when changing the manifest shape or served tile URLs.<\/li>\n<\/ul>",
       "metadata": {},
       "outgoing": [],
       "path": "log.md",
@@ -302,6 +444,9 @@ input, select {
   const bundle = JSON.parse(document.getElementById("okf-data").textContent);
   const docs = bundle.docs;
   const docsByPath = new Map(docs.map((doc) => [doc.path, doc]));
+  const docTemplates = new Map(
+    [...document.querySelectorAll("template[data-doc-path]")].map((template) => [template.dataset.docPath, template])
+  );
   const article = document.getElementById("article");
   const docList = document.getElementById("docList");
   const search = document.getElementById("search");
@@ -420,7 +565,7 @@ input, select {
         <div class="source-link">Source path: ${escapeHtml(doc.path)}</div>
         ${renderRouting(doc.metadata || {})}
       </header>
-      <section class="article-body">${doc.html}</section>
+      <section class="article-body"></section>
       <section class="relationships" aria-label="OKF relationships">
         <h3>Links from this page</h3>
         ${linkPills(doc.outgoing, "No internal OKF links from this page.")}
@@ -428,6 +573,13 @@ input, select {
         ${linkPills(bundle.backlinks[doc.path] || [], "No other wiki page links here yet.")}
       </section>
     `;
+    const body = article.querySelector(".article-body");
+    const template = docTemplates.get(doc.path);
+    if (body && template) {
+      body.replaceChildren(template.content.cloneNode(true));
+    } else if (body) {
+      body.textContent = "Document body unavailable.";
+    }
     renderList();
     if (anchor) {
       requestAnimationFrame(() => {

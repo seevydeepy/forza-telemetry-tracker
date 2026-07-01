@@ -729,6 +729,7 @@ def generate_html(
     render_mode: str,
 ) -> tuple[str, dict[str, int]]:
     documents: list[dict[str, Any]] = []
+    doc_templates: list[str] = []
     links: list[dict[str, str]] = []
     for path, raw in sorted(docs_by_path.items(), key=lambda item: doc_sort_key(item[0])):
         metadata, body = parse_frontmatter(raw)
@@ -739,6 +740,15 @@ def generate_html(
         outgoing = collect_internal_links(path, body, docs_by_path)
         for target in outgoing:
             links.append({"source": path, "target": target})
+        body_html = markdown_to_html(
+            strip_leading_title_heading(body, title),
+            path,
+            docs_by_path,
+            manifest,
+            current_solution,
+            render_mode,
+        )
+        doc_templates.append(f'<template data-doc-path="{html.escape(path, quote=True)}">\n{body_html}\n</template>')
         documents.append(
             {
                 "path": path,
@@ -747,14 +757,6 @@ def generate_html(
                 "type": doc_type,
                 "tags": tags,
                 "metadata": metadata,
-                "html": markdown_to_html(
-                    strip_leading_title_heading(body, title),
-                    path,
-                    docs_by_path,
-                    manifest,
-                    current_solution,
-                    render_mode,
-                ),
                 "outgoing": outgoing,
                 "search": " ".join([path, title, description, doc_type, *tags, *metadata_search_terms(metadata)]).lower(),
             }
@@ -774,7 +776,11 @@ def generate_html(
         "stats": {"docs": len(documents), "links": len(links)},
     }
     data_json = json.dumps(bundle, ensure_ascii=False, indent=2, sort_keys=True).replace("</", "<\\/")
-    output = HTML_TEMPLATE.replace("@@BUNDLE_NAME@@", html.escape(bundle_name)).replace("@@DATA_JSON@@", data_json)
+    output = (
+        HTML_TEMPLATE.replace("@@BUNDLE_NAME@@", html.escape(bundle_name))
+        .replace("@@DATA_JSON@@", data_json)
+        .replace("@@DOC_TEMPLATES@@", "\n".join(doc_templates))
+    )
     output = f"{GENERATED_NOTICE}\n{output}"
     return output, {"docs": len(documents), "links": len(links), "bytes": len(output.encode("utf-8"))}
 
@@ -784,8 +790,10 @@ def smoke_html(path: Path, content: str) -> None:
     required = [
         "<!doctype html>",
         'id="okf-data"',
+        'id="okf-doc-templates"',
         'id="doclist"',
         'id="article"',
+        "<template data-doc-path=",
         "single-file okf reader",
     ]
     missing = [item for item in required if item not in lowered]
@@ -795,8 +803,13 @@ def smoke_html(path: Path, content: str) -> None:
     if not match:
         raise RuntimeError(f"bad html output {path}: missing OKF JSON payload")
     payload = json.loads(match.group(1))
-    if not payload.get("docs"):
+    docs = payload.get("docs") or []
+    if not docs:
         raise RuntimeError(f"bad html output {path}: no documents in OKF JSON payload")
+    if any("html" in doc for doc in docs):
+        raise RuntimeError(f"bad html output {path}: rendered HTML leaked into OKF JSON payload")
+    if content.count("<template data-doc-path=") < len(docs):
+        raise RuntimeError(f"bad html output {path}: missing document body templates")
     if payload.get("stats", {}).get("links", 0) <= 0:
         raise RuntimeError(f"bad html output {path}: no internal links in OKF JSON payload")
 
@@ -990,6 +1003,9 @@ input, select {
     <article class="article-shell" id="article"></article>
   </main>
 </div>
+<div hidden id="okf-doc-templates">
+@@DOC_TEMPLATES@@
+</div>
 <script id="okf-data" type="application/json">
 @@DATA_JSON@@
 </script>
@@ -999,6 +1015,9 @@ input, select {
   const bundle = JSON.parse(document.getElementById("okf-data").textContent);
   const docs = bundle.docs;
   const docsByPath = new Map(docs.map((doc) => [doc.path, doc]));
+  const docTemplates = new Map(
+    [...document.querySelectorAll("template[data-doc-path]")].map((template) => [template.dataset.docPath, template])
+  );
   const article = document.getElementById("article");
   const docList = document.getElementById("docList");
   const search = document.getElementById("search");
@@ -1117,7 +1136,7 @@ input, select {
         <div class="source-link">Source path: ${escapeHtml(doc.path)}</div>
         ${renderRouting(doc.metadata || {})}
       </header>
-      <section class="article-body">${doc.html}</section>
+      <section class="article-body"></section>
       <section class="relationships" aria-label="OKF relationships">
         <h3>Links from this page</h3>
         ${linkPills(doc.outgoing, "No internal OKF links from this page.")}
@@ -1125,6 +1144,13 @@ input, select {
         ${linkPills(bundle.backlinks[doc.path] || [], "No other wiki page links here yet.")}
       </section>
     `;
+    const body = article.querySelector(".article-body");
+    const template = docTemplates.get(doc.path);
+    if (body && template) {
+      body.replaceChildren(template.content.cloneNode(true));
+    } else if (body) {
+      body.textContent = "Document body unavailable.";
+    }
     renderList();
     if (anchor) {
       requestAnimationFrame(() => {
