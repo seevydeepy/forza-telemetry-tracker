@@ -423,8 +423,9 @@ input, select {
 <li>ci</li>
 <li>release</li>
 <li>semver tag</li>
-<li>attestation</li>
-<li>artifact attestation</li>
+<li>authenticode</li>
+<li>code signing</li>
+<li>signed release</li>
 <li>checksum</li>
 <li>dependency audit</li>
 <li>lockfile</li>
@@ -435,7 +436,7 @@ input, select {
 <li>Web Dashboard owns frontend tests and build inputs consumed by the release package.</li>
 <li>FH6 Map Tile Converter owns converter source; this bundle owns publishing and bundling its Windows output.</li>
 <li>Feedback Worker owns report ingestion; release metadata wires the packaged feedback endpoint.</li>
-<li>Project Docs owns general community docs; this bundle owns release-specific installer and attestation guidance. validation:</li>
+<li>Project Docs owns general community docs; this bundle owns release-specific installer, signing, checksum, and verification guidance. validation:</li>
 <li>python tools/docs/map<em>changed</em>paths.py &lt;representative-owned-path&gt;</li>
 <li>.\tools\docs\build<em>all</em>wikis.ps1 -Check stale_notes:</li>
 <li>Review after ownership, entrypoint, handoff, or validation changes.</li>
@@ -735,7 +736,7 @@ input, select {
 <h2 id="read-this-when">Read This When</h2>
 <ul>
 <li>A change touches <code>.github/workflows/</code>, <code>.github/dependabot.yml</code>, <code>packaging/</code>, release locks, installer docs, third-party notices, licence copies, or packaged smoke tooling.</li>
-<li>A symptom involves CI failures, tagged release failures, installer output, PyInstaller bundling, Inno Setup, WebView2 prerequisite handling, artifact attestation, checksum verification, release dependency locks, or packaged-app smoke failures.</li>
+<li>A symptom involves CI failures, manual release upload failures, installer output, PyInstaller bundling, Inno Setup, WebView2 prerequisite handling, Authenticode signing, checksum verification, release dependency locks, or packaged-app smoke failures.</li>
 </ul>
 <h2 id="first-files-to-inspect">First Files To Inspect</h2>
 <ul>
@@ -762,14 +763,15 @@ input, select {
 </ul>
 <h2 id="symptoms-and-search-terms">Symptoms And Search Terms</h2>
 <ul>
-<li>Release does not start: search <code>desktop-release.yml</code>, <code>tags</code>, <code>v*.*.*</code>, <code>Validate SemVer tag</code>.</li>
+<li>Manual diagnostic package build does not start: search <code>desktop-release.yml</code>, <code>workflow_dispatch</code>, <code>version input</code>, <code>Build unsigned desktop package</code>.</li>
+<li>Signed release upload fails: search <code>docs/desktop-release.md</code>, <code>gh release create</code>, <code>Set-AuthenticodeSignature</code>, <code>FORZA_CODE_SIGNING_THUMBPRINT</code>.</li>
 <li>CI fails before packaging: search <code>ci.yml</code>, <code>requirements-telemetry-release-lock.txt</code>, <code>pip-audit</code>, <code>npm audit</code>, <code>dotnet list</code>.</li>
 <li>PyInstaller output is missing files: search <code>packaging/pyinstaller/forza-telemetry-tracker.spec</code>, <code>datas</code>, <code>frontend-dist</code>, <code>release-metadata.json</code>, <code>bin/map-converter</code>, <code>licenses</code>.</li>
 <li>Installer build fails or output is missing: search <code>tools/build-desktop-release.ps1</code>, <code>iscc</code>, <code>FORZA_TRACKER_VERSION</code>, <code>WEBVIEW2_STANDALONE_INSTALLER</code>, <code>ForzaTelemetryTrackerSetup-v</code>.</li>
 <li>WebView2 install behaviour is wrong: search <code>packaging/installer/forza-telemetry-tracker.iss</code>, <code>IsWebView2Installed</code>, <code>WebView2ClientKey</code>, <code>PrepareToInstall</code>.</li>
 <li>Packaged app smoke fails: search <code>tools/smoke-desktop-package.py</code>, <code>--smoke-http-only</code>, <code>FORZA_TRACKER_SMOKE_HTTP_PORT</code>, <code>/api/status</code>, <code>/events</code>, <code>forza-map-tile-converter.exe</code>.</li>
 <li>Release metadata/update behaviour is wrong: start here for build metadata, then hand off to Desktop Backend for <code>telemetry_tracker/app_metadata.py</code> and <code>telemetry_tracker/app_updates.py</code>.</li>
-<li>Attestation or checksum verification fails: search <code>actions/attest</code>, <code>sha256sum -c</code>, <code>gh attestation verify</code>, <code>--signer-workflow</code>, <code>--source-ref</code>.</li>
+<li>Signature or checksum verification fails: search <code>Get-AuthenticodeSignature</code>, <code>TimeStamperCertificate</code>, <code>Get-FileHash</code>, <code>.sha256</code>.</li>
 <li>Dependency update routing is unclear: search <code>.github/dependabot.yml</code> for <code>github-actions</code>, <code>npm</code>, <code>pip</code>, or <code>nuget</code>.</li>
 <li>Licence or notice packaging is wrong: search <code>THIRD_PARTY_NOTICES.md</code>, <code>licenses/</code>, and PyInstaller <code>datas</code>.</li>
 </ul>
@@ -985,7 +987,7 @@ input, select {
 </template>
 <template data-doc-path="solutions/release-ci-packaging/solution.md">
 <h2 id="purpose">Purpose</h2>
-<p>Build, verify, and publish the unsigned Windows desktop installer. This bundle owns GitHub CI/release workflows, Dependabot coverage, PyInstaller/Inno Setup packaging, release dependency locks, third-party notices, licence copies, packaged-app smoke tooling, and the maintainer release guide.</p>
+<p>Build, verify, sign, and publish the Windows desktop installer. This bundle owns GitHub CI/release workflows, Dependabot coverage, PyInstaller/Inno Setup packaging, release dependency locks, third-party notices, licence copies, packaged-app smoke tooling, and the maintainer release guide.</p>
 <h2 id="owned-paths">Owned Paths</h2>
 <ul>
 <li>.github/workflows/</li>
@@ -1001,8 +1003,8 @@ input, select {
 <h2 id="entrypoints">Entrypoints</h2>
 <ul>
 <li><code>.github/workflows/ci.yml</code> runs Windows CI for Python tests/audit, frontend tests/build/audit, and .NET map-converter restore/audit/build.</li>
-<li><code>.github/workflows/desktop-release.yml</code> is tag-triggered for <code>vX.Y.Z</code>, builds the installer, creates the checksum, generates/verifies GitHub Artifact Attestations, and publishes the GitHub Release.</li>
-<li><code>tools/build-desktop-release.ps1</code> is the local and CI release orchestrator: writes <code>build/release-metadata.json</code>, builds frontend assets, installs locked Python dependencies, runs tests, publishes the map converter, runs PyInstaller, runs Inno Setup, and optionally smokes the packaged app.</li>
+<li><code>.github/workflows/desktop-release.yml</code> is a manual diagnostic package build; it does not run on tag push and does not publish GitHub Releases.</li>
+<li><code>tools/build-desktop-release.ps1</code> is the local and CI package orchestrator: writes <code>build/release-metadata.json</code>, builds frontend assets, installs locked Python dependencies, runs tests, publishes the map converter, runs PyInstaller, runs Inno Setup, and optionally smokes the packaged app.</li>
 <li><code>packaging/pyinstaller/forza-telemetry-tracker.spec</code> defines bundled frontend, resources, map converter output, licence/notices, and release metadata.</li>
 <li><code>packaging/installer/forza-telemetry-tracker.iss</code> defines the per-user Inno Setup installer, shortcuts, WebView2 prerequisite handling, and installer output name.</li>
 <li><code>tools/smoke-desktop-package.py</code> launches the built package with smoke-only environment overrides and checks the GUI subsystem, bundled converter, <code>/api/status</code>, <code>/</code>, and <code>/events</code>.</li>
@@ -1014,12 +1016,12 @@ input, select {
 <li>Web Dashboard provides the frontend build output that PyInstaller embeds.</li>
 <li>FH6 Map Tile Converter provides the .NET converter source; release tooling publishes and packages its Windows output.</li>
 <li>Feedback Worker is wired into stable builds through the release metadata feedback endpoint.</li>
-<li>Project Docs owns broad README/support/community pages; release-specific installer, checksum, attestation, WebView2, and validation guidance lives here.</li>
+<li>Project Docs owns broad README/support/community pages; release-specific installer, signing, checksum, WebView2, and validation guidance lives here.</li>
 </ul>
 <h2 id="maintenance-notes">Maintenance Notes</h2>
 <ul>
-<li>Stable releases are SemVer tag driven; branch pushes do not exercise the publish path.</li>
-<li>The installer is unsigned for Windows Authenticode. GitHub Artifact Attestations and SHA-256 checksums prove provenance/integrity, not SmartScreen reputation.</li>
+<li>Stable releases are built, signed, checksummed, and uploaded from the maintainer&#x27;s Windows signing machine; tag pushes do not publish unsigned installers.</li>
+<li>SHA-256 checksums must be generated after Authenticode signing because signing changes installer bytes.</li>
 <li>Keep dependency-lock changes aligned with the Windows/Python 3.12 <code>uv pip compile</code> command documented in <code>docs/desktop-release.md</code>.</li>
 </ul>
 </template>
@@ -1147,7 +1149,7 @@ input, select {
 <h2 id="deep-backfill-2026-06-25">Deep Backfill 2026-06-25</h2>
 <ul>
 <li>Inspected <code>.github/workflows/ci.yml</code>: Windows CI installs <code>requirements-telemetry-release-lock.txt</code>, runs Python tests and <code>pip-audit</code>, runs frontend <code>npm ci</code>/audit/tests/build, and restores/audits/builds the .NET map converter.</li>
-<li>Inspected <code>.github/workflows/desktop-release.yml</code>: release is triggered by <code>v*.*.*</code> tags, validates strict <code>vX.Y.Z</code>, builds the unsigned desktop package, creates a <code>.sha256</code>, generates attestations, verifies downloaded assets and attestations, then publishes the GitHub Release.</li>
+<li>At the time of this backfill, <code>.github/workflows/desktop-release.yml</code> was tag-triggered and published an unsigned installer with GitHub Artifact Attestations. This entry is historical; see the 2026-07-03 release signing update below for the current flow.</li>
 <li>Inspected <code>tools/build-desktop-release.ps1</code>: local/CI build writes <code>build/release-metadata.json</code>, builds frontend assets, installs locked release dependencies, runs tests, publishes the converter, runs PyInstaller, runs Inno Setup, and runs <code>tools/smoke-desktop-package.py</code> unless skipped.</li>
 <li>Inspected <code>packaging/pyinstaller/forza-telemetry-tracker.spec</code>: bundled data includes frontend dist, tracker resources, <code>build/map-converter/win-x64</code>, <code>licenses/</code>, <code>THIRD_PARTY_NOTICES.md</code>, and <code>build/release-metadata.json</code>.</li>
 <li>Inspected <code>packaging/installer/forza-telemetry-tracker.iss</code>: installer is per-user, names <code>ForzaTelemetryTrackerSetup-v{version}-x64</code>, creates shortcuts, launches post-install, and conditionally installs bundled WebView2.</li>
@@ -1155,6 +1157,12 @@ input, select {
 <li>Inspected <code>docs/desktop-release.md</code>: documented release artifact, unsigned-installer warning, prerequisites, local build command, tagged GitHub release path, attestation/checksum verification, update behaviour, and manual validation checklist.</li>
 <li>Inspected <code>THIRD_PARTY_NOTICES.md</code> and <code>licenses/</code>: notices cover Google Material Design Icons, ForzaTechStudio, and BCnEncoder.NET with corresponding licence copies.</li>
 <li>Inspected <code>.github/dependabot.yml</code>: weekly Dependabot coverage exists for GitHub Actions, npm frontend, pip root dependencies, and NuGet map converter dependencies.</li>
+</ul>
+<h2 id="release-signing-update-2026-07-03">Release Signing Update 2026-07-03</h2>
+<ul>
+<li>Updated <code>.github/workflows/desktop-release.yml</code> so tag pushes no longer publish unsigned installers; it is now a manual unsigned diagnostic package build only.</li>
+<li>Updated <code>docs/desktop-release.md</code> so stable releases are built locally, signed with Authenticode, checksummed after signing, and uploaded with <code>gh release create</code>.</li>
+<li>Existing unsigned GitHub Releases remain historical assets until replaced or superseded by a signed release.</li>
 </ul>
 <h2 id="known-gaps">Known Gaps</h2>
 <ul>
@@ -1500,7 +1508,9 @@ input, select {
           "github actions",
           "ci",
           "release",
-          "attestation",
+          "authenticode",
+          "code signing",
+          "signed release",
           "checksum",
           "dependency audit",
           "licence notice"
@@ -1530,7 +1540,7 @@ input, select {
         "solutions/release-ci-packaging/solution.md"
       ],
       "path": "solutions/release-ci-packaging/index.md",
-      "search": "solutions/release-ci-packaging/index.md release, ci, and packaging okf bundle windows installer packaging, release workflow, dependency locks, ci workflow, release documentation, licences, notices, and packaged-app smoke tooling. solutionindex okf solution type solutionindex routing_primary github/workflows/ github/dependabot.yml packaging/ tools/build-desktop-release.ps1 tools/smoke-desktop-package.py requirements-telemetry-release-lock.txt third_party_notices.md licenses/ docs/desktop-release.md routing_keywords installer pyinstaller inno setup github actions ci release attestation checksum dependency audit licence notice",
+      "search": "solutions/release-ci-packaging/index.md release, ci, and packaging okf bundle windows installer packaging, release workflow, dependency locks, ci workflow, release documentation, licences, notices, and packaged-app smoke tooling. solutionindex okf solution type solutionindex routing_primary github/workflows/ github/dependabot.yml packaging/ tools/build-desktop-release.ps1 tools/smoke-desktop-package.py requirements-telemetry-release-lock.txt third_party_notices.md licenses/ docs/desktop-release.md routing_keywords installer pyinstaller inno setup github actions ci release authenticode code signing signed release checksum dependency audit licence notice",
       "tags": [
         "okf",
         "solution"

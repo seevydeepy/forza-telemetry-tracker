@@ -217,7 +217,7 @@ Expected result: a JSON response with `ok = true`, the same `report_ref`, and a 
 
 The local Python backend reads the feedback endpoint from release metadata or the `FORZA_TRACKER_FEEDBACK_ENDPOINT` environment variable. The Svelte UI never talks to Cloudflare directly.
 
-For packaged releases, pass the full report endpoint to the release build. The `Desktop Release` GitHub Actions workflow already passes the production endpoint for stable tags:
+For packaged releases, pass the full report endpoint to the local release build:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\build-desktop-release.ps1 `

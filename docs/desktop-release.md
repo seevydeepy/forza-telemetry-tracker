@@ -6,7 +6,9 @@ Forza is a trademark of Microsoft. Forza Telemetry Tracker is an unofficial comm
 
 The user-facing artifact is `ForzaTelemetryTrackerSetup-vX.Y.Z-x64.exe`. Users do not install Python, Node, .NET, run PowerShell scripts, run `pip`, or start multiple programs.
 
-The project currently publishes unsigned Windows installers with GitHub Artifact Attestations. Windows SmartScreen may warn on first launch or install because artifact attestations are not Windows Authenticode signatures and do not build publisher reputation.
+Stable releases are published as Authenticode-signed Windows installers plus a SHA-256 checksum. Windows SmartScreen may still warn until the publisher/app builds reputation, but the release asset should not be an unsigned installer.
+
+Existing unsigned releases are historical artefacts. Replace or supersede the latest unsigned release with a signed release before telling users the signed release process is live.
 
 ## v1 scope
 
@@ -25,6 +27,9 @@ The project currently publishes unsigned Windows installers with GitHub Artifact
 - .NET 9 SDK.
 - Inno Setup with `iscc` on `PATH`.
 - Microsoft WebView2 Evergreen Standalone installer downloaded locally.
+- GitHub CLI authenticated for this repository.
+- Windows code-signing certificate visible in `Cert:\CurrentUser\My`.
+- SimplySign Desktop signed in when using the Certum cloud certificate.
 - `uv` when refreshing `requirements-telemetry-release-lock.txt`.
 
 ## Local build
@@ -43,55 +48,110 @@ The release build uses `npm ci` for the frontend and installs Python dependencie
 uv pip compile requirements-telemetry-desktop.txt requirements-telemetry-test.txt --python-version 3.12 --python-platform windows --generate-hashes -o requirements-telemetry-release-lock.txt
 ```
 
-## GitHub release build
+## Stable release publish
 
-Stable releases are produced by pushing an annotated or lightweight SemVer tag:
+Stable releases are built, signed, checksummed, and uploaded from the maintainer's Windows signing machine. Do not upload the unsigned installer produced by GitHub Actions.
 
 ```powershell
-git tag v1.2.3
-git push origin v1.2.3
+$version = "1.2.3"
+$tag = "v$version"
+$repo = "seevydeepy/forza-telemetry-tracker"
+$webView2 = "C:\ReleaseInputs\MicrosoftEdgeWebView2RuntimeInstallerX64.exe"
+
+powershell -ExecutionPolicy Bypass -File tools\build-desktop-release.ps1 `
+  -Version $version `
+  -Repository $repo `
+  -Channel stable `
+  -FeedbackEndpoint "https://forza-telemetry-feedback.cvdp.workers.dev/v1/reports" `
+  -WebView2StandaloneInstaller $webView2
+
+$installer = "dist\installer\ForzaTelemetryTrackerSetup-v$version-x64.exe"
 ```
 
-The `.github/workflows/desktop-release.yml` workflow:
+Sign the installer locally. In this Codex setup, the normal path is:
 
-1. validates that the tag matches `vX.Y.Z`;
-2. runs the frontend tests/build, Python tests, .NET map converter publish, PyInstaller app build, Inno Setup compile, and smoke test;
-3. embeds `build/release-metadata.json` into the packaged app;
-4. publishes GitHub Artifact Attestations for the installer and checksum;
-5. verifies the downloaded assets, checksum, and attestations before publishing;
-6. uploads a GitHub Release containing:
-   - `ForzaTelemetryTrackerSetup-vX.Y.Z-x64.exe`
-   - `ForzaTelemetryTrackerSetup-vX.Y.Z-x64.exe.sha256`
+```text
+Use $code-sign to sign dist\installer\ForzaTelemetryTrackerSetup-vX.Y.Z-x64.exe
+```
 
-The build job needs no code-signing secrets or certificate configuration. The build job grants `id-token: write`, `attestations: write`, and `artifact-metadata: write` only for GitHub Artifact Attestations. The release publishing job grants `contents: write` so it can create the GitHub Release and `attestations: read` so it can verify the release assets before publishing.
+The equivalent PowerShell signing command is:
 
-## Artifact attestation verification
+```powershell
+$thumbprint = $env:FORZA_CODE_SIGNING_THUMBPRINT
+if (-not $thumbprint) { throw "Set FORZA_CODE_SIGNING_THUMBPRINT to the Authenticode certificate thumbprint." }
 
-Artifact attestations prove that a downloaded asset matches a subject attested by the repository's GitHub Actions release workflow. They do not prove the application is safe, endorsed by GitHub, or signed for Windows SmartScreen.
+$cert = Get-ChildItem "Cert:\CurrentUser\My\$thumbprint"
+Set-AuthenticodeSignature `
+  -FilePath $installer `
+  -Certificate $cert `
+  -HashAlgorithm SHA256 `
+  -TimeStampServer "http://time.certum.pl"
 
-From an empty directory, download a release and verify the installer provenance:
+$signature = Get-AuthenticodeSignature -FilePath $installer
+if ($signature.Status -ne "Valid" -or -not $signature.TimeStamperCertificate) {
+  throw "Installer signature or timestamp verification failed: $($signature.Status) $($signature.StatusMessage)"
+}
+```
+
+Create the checksum after signing:
+
+```powershell
+$checksum = "$installer.sha256"
+$hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+"$hash  $(Split-Path -Leaf $installer)" | Set-Content -Path $checksum -Encoding ascii
+```
+
+Push the source commit and tag, then create the release with the signed assets:
+
+```powershell
+git push origin master
+git tag $tag
+git push origin $tag
+
+@"
+Stable desktop release $tag
+
+- Signed Windows installer.
+- SHA-256 checksum is attached for verification.
+- Source commit: $((git rev-parse HEAD).Trim())
+"@ | Set-Content -Path release-notes.md -Encoding utf8
+
+gh release create $tag `
+  $installer `
+  $checksum `
+  --repo $repo `
+  --title $tag `
+  --notes-file release-notes.md `
+  --verify-tag
+```
+
+The GitHub tag push no longer publishes a release. The `.github/workflows/desktop-release.yml` workflow is manual-only and builds an unsigned diagnostic package artifact for packaging checks.
+
+Published stable releases contain:
+
+- `ForzaTelemetryTrackerSetup-vX.Y.Z-x64.exe`
+- `ForzaTelemetryTrackerSetup-vX.Y.Z-x64.exe.sha256`
+
+## Release asset verification
+
+From an empty directory, download a release and verify the installer signature and checksum:
 
 ```powershell
 gh release download v1.2.3 `
   --repo seevydeepy/forza-telemetry-tracker `
   --pattern "ForzaTelemetryTrackerSetup-v1.2.3-x64.exe*"
 
-gh attestation verify .\ForzaTelemetryTrackerSetup-v1.2.3-x64.exe `
-  --repo seevydeepy/forza-telemetry-tracker `
-  --signer-workflow seevydeepy/forza-telemetry-tracker/.github/workflows/desktop-release.yml `
-  --source-ref refs/tags/v1.2.3 `
-  --deny-self-hosted-runners
-```
+$signature = Get-AuthenticodeSignature .\ForzaTelemetryTrackerSetup-v1.2.3-x64.exe
+if ($signature.Status -ne "Valid" -or -not $signature.TimeStamperCertificate) {
+    throw "Installer signature or timestamp verification failed: $($signature.Status) $($signature.StatusMessage)"
+}
 
-Then compare the attached checksum with the downloaded installer:
-
-```powershell
 $expected = (Get-Content .\ForzaTelemetryTrackerSetup-v1.2.3-x64.exe.sha256).Split(" ")[0].ToLowerInvariant()
 $actual = (Get-FileHash .\ForzaTelemetryTrackerSetup-v1.2.3-x64.exe -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($actual -ne $expected) {
     throw "Installer checksum mismatch: expected $expected but got $actual"
 }
-"Installer checksum verified: $actual"
+"Installer signature and checksum verified: $actual"
 ```
 
 ## About window and updates
@@ -107,26 +167,28 @@ The About window is opened from the left slide-out menu. It shows installed buil
 
 Update checks are user-initiated only. The app checks public GitHub Releases without credentials, ignores drafts and prereleases, and compares SemVer tags instead of publish dates.
 
-When a newer stable release exists, the About button changes from `Check for updates` to `Open release X.Y.Z`. The app opens the GitHub Release page in the user's browser. The user downloads the installer, optionally verifies the GitHub Artifact Attestation and attached SHA-256 file, closes the tracker, and runs the installer manually.
+When a newer stable release exists, the About button changes from `Check for updates` to `Open release X.Y.Z`. The app opens the GitHub Release page in the user's browser. The user downloads the installer, optionally verifies the Authenticode signature and attached SHA-256 file, closes the tracker, and runs the installer manually.
 
-There is intentionally no automatic installer launch and no in-app executable verification path. That keeps the open-source release process free of mandatory paid code-signing infrastructure.
+There is intentionally no automatic installer launch and no in-app executable verification path.
 
 ## Required validation
 
 1. Install on Windows without Python, Node, or .NET available on `PATH`.
-2. Verify WebView2-present install skips the bundled prerequisite.
-3. Verify WebView2-missing install installs the bundled Evergreen runtime.
-4. Launch from Start Menu.
-5. Launch from Desktop shortcut when selected.
-6. Verify no terminal window appears.
-7. Verify `/api/status` responds during smoke testing.
-8. Verify `/events` connects during smoke testing.
-9. Send a sample Data Out UDP packet to `127.0.0.1:5400` and confirm receipt.
-10. Record telemetry and confirm `telemetry_tracker.sqlite3` under `%LOCALAPPDATA%\Forza Telemetry Tracker`.
-11. Build the world-map cache from a valid local FH6 install folder.
-12. Confirm generated tiles under `%LOCALAPPDATA%\Forza Telemetry Tracker\map-cache`.
-13. Close the app and verify HTTP and UDP ports are released.
-14. Install an older build, detect a newer stable release from About, open the GitHub Release link, and install the newer build manually.
-15. Confirm update-check failure handling for no network, inaccessible public repository, missing checksum asset, prerelease ignored, and malformed release tags.
-16. Install a newer build over an older build and confirm user data remains.
-17. Uninstall and confirm app files are removed while user data remains.
+2. Verify the installer Authenticode signature is valid and timestamped before upload.
+3. Verify the attached SHA-256 checksum was generated after signing.
+4. Verify WebView2-present install skips the bundled prerequisite.
+5. Verify WebView2-missing install installs the bundled Evergreen runtime.
+6. Launch from Start Menu.
+7. Launch from Desktop shortcut when selected.
+8. Verify no terminal window appears.
+9. Verify `/api/status` responds during smoke testing.
+10. Verify `/events` connects during smoke testing.
+11. Send a sample Data Out UDP packet to `127.0.0.1:5400` and confirm receipt.
+12. Record telemetry and confirm `telemetry_tracker.sqlite3` under `%LOCALAPPDATA%\Forza Telemetry Tracker`.
+13. Build the world-map cache from a valid local FH6 install folder.
+14. Confirm generated tiles under `%LOCALAPPDATA%\Forza Telemetry Tracker\map-cache`.
+15. Close the app and verify HTTP and UDP ports are released.
+16. Install an older build, detect a newer stable release from About, open the GitHub Release link, and install the newer build manually.
+17. Confirm update-check failure handling for no network, inaccessible public repository, missing checksum asset, prerelease ignored, and malformed release tags.
+18. Install a newer build over an older build and confirm user data remains.
+19. Uninstall and confirm app files are removed while user data remains.

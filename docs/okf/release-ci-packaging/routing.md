@@ -3,7 +3,7 @@
 ## Read This When
 
 - A change touches `.github/workflows/`, `.github/dependabot.yml`, `packaging/`, release locks, installer docs, third-party notices, licence copies, or packaged smoke tooling.
-- A symptom involves CI failures, tagged release failures, installer output, PyInstaller bundling, Inno Setup, WebView2 prerequisite handling, artifact attestation, checksum verification, release dependency locks, or packaged-app smoke failures.
+- A symptom involves CI failures, manual release upload failures, installer output, PyInstaller bundling, Inno Setup, WebView2 prerequisite handling, Authenticode signing, checksum verification, release dependency locks, or packaged-app smoke failures.
 
 ## First Files To Inspect
 
@@ -30,14 +30,15 @@
 
 ## Symptoms And Search Terms
 
-- Release does not start: search `desktop-release.yml`, `tags`, `v*.*.*`, `Validate SemVer tag`.
+- Manual diagnostic package build does not start: search `desktop-release.yml`, `workflow_dispatch`, `version input`, `Build unsigned desktop package`.
+- Signed release upload fails: search `docs/desktop-release.md`, `gh release create`, `Set-AuthenticodeSignature`, `FORZA_CODE_SIGNING_THUMBPRINT`.
 - CI fails before packaging: search `ci.yml`, `requirements-telemetry-release-lock.txt`, `pip-audit`, `npm audit`, `dotnet list`.
 - PyInstaller output is missing files: search `packaging/pyinstaller/forza-telemetry-tracker.spec`, `datas`, `frontend-dist`, `release-metadata.json`, `bin/map-converter`, `licenses`.
 - Installer build fails or output is missing: search `tools/build-desktop-release.ps1`, `iscc`, `FORZA_TRACKER_VERSION`, `WEBVIEW2_STANDALONE_INSTALLER`, `ForzaTelemetryTrackerSetup-v`.
 - WebView2 install behaviour is wrong: search `packaging/installer/forza-telemetry-tracker.iss`, `IsWebView2Installed`, `WebView2ClientKey`, `PrepareToInstall`.
 - Packaged app smoke fails: search `tools/smoke-desktop-package.py`, `--smoke-http-only`, `FORZA_TRACKER_SMOKE_HTTP_PORT`, `/api/status`, `/events`, `forza-map-tile-converter.exe`.
 - Release metadata/update behaviour is wrong: start here for build metadata, then hand off to Desktop Backend for `telemetry_tracker/app_metadata.py` and `telemetry_tracker/app_updates.py`.
-- Attestation or checksum verification fails: search `actions/attest`, `sha256sum -c`, `gh attestation verify`, `--signer-workflow`, `--source-ref`.
+- Signature or checksum verification fails: search `Get-AuthenticodeSignature`, `TimeStamperCertificate`, `Get-FileHash`, `.sha256`.
 - Dependency update routing is unclear: search `.github/dependabot.yml` for `github-actions`, `npm`, `pip`, or `nuget`.
 - Licence or notice packaging is wrong: search `THIRD_PARTY_NOTICES.md`, `licenses/`, and PyInstaller `datas`.
 

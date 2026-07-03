@@ -142,7 +142,9 @@
         "github actions",
         "ci",
         "release",
-        "attestation",
+        "authenticode",
+        "code signing",
+        "signed release",
         "checksum",
         "dependency audit",
         "licence notice"
